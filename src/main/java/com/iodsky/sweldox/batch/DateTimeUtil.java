@@ -16,7 +16,11 @@ public class DateTimeUtil {
             DateTimeFormatter.ofPattern("dd-MM-yyyy"),
             DateTimeFormatter.ofPattern("yyyy/MM/dd"),
             DateTimeFormatter.ofPattern("MM/dd/yyyy"),
-            DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+            DateTimeFormatter.ofPattern("M/d/yyyy"),
+            DateTimeFormatter.ofPattern("d/M/yyyy"),
+            DateTimeFormatter.ofPattern("M-d-yyyy"),
+            DateTimeFormatter.ofPattern("d-M-yyyy")
     };
 
     private static final DateTimeFormatter[] TIME_FORMATTERS = {
