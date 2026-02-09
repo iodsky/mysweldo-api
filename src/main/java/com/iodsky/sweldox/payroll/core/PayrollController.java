@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/payroll")
+@RequestMapping("/payrolls")
 @RequiredArgsConstructor
 @Tag(name = "Payroll", description = "Payroll processing and management endpoints")
 public class PayrollController {
