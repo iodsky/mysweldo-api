@@ -1,4 +1,4 @@
-package com.iodsky.sweldox.payroll.benefit;
+package com.iodsky.sweldox.benefit;
 
 import com.iodsky.sweldox.common.response.ApiResponse;
 import com.iodsky.sweldox.common.response.DeleteResponse;
@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/payroll-config/benefit-types")
+@RequestMapping("/benefit-types")
 @Validated
 @RequiredArgsConstructor
-@Tag(name = "Payroll Configuration - Benefit Types", description = "Manage benefit type configurations")
+@Tag(name = "Benefit Types", description = "Manage benefit type configurations")
 public class BenefitTypeController {
 
     private final BenefitTypeService benefitTypeService;

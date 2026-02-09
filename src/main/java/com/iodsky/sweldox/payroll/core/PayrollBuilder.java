@@ -4,7 +4,7 @@ import com.iodsky.sweldox.attendance.Attendance;
 import com.iodsky.sweldox.attendance.AttendanceService;
 import com.iodsky.sweldox.employee.Employee;
 import com.iodsky.sweldox.employee.EmployeeService;
-import com.iodsky.sweldox.payroll.benefit.Benefit;
+import com.iodsky.sweldox.benefit.Benefit;
 import com.iodsky.sweldox.payroll.deduction.Deduction;
 import com.iodsky.sweldox.payroll.deduction.DeductionTypeRepository;
 import lombok.RequiredArgsConstructor;

@@ -1,7 +1,7 @@
 package com.iodsky.sweldox.payroll.core;
 
 import com.iodsky.sweldox.attendance.Attendance;
-import com.iodsky.sweldox.payroll.benefit.Benefit;
+import com.iodsky.sweldox.benefit.Benefit;
 import com.iodsky.sweldox.payroll.contribution.pagIbig.PagibigContribution;
 import com.iodsky.sweldox.payroll.contribution.pagIbig.PagibigContributionRepository;
 import com.iodsky.sweldox.payroll.contribution.philhealth.PhilhealthContribution;

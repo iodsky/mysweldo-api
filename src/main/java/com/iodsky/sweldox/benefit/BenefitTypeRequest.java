@@ -1,4 +1,4 @@
-package com.iodsky.sweldox.payroll.benefit;
+package com.iodsky.sweldox.benefit;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

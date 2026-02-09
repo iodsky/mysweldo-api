@@ -2,7 +2,7 @@ package com.iodsky.sweldox.payroll.core;
 
 import com.iodsky.sweldox.attendance.Attendance;
 import com.iodsky.sweldox.employee.Employee;
-import com.iodsky.sweldox.payroll.benefit.Benefit;
+import com.iodsky.sweldox.benefit.Benefit;
 import lombok.Builder;
 import lombok.Getter;
 

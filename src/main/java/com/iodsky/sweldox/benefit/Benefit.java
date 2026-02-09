@@ -1,4 +1,4 @@
-package com.iodsky.sweldox.payroll.benefit;
+package com.iodsky.sweldox.benefit;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.iodsky.sweldox.common.BaseModel;

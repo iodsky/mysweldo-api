@@ -1,4 +1,4 @@
-package com.iodsky.sweldox.payroll.benefit;
+package com.iodsky.sweldox.benefit;
 
 import org.springframework.stereotype.Component;
 
@@ -16,14 +16,14 @@ public class BenefitMapper {
                 .build();
     }
 
-    public Benefit toEntity(BenefitDto benefitDto) {
-        if (benefitDto == null) {
+    public Benefit toEntity(BenefitRequest request) {
+        if (request == null) {
             return  null;
         }
 
         return Benefit.builder()
-                .benefitType(BenefitType.builder().id(benefitDto.getBenefit()).build())
-                .amount(benefitDto.getAmount())
+                .benefitType(BenefitType.builder().id(request.getBenefitTypeId()).build())
+                .amount(request.getAmount())
                 .build();
     }
 

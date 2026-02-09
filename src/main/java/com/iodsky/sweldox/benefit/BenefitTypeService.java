@@ -1,4 +1,4 @@
-package com.iodsky.sweldox.payroll.benefit;
+package com.iodsky.sweldox.benefit;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

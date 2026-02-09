@@ -6,10 +6,10 @@ import com.iodsky.sweldox.department.Department;
 import com.iodsky.sweldox.department.DepartmentRepository;
 import com.iodsky.sweldox.position.Position;
 import com.iodsky.sweldox.position.PositionRepository;
-import com.iodsky.sweldox.payroll.benefit.Benefit;
+import com.iodsky.sweldox.benefit.Benefit;
 
-import com.iodsky.sweldox.payroll.benefit.BenefitType;
-import com.iodsky.sweldox.payroll.benefit.BenefitTypeRepository;
+import com.iodsky.sweldox.benefit.BenefitType;
+import com.iodsky.sweldox.benefit.BenefitTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ItemProcessor;
