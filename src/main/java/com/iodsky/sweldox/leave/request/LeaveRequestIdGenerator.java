@@ -1,4 +1,4 @@
-package com.iodsky.sweldox.leave;
+package com.iodsky.sweldox.leave.request;
 
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.id.IdentifierGenerator;

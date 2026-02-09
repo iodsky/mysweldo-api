@@ -1,4 +1,4 @@
-package com.iodsky.sweldox.leave;
+package com.iodsky.sweldox.leave.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.FutureOrPresent;

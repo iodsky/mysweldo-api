@@ -1,12 +1,14 @@
-package com.iodsky.sweldox.leave;
+package com.iodsky.sweldox.leave.credit;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.iodsky.sweldox.common.BaseModel;
 import com.iodsky.sweldox.employee.Employee;
+import com.iodsky.sweldox.leave.LeaveType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -33,6 +35,6 @@ public class LeaveCredit extends BaseModel {
     @Min(value = 0, message = "Leave credits cannot be negative")
     private double credits;
 
-    private String fiscalYear;
+    private LocalDate effectiveDate;
 
 }

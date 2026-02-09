@@ -1,4 +1,4 @@
-package com.iodsky.sweldox.leave;
+package com.iodsky.sweldox.leave.request;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

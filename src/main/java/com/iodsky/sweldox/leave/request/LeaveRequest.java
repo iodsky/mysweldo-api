@@ -1,8 +1,9 @@
-package com.iodsky.sweldox.leave;
+package com.iodsky.sweldox.leave.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.iodsky.sweldox.common.BaseModel;
 import com.iodsky.sweldox.employee.Employee;
+import com.iodsky.sweldox.leave.LeaveType;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -1,5 +1,8 @@
-package com.iodsky.sweldox.leave;
+package com.iodsky.sweldox.leave.request;
 
+import com.iodsky.sweldox.leave.LeaveType;
+import com.iodsky.sweldox.leave.credit.LeaveCredit;
+import com.iodsky.sweldox.leave.credit.LeaveCreditService;
 import com.iodsky.sweldox.security.user.User;
 import com.iodsky.sweldox.security.user.UserService;
 import jakarta.persistence.OptimisticLockException;
@@ -61,7 +64,7 @@ public class LeaveRequestService {
     }
 
     public Page<LeaveRequest> getLeaveRequests(int pageNo, int limit) {
-        Pageable page = PageRequest.of(pageNo, limit, Sort.by(Sort.Direction.DESC, "requestDate"));
+        Pageable page = PageRequest.of(pageNo, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         User user = userService.getAuthenticatedUser();
 

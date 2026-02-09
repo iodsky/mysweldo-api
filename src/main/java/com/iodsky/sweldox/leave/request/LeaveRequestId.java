@@ -1,4 +1,4 @@
-package com.iodsky.sweldox.leave;
+package com.iodsky.sweldox.leave.request;
 
 import org.hibernate.annotations.IdGeneratorType;
 

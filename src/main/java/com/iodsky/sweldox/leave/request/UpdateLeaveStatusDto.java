@@ -1,4 +1,4 @@
-package com.iodsky.sweldox.leave;
+package com.iodsky.sweldox.leave.request;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;

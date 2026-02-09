@@ -1,4 +1,4 @@
-package com.iodsky.sweldox.leave;
+package com.iodsky.sweldox.leave.credit;
 
 import org.springframework.stereotype.Component;
 
@@ -10,8 +10,8 @@ public class LeaveCreditMapper {
                 .id(leaveCredit.getId())
                 .employeeId(leaveCredit.getEmployee().getId())
                 .type(leaveCredit.getType().toString())
+                .effectiveDate(leaveCredit.getEffectiveDate())
                 .credits(leaveCredit.getCredits())
-                .fiscalYear(leaveCredit.getFiscalYear())
                 .build();
     }
 }
