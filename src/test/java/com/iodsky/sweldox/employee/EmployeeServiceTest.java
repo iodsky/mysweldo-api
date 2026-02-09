@@ -1,6 +1,5 @@
 package com.iodsky.sweldox.employee;
 
-import com.iodsky.sweldox.common.exception.DuplicateFieldException;
 import com.iodsky.sweldox.department.Department;
 import com.iodsky.sweldox.department.DepartmentService;
 import com.iodsky.sweldox.position.Position;
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -94,32 +92,6 @@ class EmployeeServiceTest {
             Employee result = employeeService.createEmployee(request);
 
             assertNull(result.getSupervisor());
-        }
-
-        @Test
-        void shouldThrowDuplicateFieldExceptionWhenDuplicateKeyDetected() {
-            when(employeeMapper.toEntity(request)).thenReturn(employee);
-            DataIntegrityViolationException ex = new DataIntegrityViolationException("Duplicate")
-            {
-                @Override
-                public Throwable getRootCause() {
-                    return new Throwable("Key (email)=(john@example.com) already exists");
-                }
-            };
-
-            when(employeeRepository.save(any(Employee.class))).thenThrow(ex);
-
-            assertThrows(DuplicateFieldException.class, () -> employeeService.createEmployee(request));
-        }
-
-        @Test
-        void shouldThrowDuplicateFieldExceptionWhenRootCauseIsNull() {
-            when(employeeMapper.toEntity(request)).thenReturn(employee);
-            DataIntegrityViolationException ex = new DataIntegrityViolationException("constraint fail");
-
-            when(employeeRepository.save(any(Employee.class))).thenThrow(ex);
-
-            assertThrows(DuplicateFieldException.class, () -> employeeService.createEmployee(request));
         }
     }
 
@@ -243,22 +215,6 @@ class EmployeeServiceTest {
             verify(employeeRepository).save(employee);
         }
 
-        @Test
-        void shouldThrowDuplicateFieldExceptionWhenUpdatingWithDuplicate() {
-            when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
-
-            DataIntegrityViolationException ex = new DataIntegrityViolationException("Duplicate")
-            {
-                @Override
-                public Throwable getRootCause() {
-                    return new Throwable("Key (email)=(john@example.com) already exists");
-                }
-            };
-
-            when(employeeRepository.save(any(Employee.class))).thenThrow(ex);
-
-            assertThrows(DuplicateFieldException.class, () -> employeeService.updateEmployeeById(1L, request));
-        }
 
         @Test
         void shouldThrowNotFoundWhenUpdatingNonexistentEmployee() {

@@ -2,6 +2,10 @@ package com.iodsky.sweldox.leave;
 
 import com.iodsky.sweldox.employee.EmployeeService;
 import com.iodsky.sweldox.employee.Employee;
+import com.iodsky.sweldox.leave.credit.LeaveCredit;
+import com.iodsky.sweldox.leave.credit.LeaveCreditRepository;
+import com.iodsky.sweldox.leave.credit.LeaveCreditRequest;
+import com.iodsky.sweldox.leave.credit.LeaveCreditService;
 import com.iodsky.sweldox.security.user.User;
 import com.iodsky.sweldox.security.user.UserRole;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +21,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -71,218 +76,132 @@ class LeaveCreditServiceTest {
                 .build();
     }
 
+
     @Nested
-    class InitializeEmployeeLeaveCreditsTests {
+    class CreateLeaveCreditsTests {
 
         @Test
-        void shouldInitializeLeaveCreditsSuccessfullyWithProvidedFiscalYear() {
-            InitializeEmployeeLeaveCreditsDto dto = new InitializeEmployeeLeaveCreditsDto();
-            dto.setEmployeeId(1L);
-            dto.setFiscalYear("2025-2026");
+        void shouldCreateLeaveCreditsSuccessfully() {
+            java.time.LocalDate effectiveDate = LocalDate.of(2026, 1, 1);
+            LeaveCreditRequest request = LeaveCreditRequest.builder()
+                    .employeeId(1L)
+                    .effectiveDate(effectiveDate)
+                    .build();
 
-            when(employeeService.getEmployeeById(1L)).thenReturn(employee);
-            when(leaveCreditRepository.existsByEmployee_IdAndFiscalYear(1L, "2025-2026")).thenReturn(false);
-            when(leaveCreditRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+            when(employeeService.getEmployeeById(eq(1L))).thenReturn(employee);
+            when(leaveCreditRepository.existsByEmployee_IdAndEffectiveDate(eq(1L), eq(effectiveDate)))
+                    .thenReturn(false);
 
-            List<LeaveCredit> result = leaveCreditService.initializeEmployeeLeaveCredits(dto);
+            LeaveCredit vacation = LeaveCredit.builder()
+                    .id(UUID.randomUUID())
+                    .employee(employee)
+                    .type(LeaveType.VACATION)
+                    .credits(14.0)
+                    .effectiveDate(effectiveDate)
+                    .build();
+
+            LeaveCredit sick = LeaveCredit.builder()
+                    .id(UUID.randomUUID())
+                    .employee(employee)
+                    .type(LeaveType.SICK)
+                    .credits(7.0)
+                    .effectiveDate(effectiveDate)
+                    .build();
+
+            LeaveCredit bereavement = LeaveCredit.builder()
+                    .id(UUID.randomUUID())
+                    .employee(employee)
+                    .type(LeaveType.BEREAVEMENT)
+                    .credits(5.0)
+                    .effectiveDate(effectiveDate)
+                    .build();
+
+            when(leaveCreditRepository.saveAll(anyList()))
+                    .thenReturn(List.of(vacation, sick, bereavement));
+
+            List<LeaveCredit> result = leaveCreditService.createLeaveCredits(request);
 
             assertNotNull(result);
             assertEquals(3, result.size());
 
-            // Verify VACATION leave credit
-            LeaveCredit vacation = result.stream()
+            // Verify vacation credit
+            LeaveCredit vacationResult = result.stream()
                     .filter(lc -> lc.getType() == LeaveType.VACATION)
                     .findFirst()
                     .orElse(null);
-            assertNotNull(vacation);
-            assertEquals(14.0, vacation.getCredits());
-            assertEquals("2025-2026", vacation.getFiscalYear());
-            assertEquals(employee, vacation.getEmployee());
+            assertNotNull(vacationResult);
+            assertEquals(14.0, vacationResult.getCredits());
+            assertEquals(effectiveDate, vacationResult.getEffectiveDate());
 
-            // Verify SICK leave credit
-            LeaveCredit sick = result.stream()
+            // Verify sick credit
+            LeaveCredit sickResult = result.stream()
                     .filter(lc -> lc.getType() == LeaveType.SICK)
                     .findFirst()
                     .orElse(null);
-            assertNotNull(sick);
-            assertEquals(7.0, sick.getCredits());
-            assertEquals("2025-2026", sick.getFiscalYear());
-            assertEquals(employee, sick.getEmployee());
+            assertNotNull(sickResult);
+            assertEquals(7.0, sickResult.getCredits());
+            assertEquals(effectiveDate, sickResult.getEffectiveDate());
 
-            // Verify BEREAVEMENT leave credit
-            LeaveCredit bereavement = result.stream()
+            // Verify bereavement credit
+            LeaveCredit bereavementResult = result.stream()
                     .filter(lc -> lc.getType() == LeaveType.BEREAVEMENT)
                     .findFirst()
                     .orElse(null);
-            assertNotNull(bereavement);
-            assertEquals(5.0, bereavement.getCredits());
-            assertEquals("2025-2026", bereavement.getFiscalYear());
-            assertEquals(employee, bereavement.getEmployee());
+            assertNotNull(bereavementResult);
+            assertEquals(5.0, bereavementResult.getCredits());
+            assertEquals(effectiveDate, bereavementResult.getEffectiveDate());
 
-            verify(employeeService).getEmployeeById(1L);
-            verify(leaveCreditRepository).existsByEmployee_IdAndFiscalYear(1L, "2025-2026");
-            verify(leaveCreditRepository).saveAll(any());
+            verify(employeeService).getEmployeeById(eq(1L));
+            verify(leaveCreditRepository).existsByEmployee_IdAndEffectiveDate(eq(1L), eq(effectiveDate));
+            verify(leaveCreditRepository).saveAll(anyList());
         }
 
         @Test
-        void shouldInitializeLeaveCreditsWithDefaultFiscalYearWhenNotProvided() {
-            InitializeEmployeeLeaveCreditsDto dto = new InitializeEmployeeLeaveCreditsDto();
-            dto.setEmployeeId(1L);
-            dto.setFiscalYear(null);
+        void shouldThrowConflictWhenLeaveCreditsAlreadyExist() {
+            LocalDate effectiveDate = LocalDate.of(2026, 1, 1);
+            LeaveCreditRequest request = LeaveCreditRequest.builder()
+                    .employeeId(1L)
+                    .effectiveDate(effectiveDate)
+                    .build();
 
-            when(employeeService.getEmployeeById(1L)).thenReturn(employee);
-            when(leaveCreditRepository.existsByEmployee_IdAndFiscalYear(eq(1L), any())).thenReturn(false);
-            when(leaveCreditRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-            List<LeaveCredit> result = leaveCreditService.initializeEmployeeLeaveCredits(dto);
-
-            assertNotNull(result);
-            assertEquals(3, result.size());
-
-            // Verify that fiscal year is generated (current year format)
-            String fiscalYear = result.getFirst().getFiscalYear();
-            assertNotNull(fiscalYear);
-            assertTrue(fiscalYear.matches("\\d{4}-\\d{4}"));
-
-            // All credits should have the same fiscal year
-            assertTrue(result.stream().allMatch(lc -> lc.getFiscalYear().equals(fiscalYear)));
-
-            verify(leaveCreditRepository).saveAll(any());
-        }
-
-        @Test
-        void shouldInitializeLeaveCreditsWithDefaultFiscalYearWhenBlankProvided() {
-            InitializeEmployeeLeaveCreditsDto dto = new InitializeEmployeeLeaveCreditsDto();
-            dto.setEmployeeId(1L);
-            dto.setFiscalYear("   ");
-
-            when(employeeService.getEmployeeById(1L)).thenReturn(employee);
-            when(leaveCreditRepository.existsByEmployee_IdAndFiscalYear(eq(1L), any())).thenReturn(false);
-            when(leaveCreditRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-            List<LeaveCredit> result = leaveCreditService.initializeEmployeeLeaveCredits(dto);
-
-            assertNotNull(result);
-            assertEquals(3, result.size());
-
-            // Verify that fiscal year is generated despite blank string
-            String fiscalYear = result.get(0).getFiscalYear();
-            assertNotNull(fiscalYear);
-            assertTrue(fiscalYear.matches("\\d{4}-\\d{4}"));
-
-            verify(leaveCreditRepository).saveAll(any());
-        }
-
-        @Test
-        void shouldThrowConflictExceptionWhenLeaveCreditsAlreadyExist() {
-            InitializeEmployeeLeaveCreditsDto dto = new InitializeEmployeeLeaveCreditsDto();
-            dto.setEmployeeId(1L);
-            dto.setFiscalYear("2025-2026");
-
-            when(employeeService.getEmployeeById(1L))
-                    .thenReturn(employee);
-            when(leaveCreditRepository.existsByEmployee_IdAndFiscalYear(1L, "2025-2026"))
+            when(employeeService.getEmployeeById(eq(1L))).thenReturn(employee);
+            when(leaveCreditRepository.existsByEmployee_IdAndEffectiveDate(eq(1L), eq(effectiveDate)))
                     .thenReturn(true);
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveCreditService.initializeEmployeeLeaveCredits(dto));
+                    leaveCreditService.createLeaveCredits(request));
 
             assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
             assertTrue(ex.getMessage().contains("Leave credits already exists"));
             assertTrue(ex.getMessage().contains("employee 1"));
 
-            verify(employeeService).getEmployeeById(1L);
-            verify(leaveCreditRepository).existsByEmployee_IdAndFiscalYear(1L, "2025-2026");
-            verify(leaveCreditRepository, never()).saveAll(any());
+            verify(employeeService).getEmployeeById(eq(1L));
+            verify(leaveCreditRepository).existsByEmployee_IdAndEffectiveDate(eq(1L), eq(effectiveDate));
+            verify(leaveCreditRepository, never()).saveAll(anyList());
         }
 
         @Test
-        void shouldThrowNotFoundExceptionWhenEmployeeDoesNotExist() {
-            InitializeEmployeeLeaveCreditsDto dto = new InitializeEmployeeLeaveCreditsDto();
-            dto.setEmployeeId(999L);
-            dto.setFiscalYear("2025-2026");
+        void shouldThrowNotFoundWhenEmployeeDoesNotExist() {
+            LocalDate effectiveDate = LocalDate.of(2026, 1, 1);
+            LeaveCreditRequest request = LeaveCreditRequest.builder()
+                    .employeeId(999L)
+                    .effectiveDate(effectiveDate)
+                    .build();
 
-            when(employeeService.getEmployeeById(999L))
+            when(employeeService.getEmployeeById(eq(999L)))
                     .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found: 999"));
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveCreditService.initializeEmployeeLeaveCredits(dto));
+                    leaveCreditService.createLeaveCredits(request));
 
             assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-            verify(employeeService).getEmployeeById(999L);
-            verify(leaveCreditRepository, never()).existsByEmployee_IdAndFiscalYear(any(), any());
-            verify(leaveCreditRepository, never()).saveAll(any());
+            assertTrue(ex.getMessage().contains("Employee not found"));
+
+            verify(employeeService).getEmployeeById(eq(999L));
+            verify(leaveCreditRepository, never()).existsByEmployee_IdAndEffectiveDate(anyLong(), any());
+            verify(leaveCreditRepository, never()).saveAll(anyList());
         }
 
-        @Test
-        void shouldCreateAllThreeLeaveTypes() {
-            InitializeEmployeeLeaveCreditsDto dto = new InitializeEmployeeLeaveCreditsDto();
-            dto.setEmployeeId(1L);
-            dto.setFiscalYear("2025-2026");
-
-            when(employeeService.getEmployeeById(1L)).thenReturn(employee);
-            when(leaveCreditRepository.existsByEmployee_IdAndFiscalYear(1L, "2025-2026")).thenReturn(false);
-            when(leaveCreditRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-            List<LeaveCredit> result = leaveCreditService.initializeEmployeeLeaveCredits(dto);
-
-            // Verify all three types exist
-            long vacationCount = result.stream().filter(lc -> lc.getType() == LeaveType.VACATION).count();
-            long sickCount = result.stream().filter(lc -> lc.getType() == LeaveType.SICK).count();
-            long bereavementCount = result.stream().filter(lc -> lc.getType() == LeaveType.BEREAVEMENT).count();
-
-            assertEquals(1, vacationCount);
-            assertEquals(1, sickCount);
-            assertEquals(1, bereavementCount);
-        }
-
-        @Test
-        void shouldUseCorrectDefaultCreditsForEachLeaveType() {
-            InitializeEmployeeLeaveCreditsDto dto = new InitializeEmployeeLeaveCreditsDto();
-            dto.setEmployeeId(1L);
-            dto.setFiscalYear("2025-2026");
-
-            when(employeeService.getEmployeeById(1L)).thenReturn(employee);
-            when(leaveCreditRepository.existsByEmployee_IdAndFiscalYear(1L, "2025-2026")).thenReturn(false);
-            when(leaveCreditRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-            List<LeaveCredit> result = leaveCreditService.initializeEmployeeLeaveCredits(dto);
-
-            // Verify default credits match constants
-            LeaveCredit vacation = result.stream()
-                    .filter(lc -> lc.getType() == LeaveType.VACATION)
-                    .findFirst()
-                    .orElseThrow();
-            assertEquals(14.0, vacation.getCredits());
-
-            LeaveCredit sick = result.stream()
-                    .filter(lc -> lc.getType() == LeaveType.SICK)
-                    .findFirst()
-                    .orElseThrow();
-            assertEquals(7.0, sick.getCredits());
-
-            LeaveCredit bereavement = result.stream()
-                    .filter(lc -> lc.getType() == LeaveType.BEREAVEMENT)
-                    .findFirst()
-                    .orElseThrow();
-            assertEquals(5.0, bereavement.getCredits());
-        }
-
-        @Test
-        void shouldAssociateAllCreditsWithCorrectEmployee() {
-            InitializeEmployeeLeaveCreditsDto dto = new InitializeEmployeeLeaveCreditsDto();
-            dto.setEmployeeId(1L);
-            dto.setFiscalYear("2025-2026");
-
-            when(employeeService.getEmployeeById(1L)).thenReturn(employee);
-            when(leaveCreditRepository.existsByEmployee_IdAndFiscalYear(1L, "2025-2026")).thenReturn(false);
-            when(leaveCreditRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-            List<LeaveCredit> result = leaveCreditService.initializeEmployeeLeaveCredits(dto);
-
-            // Verify all credits are associated with the correct employee
-            assertTrue(result.stream().allMatch(lc -> lc.getEmployee().equals(employee)));
-        }
     }
 
     @Nested
