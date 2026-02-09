@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.iodsky.sweldox.common.BaseModel;
 import com.iodsky.sweldox.department.Department;
 import com.iodsky.sweldox.position.Position;
-import com.iodsky.sweldox.payroll.benefit.Benefit;
+import com.iodsky.sweldox.benefit.Benefit;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -46,7 +46,7 @@ public class Employee extends BaseModel {
     @Column(name = "phone_number", unique = true)
     private String phoneNumber;
 
-    @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true, optional = true)
     @JsonIgnore
     private GovernmentId governmentId;
 
