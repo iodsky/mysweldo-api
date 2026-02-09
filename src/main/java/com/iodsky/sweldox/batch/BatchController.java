@@ -27,7 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 
 @RestController
-@RequestMapping("/job")
+@RequestMapping("/jobs")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Batch Jobs", description = "Batch job management endpoints")
