@@ -8,6 +8,7 @@ import com.iodsky.sweldox.leave.credit.LeaveCreditRequest;
 import com.iodsky.sweldox.leave.credit.LeaveCreditService;
 import com.iodsky.sweldox.security.user.User;
 import com.iodsky.sweldox.security.user.UserRole;
+import com.iodsky.sweldox.security.user.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,9 +17,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -36,6 +34,7 @@ class LeaveCreditServiceTest {
 
     @Mock private LeaveCreditRepository leaveCreditRepository;
     @Mock private EmployeeService employeeService;
+    @Mock private UserService userService;
     @InjectMocks private LeaveCreditService leaveCreditService;
 
     private User normalUser;
@@ -238,33 +237,27 @@ class LeaveCreditServiceTest {
 
         @Test
         void shouldReturnAllLeaveCreditsForAuthenticatedEmployee() {
-            Authentication authentication = mock(Authentication.class);
-            SecurityContext context = mock(SecurityContext.class);
-            when(authentication.getPrincipal()).thenReturn(normalUser);
-            when(context.getAuthentication()).thenReturn(authentication);
-            SecurityContextHolder.setContext(context);
-
+            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
             when(leaveCreditRepository.findAllByEmployee_Id(eq(1L)))
                     .thenReturn(List.of(vacationCredit, sickCredit));
 
             List<LeaveCredit> result = leaveCreditService.getLeaveCreditsByEmployeeId();
 
             assertEquals(2, result.size());
+            verify(userService).getAuthenticatedUser();
             verify(leaveCreditRepository).findAllByEmployee_Id(eq(1L));
         }
 
         @Test
         void shouldThrowUnauthorizedWhenPrincipalIsNotUser() {
-            Authentication authentication = mock(Authentication.class);
-            SecurityContext context = mock(SecurityContext.class);
-            when(authentication.getPrincipal()).thenReturn("anonymousUser");
-            when(context.getAuthentication()).thenReturn(authentication);
-            SecurityContextHolder.setContext(context);
+            when(userService.getAuthenticatedUser())
+                    .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required"));
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
                     leaveCreditService.getLeaveCreditsByEmployeeId());
 
             assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+            verify(userService).getAuthenticatedUser();
         }
     }
 
