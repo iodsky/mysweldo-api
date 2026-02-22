@@ -11,9 +11,22 @@ import java.util.UUID;
 @Repository
 public interface PayrollRepository extends JpaRepository<Payroll, UUID> {
 
-    Page<Payroll> findAllByPeriodStartDateBetween(LocalDate startDate, LocalDate endDate, Pageable pageable);
+    Page<Payroll> findAllByPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
+            LocalDate endDate,
+            LocalDate startDate,
+            Pageable pageable
+    );
 
-    Page<Payroll> findAllByEmployee_IdAndPeriodStartDateBetween(Long employeeId, LocalDate startDate, LocalDate endDate, Pageable pageable);
+    Page<Payroll> findAllByEmployee_IdAndPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
+            Long employeeId,
+            LocalDate endDate,
+            LocalDate startDate,
+            Pageable pageable
+    );
 
     boolean existsByEmployee_IdAndPeriodStartDateAndPeriodEndDate(Long employeeId, LocalDate startDate, LocalDate endDate);
+
+    Page<Payroll> findAllByPeriodStartDateGreaterThanEqual(LocalDate periodStartDate, Pageable pageable);
+
+    Page<Payroll> findAllByPeriodEndDateLessThanEqual(LocalDate periodEndDate, Pageable pageable);
 }

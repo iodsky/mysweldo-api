@@ -1,7 +1,6 @@
 package com.iodsky.sweldox.attendance;
 
 import com.iodsky.sweldox.common.DateRange;
-import com.iodsky.sweldox.common.DateRangeResolver;
 import com.iodsky.sweldox.employee.EmployeeService;
 import com.iodsky.sweldox.employee.Employee;
 import com.iodsky.sweldox.security.user.User;
@@ -10,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -29,7 +29,6 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final EmployeeService employeeService;
     private final UserService userService;
-    private final DateRangeResolver dateRangeResolver;
 
     public Attendance createAttendance(AttendanceDto attendanceDto) {
         User user = userService.getAuthenticatedUser();
@@ -167,15 +166,19 @@ public class AttendanceService {
         return attendanceRepository.save(attendance);
     }
 
-    public Page<Attendance> getAllAttendances(int page, int limit, LocalDate startDate, LocalDate endDate) {
-        Pageable pageable = PageRequest.of(page, limit);
+    public Page<Attendance> getAllAttendances(int page, int limit, LocalDate date, LocalDate endDate) {
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable = PageRequest.of(page, limit, sort);
 
-        if (startDate != null && endDate == null) {
-            return attendanceRepository.findAllByDate(startDate, pageable);
+        if (date == null && endDate == null) {
+            return attendanceRepository.findAll(pageable);
         }
 
-        DateRange dateRange = dateRangeResolver.resolve(startDate, endDate);
+        if (date != null && endDate == null) {
+            return attendanceRepository.findAllByDate(date, pageable);
+        }
 
+        DateRange dateRange = new DateRange(date, endDate);
         return attendanceRepository.findAllByDateBetween(dateRange.startDate(), dateRange.endDate(), pageable);
     }
 
@@ -195,7 +198,7 @@ public class AttendanceService {
         }
 
         Pageable pageable = PageRequest.of(page, limit);
-        DateRange dateRange = dateRangeResolver.resolve(startDate, endDate);
+        DateRange dateRange = new DateRange(startDate, endDate);
 
         return attendanceRepository.findByEmployee_IdAndDateBetween(employeeId, dateRange.startDate(), dateRange.endDate(), pageable);
     }

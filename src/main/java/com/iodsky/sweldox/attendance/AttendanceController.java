@@ -42,10 +42,10 @@ public class AttendanceController {
     public ResponseEntity<ApiResponse<List<AttendanceDto>>> getAllAttendances(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
-            @Parameter(description = "Filter by start date") @RequestParam(required = false) LocalDate startDate,
-            @Parameter(description = "Filter by end date") @RequestParam(required = false) LocalDate endDate
+            @Parameter(description = "Filter by date (specific date if endDate is null, or start of range if endDate is provided)") @RequestParam(required = false) LocalDate date,
+            @Parameter(description = "Filter by end date (creates a date range when used with date parameter)") @RequestParam(required = false) LocalDate endDate
     ) {
-        Page<Attendance> page = attendanceService.getAllAttendances(pageNo, limit, startDate, endDate);
+        Page<Attendance> page = attendanceService.getAllAttendances(pageNo, limit, date, endDate);
 
         List<AttendanceDto> data = page.getContent().stream().map(attendanceMapper::toDto).toList();
 

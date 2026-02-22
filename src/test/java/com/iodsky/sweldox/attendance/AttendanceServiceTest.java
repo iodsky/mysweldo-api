@@ -1,7 +1,5 @@
 package com.iodsky.sweldox.attendance;
 
-import com.iodsky.sweldox.common.DateRange;
-import com.iodsky.sweldox.common.DateRangeResolver;
 import com.iodsky.sweldox.employee.EmployeeService;
 import com.iodsky.sweldox.employee.Employee;
 import com.iodsky.sweldox.security.user.User;
@@ -16,7 +14,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -32,7 +29,6 @@ class AttendanceServiceTest {
     @Mock private AttendanceRepository attendanceRepository;
     @Mock private EmployeeService employeeService;
     @Mock private UserService userService;
-    @Mock private DateRangeResolver dateRangeResolver;
     @InjectMocks private AttendanceService attendanceService;
 
     private User hrUser;
@@ -54,7 +50,6 @@ class AttendanceServiceTest {
         currentEmployee.setId(1L);
         currentEmployee.setStartShift(SHIFT_START);
         currentEmployee.setEndShift(SHIFT_END);
-
 
         otherEmployee = new Employee();
         otherEmployee.setId(2L);
@@ -85,8 +80,6 @@ class AttendanceServiceTest {
                 .totalHours(BigDecimal.ZERO)
                 .overtime(BigDecimal.ZERO)
                 .build();
-
-        SecurityContextHolder.clearContext();
     }
 
     @Nested
@@ -420,8 +413,6 @@ class AttendanceServiceTest {
         void shouldReturnAttendancesForDateRange() {
             Pageable pageable = PageRequest.of(0, 10);
             Page<Attendance> attendancePage = new PageImpl<>(List.of(attendance), pageable, 1);
-            when(dateRangeResolver.resolve(any(), any()))
-                    .thenReturn(new DateRange(TODAY, TODAY.plusDays(2)));
             when(attendanceRepository.findAllByDateBetween(any(), any(), any(Pageable.class))).thenReturn(attendancePage);
 
             Page<Attendance> result = attendanceService.getAllAttendances(0, 10, TODAY, TODAY.plusDays(2));
@@ -430,20 +421,6 @@ class AttendanceServiceTest {
             assertEquals(1, result.getContent().size());
         }
 
-        @Test
-        void shouldHandleSwappedDates() {
-            Pageable pageable = PageRequest.of(0, 10);
-            Page<Attendance> attendancePage = new PageImpl<>(List.of(attendance), pageable, 1);
-            when(dateRangeResolver.resolve(any(), any()))
-                    .thenReturn(new DateRange(TODAY, TODAY.plusDays(2)));
-
-            when(attendanceRepository.findAllByDateBetween(any(), any(), any(Pageable.class))).thenReturn(attendancePage);
-
-            Page<Attendance> result = attendanceService.getAllAttendances(0, 10, TODAY.plusDays(2), TODAY);
-
-            assertFalse(result.isEmpty());
-            verify(attendanceRepository).findAllByDateBetween(any(LocalDate.class), any(LocalDate.class), any(Pageable.class));
-        }
     }
 
     @Nested
@@ -455,8 +432,6 @@ class AttendanceServiceTest {
             Page<Attendance> attendancePage = new PageImpl<>(List.of(attendance), pageable, 1);
             when(attendanceRepository.findByEmployee_IdAndDateBetween(anyLong(), any(), any(), any(Pageable.class)))
                     .thenReturn(attendancePage);
-            when(dateRangeResolver.resolve(any(), any()))
-                    .thenReturn(new DateRange(TODAY, TODAY.plusDays(2)));
 
             Page<Attendance> result = attendanceService.getEmployeeAttendances(0, 10, null, TODAY, TODAY.plusDays(1));
 
@@ -471,8 +446,6 @@ class AttendanceServiceTest {
             Page<Attendance> attendancePage = new PageImpl<>(List.of(attendance), pageable, 1);
             when(attendanceRepository.findByEmployee_IdAndDateBetween(anyLong(), any(), any(), any(Pageable.class)))
                     .thenReturn(attendancePage);
-            when(dateRangeResolver.resolve(any(), any()))
-                    .thenReturn(new DateRange(TODAY, TODAY.plusDays(2)));
 
             Page<Attendance> result = attendanceService.getEmployeeAttendances(0, 10, otherEmployee.getId(), TODAY, TODAY.plusDays(1));
 
