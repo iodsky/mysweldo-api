@@ -3,14 +3,15 @@ package com.iodsky.sweldox.common;
 import com.iodsky.sweldox.common.response.ErrorResponse;
 import com.iodsky.sweldox.payroll.core.PayrollRunException;
 import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -19,13 +20,46 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String paramName = ex.getName();
+        String requiredType = ex.getRequiredType().getSimpleName();
+        String providedValue = ex.getValue().toString();
+
+        String message = String.format("Invalid value '%s' for parameter '%s'. Expected type: %s",
+                providedValue, paramName, requiredType);
+
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message(message)
+                .path(request.getRequestURI())
+                .build();
+
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+    
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex,  HttpServletRequest request) {
+
+        String message = ex.getMessage().split(": ")[0];
+
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message(message)
+                .path(request.getRequestURI())
+                .build();
+
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException ex, HttpServletRequest request) {
-        logger.warn("Data integrity violation: {}", ex.getMessage());
+        log.warn("Data integrity violation: {}", ex.getMessage());
 
         String message = "Data validation error";
         DuplicateField duplicateField = null;
@@ -79,7 +113,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleResponseStatusException(ResponseStatusException ex, HttpServletRequest request) {
 
-        logger.error("HTTP error has occured: {}", ex.getMessage());
+        log.error("HTTP error has occured: {}", ex.getMessage());
 
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(Instant.now())
@@ -111,14 +145,28 @@ public class GlobalExceptionHandler {
                 .path(request.getRequestURI())
                 .build();
 
-        logger.error("Validation failed: {}", validationErrors);
+        log.error("Validation failed: {}", validationErrors);
+
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, HttpServletRequest request) {
+        log.warn("Invalid argument: {}", ex.getMessage());
+
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
 
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(PayrollRunException.class)
     public ResponseEntity<ErrorResponse> handlePayrollRunException(Exception ex, HttpServletRequest request) {
-        logger.error("An unexpected error has occured while payroll processing");
+        log.error("An unexpected error has occured while payroll processing");
 
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(Instant.now())
@@ -133,7 +181,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAllOtherException(Exception ex, HttpServletRequest request) {
 
-        logger.error("An unexpected error has occurred: {}", ex.getMessage());
+        log.error("An unexpected error has occurred: {}", ex.getMessage());
 
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(Instant.now())
