@@ -20,7 +20,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -65,8 +64,8 @@ public class AttendanceService {
 
 
         // Check for existing attendance record
-        Optional<Attendance> exists = attendanceRepository.findByEmployee_IdAndDate(employeeId, attendanceDate);
-        if (exists.isPresent()) {
+        Attendance existing = getEmployeeAttendanceByDate(employeeId, attendanceDate);
+        if (existing != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Attendance record already exists");
         }
 
@@ -83,6 +82,10 @@ public class AttendanceService {
                 .build();
 
         return attendanceRepository.save(attendance);
+    }
+
+    public Attendance getEmployeeAttendanceByDate(Long employeeId, LocalDate date) {
+        return attendanceRepository.findByEmployee_IdAndDate(employeeId, date).orElse(null);
     }
 
     public Attendance updateAttendance(UUID id, AttendanceDto attendanceDto) {
