@@ -25,9 +25,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LeaveRequestService {
 
-    private final LeaveRequestRepository leaveRequestRepository;
+    private final LeaveRequestRepository repository;
     private final LeaveCreditService leaveCreditService;
-    private final LeaveRequestMapper leaveRequestMapper;
+    private final LeaveRequestMapper mapper;
     private final UserService userService;
 
     @Transactional
@@ -61,30 +61,60 @@ public class LeaveRequestService {
                 .status(RequestStatus.PENDING)
                 .build();
 
-        return leaveRequestRepository.save(leave);
+        return repository.save(leave);
     }
 
     public Page<LeaveRequest> getLeaveRequests(int pageNo, int limit) {
-        Pageable page = PageRequest.of(pageNo, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable page = PageRequest.of(pageNo, limit, sort);
 
-        User user = userService.getAuthenticatedUser();
+        return repository.findAll(page);
+    }
 
-        if (user.getUserRole().getRole().equals("HR")) {
-            return leaveRequestRepository.findAll(page);
+    public Page<LeaveRequest> getEmployeeLeaveRequests(int pageNo, int limit) {
+        User authenticatedUser = userService.getAuthenticatedUser();
+        Long employeeId = authenticatedUser.getEmployee().getId();
+
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable page = PageRequest.of(pageNo, limit, sort);
+
+        return repository.findAllByEmployee_Id(employeeId, page);
+    }
+
+    public Page<LeaveRequest> getSubordinatesLeaveRequests(int pageNo, int limit) {
+        User authenticatedUser = userService.getAuthenticatedUser();
+        Long supervisorId = authenticatedUser.getEmployee().getId();
+
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable = PageRequest.of(pageNo, limit, sort);
+
+        return repository.findAllByEmployee_Supervisor_Id(supervisorId, pageable);
+    }
+
+    public LeaveRequest getLeaveRequestById(String id) {
+        User authenticatedUser = userService.getAuthenticatedUser();
+        boolean isHR = authenticatedUser.getUserRole().getRole().equals("HR");
+        Long employeeId = authenticatedUser.getEmployee().getId();
+
+        LeaveRequest leaveRequest = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Leave request " + id + " not found"));
+
+        boolean isSupervisor = leaveRequest.getEmployee().getSupervisor() != null &&
+                leaveRequest.getEmployee().getSupervisor().getId().equals(employeeId);
+
+        if (!leaveRequest.getEmployee().getId().equals(employeeId) && !isHR && !isSupervisor) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You don't have permission to access this resource");
         }
 
-        return leaveRequestRepository.findAllByEmployee_Id(user.getEmployee().getId(), page);
+        return leaveRequest;
     }
 
-    public LeaveRequest getLeaveRequestById(String leaveRequestId) {
-        return leaveRequestRepository.findById(leaveRequestId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Leave request " + leaveRequestId + " not found"));
-    }
-
-    public LeaveRequest updateLeaveRequest(String leaveRequestId, LeaveRequestDto dto) {
+    @Transactional
+    public LeaveRequest updateLeaveRequest(String id, LeaveRequestDto dto) {
         User user = userService.getAuthenticatedUser();
 
-        LeaveRequest entity = getLeaveRequestById(leaveRequestId);
+        LeaveRequest entity = getLeaveRequestById(id);
         if (!entity.getEmployee().getId().equals(user.getEmployee().getId())) {
             if (!user.getUserRole().getRole().equals("HR")) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have permission to access this resource");
@@ -95,22 +125,33 @@ public class LeaveRequestService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete processed leave request");
         }
 
-        LeaveRequest updated = leaveRequestMapper.updateEntity(entity, dto);
+        LeaveRequest updated = mapper.updateEntity(entity, dto);
 
-        return leaveRequestRepository.save(updated);
+        return repository.save(updated);
     }
 
     @Transactional
-    public LeaveRequest updateLeaveStatus(String leaveRequestId, RequestStatus newStatus) {
-        LeaveRequest leaveRequest = getLeaveRequestById(leaveRequestId);
+    public LeaveRequest updateLeaveStatus(String id, RequestStatus status) {
+        User authenticatedUser = userService.getAuthenticatedUser();
+        LeaveRequest leaveRequest = getLeaveRequestById(id);
 
-        if (!leaveRequest.getStatus().equals(RequestStatus.PENDING)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Leave request " + leaveRequestId + " has already been processed");
+        boolean isHR = authenticatedUser.getUserRole().getRole().equals("HR");
+
+        boolean isSupervisor = leaveRequest.getEmployee().getSupervisor() != null &&
+                leaveRequest.getEmployee().getSupervisor().getId().equals(authenticatedUser.getEmployee().getId());
+
+        if (!isHR && !isSupervisor) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You don't have permission to approve this request");
         }
 
-        leaveRequest.setStatus(newStatus);
+        if (!leaveRequest.getStatus().equals(RequestStatus.PENDING)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Leave request " + id + " has already been processed");
+        }
 
-        if (newStatus.equals(RequestStatus.APPROVED)) {
+        leaveRequest.setStatus(status);
+
+        if (status.equals(RequestStatus.APPROVED)) {
             double daysToDeduct = calculateTotalDays(leaveRequest.getStartDate(), leaveRequest.getEndDate());
             LeaveCredit leaveCredit = leaveCreditService.getLeaveCreditByEmployeeIdAndType(leaveRequest.getEmployee().getId(), leaveRequest.getLeaveType());
 
@@ -130,16 +171,16 @@ public class LeaveRequestService {
         }
 
         try {
-            return leaveRequestRepository.save(leaveRequest);
+            return repository.save(leaveRequest);
         } catch (OptimisticLockException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Leave credits were modified by another process.");
         }
     }
 
-    public void deleteLeaveRequest(String leaveRequestId) {
+    public void deleteLeaveRequest(String id) {
         User user = userService.getAuthenticatedUser();
 
-        LeaveRequest leaveRequest = getLeaveRequestById(leaveRequestId);
+        LeaveRequest leaveRequest = getLeaveRequestById(id);
         if (!leaveRequest.getEmployee().getId().equals(user.getEmployee().getId())) {
             if (!user.getUserRole().getRole().equals("HR")) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have permission to access this resource");
@@ -150,7 +191,7 @@ public class LeaveRequestService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete processed leave request");
         }
 
-        leaveRequestRepository.delete(leaveRequest);
+        repository.delete(leaveRequest);
     }
 
     private double calculateTotalDays(LocalDate startDate, LocalDate endDate) {
@@ -183,14 +224,14 @@ public class LeaveRequestService {
         }
 
         // Duplicate dates
-        if (leaveRequestRepository.existsByEmployee_IdAndStartDateAndEndDate(
+        if (repository.existsByEmployee_IdAndStartDateAndEndDate(
                 employeeId, dto.getStartDate(), dto.getEndDate()
         )) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Duplicate leave request");
         }
 
         // Overlapping dates
-        if (leaveRequestRepository
+        if (repository
                 .existsByEmployee_IdAndStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
                         employeeId,
                         List.of(RequestStatus.PENDING, RequestStatus.APPROVED),

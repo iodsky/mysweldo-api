@@ -15,6 +15,8 @@ public interface OvertimeRequestRepository extends JpaRepository<OvertimeRequest
 
     Page<OvertimeRequest> findByDateBetween(LocalDate startDate, LocalDate endDate, Pageable pageable);
 
-    Page<OvertimeRequest> findAllByEmployee_Id(long employeeId, Pageable pageable);
+    Page<OvertimeRequest> findAllByEmployee_Id(Long employeeId, Pageable pageable);
+
+    Page<OvertimeRequest> findByEmployee_Supervisor_Id(Long supervisorId, Pageable pageable);
 
 }

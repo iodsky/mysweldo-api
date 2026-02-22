@@ -6,6 +6,7 @@ import com.iodsky.sweldox.common.DateRange;
 import com.iodsky.sweldox.common.RequestStatus;
 import com.iodsky.sweldox.employee.Employee;
 import com.iodsky.sweldox.employee.EmployeeService;
+import com.iodsky.sweldox.leave.request.LeaveRequest;
 import com.iodsky.sweldox.security.user.User;
 import com.iodsky.sweldox.security.user.UserService;
 import jakarta.transaction.Transactional;
@@ -85,21 +86,33 @@ public class OvertimeRequestService {
         return repository.findAllByEmployee_Id(employeeId, pageable);
     }
 
+    public Page<OvertimeRequest> getSubordinatesOvertimeRequests(int page, int limit) {
+        User authenticatedUser = userService.getAuthenticatedUser();
+        Long supervisorId = authenticatedUser.getEmployee().getId();
+
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable  = PageRequest.of(page, limit, sort);
+
+        return repository.findByEmployee_Supervisor_Id(supervisorId, pageable);
+    }
 
     public OvertimeRequest getOvertimeRequestById(UUID id) {
         User authenticatedUser = userService.getAuthenticatedUser();
         boolean isHR = authenticatedUser.getUserRole().getRole().equals("HR");
-        Long employeeId =authenticatedUser.getEmployee().getId();
+        Long employeeId = authenticatedUser.getEmployee().getId();
 
-        OvertimeRequest overtimeRequest = repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Overtime request not found for id: " + id));
+        OvertimeRequest request = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Leave request " + id + " not found"));
 
-        if (!overtimeRequest.getEmployee().getId().equals(employeeId) && !isHR) {
-            throw  new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "You don't have the permissions to access this resource");
+        boolean isSupervisor = request.getEmployee().getSupervisor() != null &&
+                request.getEmployee().getSupervisor().getId().equals(employeeId);
+
+        if (!request.getEmployee().getId().equals(employeeId) && !isHR && !isSupervisor) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You don't have permission to access this resource");
         }
 
-        return overtimeRequest;
+        return request;
     }
 
     @Transactional
@@ -128,10 +141,27 @@ public class OvertimeRequestService {
         return repository.save(existing);
     }
 
+    @Transactional
     public OvertimeRequest updateOvertimeRequestStatus(UUID id, RequestStatus status) {
-        OvertimeRequest existing = getOvertimeRequestById(id);
-        existing.setStatus(status);
-        return repository.save(existing);
+        User authenticatedUser = userService.getAuthenticatedUser();
+        OvertimeRequest request = getOvertimeRequestById(id);
+
+        boolean isHR = authenticatedUser.getUserRole().getRole().equals("HR");
+
+        boolean isSupervisor = request.getEmployee().getSupervisor() != null &&
+                request.getEmployee().getSupervisor().getId().equals(authenticatedUser.getEmployee().getId());
+
+        if (!isHR && !isSupervisor) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You don't have permission to approve this request");
+        }
+
+        if (!request.getStatus().equals(RequestStatus.PENDING)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Overtime request " + id + " has already been processed");
+        }
+
+        request.setStatus(status);
+        return repository.save(request);
     }
 
     public void deleteOvertimeRequest(UUID id) {

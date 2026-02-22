@@ -1,0 +1,1 @@
+INSERT INTO user_role (role, created_at, updated_at, version) VALUES ('SUPERVISOR', NOW(), NOW(), 0);

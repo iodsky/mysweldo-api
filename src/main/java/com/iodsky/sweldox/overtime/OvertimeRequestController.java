@@ -69,6 +69,18 @@ public class OvertimeRequestController {
         return ResponseFactory.ok("Overtime request retrieved successfully", requests, PaginationMeta.of(page));
     }
 
+    @GetMapping("/subordinates")
+    @PreAuthorize("hasRole('SUPERVISOR')")
+    public ResponseEntity<ApiResponse<List<OvertimeRequestDto>>> getSubordinatesOvertimeRequests(
+            @RequestParam(defaultValue = "0") @Min(0) int pageNo,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit
+    ) {
+        Page<OvertimeRequest> page = service.getSubordinatesOvertimeRequests(pageNo, limit);
+        List<OvertimeRequestDto> requests = page.getContent().stream().map(mapper::toDto).toList();
+
+        return ResponseFactory.ok("Overtime request retrieved successfully", requests, PaginationMeta.of(page));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<OvertimeRequestDto>> updateOvertimeRequest(@PathVariable UUID id, @RequestBody @Valid UpdateOvertimeRequest request) {
         OvertimeRequest entity = service.updateOvertimeRequest(id, request);
@@ -77,8 +89,8 @@ public class OvertimeRequestController {
         return ResponseFactory.ok("Overtime request updated successfully", dto);
     }
 
-    @PatchMapping("/{id}")
-    @PreAuthorize("hasRole('HR')")
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('HR', 'SUPERVISOR')")
     public ResponseEntity<ApiResponse<OvertimeRequestDto>> updateOvertimeRequestStatus(@PathVariable UUID id, @RequestParam RequestStatus status) {
         OvertimeRequest entity = service.updateOvertimeRequestStatus(id, status);
         OvertimeRequestDto dto = mapper.toDto(entity);

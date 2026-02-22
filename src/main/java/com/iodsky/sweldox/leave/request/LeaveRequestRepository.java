@@ -22,4 +22,6 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Stri
             LocalDate startDate,
             LocalDate endDate
     );
+
+    Page<LeaveRequest> findAllByEmployee_Supervisor_Id(Long supervisorId, Pageable pageable);
 }
