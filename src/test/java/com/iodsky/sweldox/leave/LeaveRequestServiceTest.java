@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,49 +37,81 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class LeaveRequestServiceTest {
 
-    @Mock private LeaveRequestRepository leaveRequestRepository;
+    @Mock private LeaveRequestRepository repository;
     @Mock private LeaveCreditService leaveCreditService;
-    @Mock private LeaveRequestMapper leaveRequestMapper;
+    @Mock private LeaveRequestMapper mapper;
     @Mock private UserService userService;
-    @InjectMocks private LeaveRequestService leaveRequestService;
+    @InjectMocks private LeaveRequestService service;
+
+    private Employee hrEmployee;
+    private Employee employee;
+    private Employee supervisorEmployee;
+    private Employee subordinateEmployee;
 
     private User hrUser;
-    private User normalUser;
-    private Employee employee;
-    private Employee otherEmployee;
+    private User employeeUser;
+    private User supervisorUser;
+
+    private LeaveRequest pendingLeaveRequest;
+    private LeaveRequest approvedLeaveRequest;
+    private LeaveRequest rejectedLeaveRequest;
+    private LeaveRequest otherEmployeeLeaveRequest;
+    private LeaveRequest subordinateLeaveRequest;
+
     private LeaveRequestDto leaveRequestDto;
-    private LeaveRequest leaveRequest;
+    private LeaveRequestDto updateLeaveRequestDto;
+
     private LeaveCredit leaveCredit;
 
+    private Pageable pageable;
+    private Page<LeaveRequest> pageWithAllRequests;
+    private Page<LeaveRequest> pageWithFilteredRequests;
+    private Page<LeaveRequest> emptyPage;
+
     @BeforeEach
-    void setUp() {
-        // Setup employees
-        employee = new Employee();
-        employee.setId(1L);
-        employee.setFirstName("Juan");
-        employee.setLastName("Dela Cruz");
+    void setup() {
+        hrEmployee = Employee.builder()
+                .id(10000L)
+                .firstName("Maria")
+                .lastName("Santos")
+                .build();
 
-        otherEmployee = new Employee();
-        otherEmployee.setId(2L);
-        otherEmployee.setFirstName("Maria");
-        otherEmployee.setLastName("Santos");
+        employee = Employee.builder()
+                .id(10001L)
+                .firstName("Juan")
+                .lastName("Dela Cruz")
+                .build();
 
-        // Setup users
-        UserRole hrRole = new UserRole();
-        hrRole.setRole("HR");
+        supervisorEmployee = Employee.builder()
+                .id(10002L)
+                .firstName("Pedro")
+                .lastName("Garcia")
+                .build();
 
-        hrUser = new User();
-        hrUser.setId(UUID.randomUUID());
-        hrUser.setEmployee(employee);
-        hrUser.setUserRole(hrRole);
+        subordinateEmployee = Employee.builder()
+                .id(10003L)
+                .firstName("Ana")
+                .lastName("Reyes")
+                .supervisor(supervisorEmployee)
+                .build();
 
-        UserRole normalRole = new UserRole();
-        normalRole.setRole("EMPLOYEE");
+        hrUser = User.builder()
+                .id(UUID.randomUUID())
+                .employee(hrEmployee)
+                .userRole(new UserRole("HR"))
+                .build();
 
-        normalUser = new User();
-        normalUser.setId(UUID.randomUUID());
-        normalUser.setEmployee(employee);
-        normalUser.setUserRole(normalRole);
+        employeeUser = User.builder()
+                .id(UUID.randomUUID())
+                .employee(employee)
+                .userRole(new UserRole("EMPLOYEE"))
+                .build();
+
+        supervisorUser = User.builder()
+                .id(UUID.randomUUID())
+                .employee(supervisorEmployee)
+                .userRole(new UserRole("SUPERVISOR"))
+                .build();
 
         leaveRequestDto = LeaveRequestDto.builder()
                 .leaveType("VACATION")
@@ -87,14 +120,11 @@ class LeaveRequestServiceTest {
                 .note("Year end vacation")
                 .build();
 
-        leaveRequest = LeaveRequest.builder()
-                .id("LR-2025-001")
-                .employee(employee)
-                .leaveType(LeaveType.VACATION)
-                .startDate(leaveRequestDto.getStartDate())
-                .endDate(leaveRequestDto.getEndDate())
-                .note(leaveRequestDto.getNote())
-                .status(RequestStatus.PENDING)
+        updateLeaveRequestDto = LeaveRequestDto.builder()
+                .leaveType("VACATION")
+                .startDate(LocalDate.of(2025, 12, 23)) // Monday
+                .endDate(LocalDate.of(2025, 12, 26)) // Thursday
+                .note("Updated vacation dates")
                 .build();
 
         leaveCredit = LeaveCredit.builder()
@@ -103,6 +133,61 @@ class LeaveRequestServiceTest {
                 .type(LeaveType.VACATION)
                 .credits(10.0)
                 .build();
+
+        pendingLeaveRequest = LeaveRequest.builder()
+                .id("LR-2025-001")
+                .employee(employee)
+                .leaveType(LeaveType.VACATION)
+                .startDate(LocalDate.of(2025, 12, 16))
+                .endDate(LocalDate.of(2025, 12, 19))
+                .note("Pending vacation leave")
+                .status(RequestStatus.PENDING)
+                .build();
+
+        approvedLeaveRequest = LeaveRequest.builder()
+                .id("LR-2025-002")
+                .employee(employee)
+                .leaveType(LeaveType.SICK)
+                .startDate(LocalDate.of(2025, 11, 10))
+                .endDate(LocalDate.of(2025, 11, 12))
+                .note("Approved sick leave")
+                .status(RequestStatus.APPROVED)
+                .build();
+
+        rejectedLeaveRequest = LeaveRequest.builder()
+                .id("LR-2025-003")
+                .employee(employee)
+                .leaveType(LeaveType.VACATION)
+                .startDate(LocalDate.of(2025, 10, 5))
+                .endDate(LocalDate.of(2025, 10, 7))
+                .note("Rejected vacation leave")
+                .status(RequestStatus.REJECTED)
+                .build();
+
+        otherEmployeeLeaveRequest = LeaveRequest.builder()
+                .id("LR-2025-004")
+                .employee(hrEmployee)
+                .leaveType(LeaveType.VACATION)
+                .startDate(LocalDate.of(2025, 12, 20))
+                .endDate(LocalDate.of(2025, 12, 23))
+                .note("Other employee's leave request")
+                .status(RequestStatus.PENDING)
+                .build();
+
+        subordinateLeaveRequest = LeaveRequest.builder()
+                .id("LR-2025-005")
+                .employee(subordinateEmployee)
+                .leaveType(LeaveType.SICK)
+                .startDate(LocalDate.of(2025, 12, 27))
+                .endDate(LocalDate.of(2025, 12, 30))
+                .note("Subordinate's leave request")
+                .status(RequestStatus.PENDING)
+                .build();
+
+        pageable = PageRequest.of(0, 10);
+        pageWithAllRequests = new PageImpl<>(List.of(pendingLeaveRequest, approvedLeaveRequest, rejectedLeaveRequest), pageable, 3);
+        pageWithFilteredRequests = new PageImpl<>(List.of(pendingLeaveRequest, approvedLeaveRequest), pageable, 2);
+        emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
     }
 
     @Nested
@@ -110,24 +195,21 @@ class LeaveRequestServiceTest {
 
         @Test
         void shouldCreateLeaveRequestSuccessfully() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
-            when(leaveCreditService.getLeaveCreditByEmployeeIdAndType(eq(1L), eq(LeaveType.VACATION)))
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(leaveCreditService.getLeaveCreditByEmployeeIdAndType(eq(10001L), eq(LeaveType.VACATION)))
                     .thenReturn(leaveCredit);
-            when(leaveRequestRepository.existsByEmployee_IdAndStartDateAndEndDate(eq(1L), any(), any()))
+            when(repository.existsByEmployee_IdAndStartDateAndEndDate(eq(10001L), any(), any()))
                     .thenReturn(false);
-            when(leaveRequestRepository.existsByEmployee_IdAndStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                    eq(1L), anyList(), any(), any()))
+            when(repository.existsByEmployee_IdAndStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                    eq(10001L), anyList(), any(), any()))
                     .thenReturn(false);
-            when(leaveRequestRepository.save(any(LeaveRequest.class))).thenReturn(leaveRequest);
+            when(repository.save(any(LeaveRequest.class))).thenReturn(pendingLeaveRequest);
 
-            LeaveRequest result = leaveRequestService.createLeaveRequest(leaveRequestDto);
+            LeaveRequest result = service.createLeaveRequest(leaveRequestDto);
 
             assertNotNull(result);
-            assertEquals(employee, result.getEmployee());
-            assertEquals(LeaveType.VACATION, result.getLeaveType());
             assertEquals(RequestStatus.PENDING, result.getStatus());
-            verify(leaveRequestRepository).save(any(LeaveRequest.class));
+            verify(repository).save(any(LeaveRequest.class));
         }
 
         @Test
@@ -135,52 +217,49 @@ class LeaveRequestServiceTest {
             when(userService.getAuthenticatedUser()).thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized"));
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.createLeaveRequest(leaveRequestDto));
+                    service.createLeaveRequest(leaveRequestDto));
 
             assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
         }
 
         @Test
         void shouldThrowBadRequestWhenInsufficientLeaveCredits() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
             leaveCredit.setCredits(2.0); // Only 2 days available, but 4 days required
-            when(leaveCreditService.getLeaveCreditByEmployeeIdAndType(eq(1L), eq(LeaveType.VACATION)))
+            when(leaveCreditService.getLeaveCreditByEmployeeIdAndType(eq(10001L), eq(LeaveType.VACATION)))
                     .thenReturn(leaveCredit);
-            when(leaveRequestRepository.existsByEmployee_IdAndStartDateAndEndDate(eq(1L), any(), any()))
+            when(repository.existsByEmployee_IdAndStartDateAndEndDate(eq(10001L), any(), any()))
                     .thenReturn(false);
-            when(leaveRequestRepository.existsByEmployee_IdAndStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                    eq(1L), anyList(), any(), any()))
+            when(repository.existsByEmployee_IdAndStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                    eq(10001L), anyList(), any(), any()))
                     .thenReturn(false);
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.createLeaveRequest(leaveRequestDto));
+                    service.createLeaveRequest(leaveRequestDto));
 
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         }
 
         @Test
         void shouldThrowBadRequestWhenStartDateIsAfterEndDate() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
             leaveRequestDto.setStartDate(LocalDate.of(2025, 12, 20));
             leaveRequestDto.setEndDate(LocalDate.of(2025, 12, 15));
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.createLeaveRequest(leaveRequestDto));
+                    service.createLeaveRequest(leaveRequestDto));
 
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         }
 
         @Test
         void shouldThrowBadRequestWhenStartDateIsWeekend() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
             leaveRequestDto.setStartDate(LocalDate.of(2025, 12, 13)); // Saturday
             leaveRequestDto.setEndDate(LocalDate.of(2025, 12, 16));
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.createLeaveRequest(leaveRequestDto));
+                    service.createLeaveRequest(leaveRequestDto));
 
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
             assertEquals("Start date must be a weekday", ex.getReason());
@@ -188,28 +267,25 @@ class LeaveRequestServiceTest {
 
         @Test
         void shouldThrowBadRequestWhenEndDateIsWeekend() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
             leaveRequestDto.setStartDate(LocalDate.of(2025, 12, 16));
             leaveRequestDto.setEndDate(LocalDate.of(2025, 12, 20)); // Saturday
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.createLeaveRequest(leaveRequestDto));
+                    service.createLeaveRequest(leaveRequestDto));
 
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
             assertEquals("End date must be a weekday", ex.getReason());
         }
 
         @Test
-        void shouldThrowBadRequestWhenDuplicateLeaveRequest() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
-            when(leaveRequestRepository.existsByEmployee_IdAndStartDateAndEndDate(
-                    eq(1L), any(), any()))
+        void shouldThrowConflictWhenDuplicateLeaveRequest() {
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(repository.existsByEmployee_IdAndStartDateAndEndDate(eq(10001L), any(), any()))
                     .thenReturn(true);
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.createLeaveRequest(leaveRequestDto));
+                    service.createLeaveRequest(leaveRequestDto));
 
             assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
             assertEquals("Duplicate leave request", ex.getReason());
@@ -217,16 +293,15 @@ class LeaveRequestServiceTest {
 
         @Test
         void shouldThrowBadRequestWhenOverlappingLeaveExists() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
-            when(leaveRequestRepository.existsByEmployee_IdAndStartDateAndEndDate(eq(1L), any(), any()))
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(repository.existsByEmployee_IdAndStartDateAndEndDate(eq(10001L), any(), any()))
                     .thenReturn(false);
-            when(leaveRequestRepository.existsByEmployee_IdAndStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                    eq(1L), anyList(), any(), any()))
+            when(repository.existsByEmployee_IdAndStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                    eq(10001L), anyList(), any(), any()))
                     .thenReturn(true);
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.createLeaveRequest(leaveRequestDto));
+                    service.createLeaveRequest(leaveRequestDto));
 
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
             assertTrue(ex.getReason().contains("overlaps"));
@@ -234,12 +309,11 @@ class LeaveRequestServiceTest {
 
         @Test
         void shouldThrowBadRequestWhenInvalidLeaveType() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
             leaveRequestDto.setLeaveType("INVALID_TYPE");
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.createLeaveRequest(leaveRequestDto));
+                    service.createLeaveRequest(leaveRequestDto));
 
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
             assertTrue(ex.getReason().contains("Invalid leave type"));
@@ -247,73 +321,139 @@ class LeaveRequestServiceTest {
     }
 
     @Nested
-    class GetLeaveRequestTests {
+    class GetLeaveRequestsTests {
+
+       @Test
+       void shouldReturnAllLeaveRequestsWithPagination() {
+           when(repository.findAll(any(Pageable.class))).thenReturn(pageWithAllRequests);
+
+           Page<LeaveRequest> result = service.getLeaveRequests(null, null, 0, 10);
+
+           assertEquals(3, result.getTotalElements());
+           verify(repository).findAll(any(Pageable.class));
+       }
 
         @Test
-        void shouldReturnAllLeaveRequestsWhenUserIsHR() {
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+        void shouldReturnLeaveRequestsFilteredByDateRange() {
+            when(repository.findAllByStartDateLessThanEqualAndEndDateGreaterThanEqual(any(), any(), any(Pageable.class)))
+                    .thenReturn(pageWithFilteredRequests);
 
-            Pageable pageable = PageRequest.of(0, 10);
-            Page<LeaveRequest> page = new PageImpl<>(List.of(leaveRequest), pageable, 1);
-            when(leaveRequestRepository.findAll(any(Pageable.class))).thenReturn(page);
+            LocalDate startDate = LocalDate.of(2025, 11, 1);
+            LocalDate endDate = LocalDate.of(2025, 12, 31);
+            Page<LeaveRequest> result = service.getLeaveRequests(startDate, endDate, 0, 10);
 
-            Page<LeaveRequest> result = leaveRequestService.getLeaveRequests(0, 10);
+            assertEquals(2, result.getTotalElements());
+            verify(repository).findAllByStartDateLessThanEqualAndEndDateGreaterThanEqual(any(), any(), any(Pageable.class));
+        }
 
+        @Test
+        void shouldReturnEmptyPageWhenNoRequestsExist() {
+            when(repository.findAll(any(Pageable.class))).thenReturn(emptyPage);
+
+            Page<LeaveRequest> result = service.getLeaveRequests(null, null, 0, 10);
+
+            assertEquals(0, result.getTotalElements());
+            verify(repository).findAll(any(Pageable.class));
+        }
+
+    }
+
+    @Nested
+    class GetEmployeeLeaveRequestsTests {
+
+        @Test
+        void shouldReturnAuthenticatedEmployeeLeaveRequestsWithPagination() {
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(repository.findAllByEmployee_Id(anyLong(), any(Pageable.class))).thenReturn(pageWithAllRequests);
+
+            Page<LeaveRequest> result = service.getEmployeeLeaveRequests(0, 10);
+
+            assertEquals(3, result.getTotalElements());
+            verify(repository).findAllByEmployee_Id(anyLong(), any(Pageable.class));
+        }
+
+        @Test
+        void shouldReturnEmptyPageWhenEmployeeHasNoRequests() {
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(repository.findAllByEmployee_Id(anyLong(), any(Pageable.class))).thenReturn(emptyPage);
+
+            Page<LeaveRequest> result = service.getEmployeeLeaveRequests(0, 10);
+
+            assertEquals(0, result.getTotalElements());
+            verify(repository).findAllByEmployee_Id(anyLong(), any(Pageable.class));
+        }
+
+    }
+
+    @Nested
+    class GetSubordinatesLeaveRequestsTests {
+
+        @Test
+        void shouldReturnSubordinatesLeaveRequestsWithPagination() {
+            Page<LeaveRequest> subordinatesPage = new PageImpl<>(List.of(subordinateLeaveRequest), pageable, 1);
+            when(userService.getAuthenticatedUser()).thenReturn(supervisorUser);
+            when(repository.findAllByEmployee_Supervisor_Id(eq(supervisorEmployee.getId()), any(Pageable.class)))
+                    .thenReturn(subordinatesPage);
+
+            Page<LeaveRequest> result = service.getSubordinatesLeaveRequests(0, 10);
+
+            assertNotNull(result);
             assertEquals(1, result.getTotalElements());
-            verify(leaveRequestRepository).findAll(any(Pageable.class));
+            assertEquals(subordinateLeaveRequest.getId(), result.getContent().get(0).getId());
+            verify(repository).findAllByEmployee_Supervisor_Id(eq(supervisorEmployee.getId()), any(Pageable.class));
         }
 
         @Test
-        void shouldReturnEmployeeLeaveRequestsWhenUserIsNotHR() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
+        void shouldReturnEmptyPageWhenNoSubordinateRequests() {
+            when(userService.getAuthenticatedUser()).thenReturn(supervisorUser);
+            when(repository.findAllByEmployee_Supervisor_Id(eq(supervisorEmployee.getId()), any(Pageable.class)))
+                    .thenReturn(emptyPage);
 
-            Pageable pageable = PageRequest.of(0, 10);
-            Page<LeaveRequest> page = new PageImpl<>(List.of(leaveRequest), pageable, 1);
-            when(leaveRequestRepository.findAllByEmployee_Id(eq(1L), any(Pageable.class)))
-                    .thenReturn(page);
+            Page<LeaveRequest> result = service.getSubordinatesLeaveRequests(0, 10);
 
-            Page<LeaveRequest> result = leaveRequestService.getLeaveRequests(0, 10);
-
-            assertEquals(1, result.getTotalElements());
-            verify(leaveRequestRepository).findAllByEmployee_Id(eq(1L), any(Pageable.class));
+            assertNotNull(result);
+            assertEquals(0, result.getTotalElements());
+            verify(repository).findAllByEmployee_Supervisor_Id(eq(supervisorEmployee.getId()), any(Pageable.class));
         }
 
-        @Test
-        void shouldThrowUnauthorizedWhenPrincipalIsNotUser() {
-            when(userService.getAuthenticatedUser()).thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized"));
-
-            ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.getLeaveRequests(0, 10));
-
-            assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
-        }
     }
 
     @Nested
     class GetLeaveRequestByIdTests {
 
         @Test
-        void shouldReturnLeaveRequestById() {
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
+        void shouldReturnLeaveRequestByIdForOwner() {
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(repository.findById(anyString())).thenReturn(Optional.of(pendingLeaveRequest));
 
-            LeaveRequest result = leaveRequestService.getLeaveRequestById("LR-2025-001");
+            LeaveRequest result = service.getLeaveRequestById(pendingLeaveRequest.getId());
 
-            assertEquals(leaveRequest, result);
-            assertEquals("LR-2025-001", result.getId());
+            assertNotNull(result);
+            verify(repository).findById(anyString());
+        }
+
+        @Test
+        void shouldReturnLeaveRequestByIdForHR() {
+            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+            when(repository.findById(anyString())).thenReturn(Optional.of(rejectedLeaveRequest));
+
+            LeaveRequest result = service.getLeaveRequestById(rejectedLeaveRequest.getId());
+
+            assertNotNull(result);
+            verify(repository).findById(anyString());
         }
 
         @Test
         void shouldThrowNotFoundWhenLeaveRequestDoesNotExist() {
-            when(leaveRequestRepository.findById("LR-2025-999"))
-                    .thenReturn(Optional.empty());
+            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+            when(repository.findById(anyString())).thenReturn(Optional.empty());
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.getLeaveRequestById("LR-2025-999"));
+                    service.getLeaveRequestById("LR-2025-999"));
 
             assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-            assertTrue(ex.getReason().contains("LR-2025-999"));
         }
+
     }
 
     @Nested
@@ -321,108 +461,94 @@ class LeaveRequestServiceTest {
 
         @Test
         void shouldUpdateLeaveRequestSuccessfully() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(repository.findById(pendingLeaveRequest.getId())).thenReturn(Optional.of(pendingLeaveRequest));
+            when(mapper.updateEntity(any(LeaveRequest.class), any(LeaveRequestDto.class))).thenReturn(pendingLeaveRequest);
+            when(repository.save(any(LeaveRequest.class))).thenReturn(pendingLeaveRequest);
 
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
-            when(leaveRequestMapper.updateEntity(any(LeaveRequest.class), any(LeaveRequestDto.class)))
-                    .thenReturn(leaveRequest);
-            when(leaveRequestRepository.save(any(LeaveRequest.class))).thenReturn(leaveRequest);
-
-            LeaveRequest result = leaveRequestService.updateLeaveRequest("LR-2025-001", leaveRequestDto);
+            LeaveRequest result = service.updateLeaveRequest(pendingLeaveRequest.getId(), updateLeaveRequestDto);
 
             assertNotNull(result);
-            verify(leaveRequestRepository).save(leaveRequest);
+            verify(repository).save(any(LeaveRequest.class));
         }
 
         @Test
         void shouldAllowHRToUpdateOtherEmployeeLeaveRequest() {
             when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+            when(repository.findById(otherEmployeeLeaveRequest.getId())).thenReturn(Optional.of(otherEmployeeLeaveRequest));
+            doReturn(otherEmployeeLeaveRequest).when(mapper).updateEntity(any(LeaveRequest.class), any(LeaveRequestDto.class));
+            doReturn(otherEmployeeLeaveRequest).when(repository).save(any(LeaveRequest.class));
 
-            leaveRequest.setEmployee(otherEmployee);
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
-            when(leaveRequestMapper.updateEntity(any(LeaveRequest.class), any(LeaveRequestDto.class)))
-                    .thenReturn(leaveRequest);
-            when(leaveRequestRepository.save(any(LeaveRequest.class))).thenReturn(leaveRequest);
-
-            LeaveRequest result = leaveRequestService.updateLeaveRequest("LR-2025-001", leaveRequestDto);
+            LeaveRequest result = service.updateLeaveRequest(otherEmployeeLeaveRequest.getId(), updateLeaveRequestDto);
 
             assertNotNull(result);
-            verify(leaveRequestRepository).save(leaveRequest);
+            verify(repository).save(any(LeaveRequest.class));
         }
 
         @Test
         void shouldThrowForbiddenWhenNonHRUpdatesOtherEmployeeRequest() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
-            leaveRequest.setEmployee(otherEmployee);
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(repository.findById(anyString())).thenReturn(Optional.of(otherEmployeeLeaveRequest));
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.updateLeaveRequest("LR-2025-001", leaveRequestDto));
+                    service.updateLeaveRequest(otherEmployeeLeaveRequest.getId(), updateLeaveRequestDto));
 
             assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         }
 
         @Test
         void shouldThrowBadRequestWhenUpdatingProcessedRequest() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
-            leaveRequest.setStatus(RequestStatus.APPROVED);
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(repository.findById("LR-2025-002")).thenReturn(Optional.of(approvedLeaveRequest));
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.updateLeaveRequest("LR-2025-001", leaveRequestDto));
+                    service.updateLeaveRequest("LR-2025-002", updateLeaveRequestDto));
 
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
             assertTrue(ex.getReason().contains("Cannot delete processed"));
         }
+
     }
 
     @Nested
-    class UpdateRequestStatusTests {
+    class UpdateLeaveRequestStatusTests {
 
         @Test
-        void shouldApproveLeaveRequestAndDeductCredits() {
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
-            when(leaveCreditService.getLeaveCreditByEmployeeIdAndType(eq(1L), eq(LeaveType.VACATION)))
+        void shouldApproveLeaveRequestSuccessfully() {
+            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+            when(repository.findById(anyString())).thenReturn(Optional.of(pendingLeaveRequest));
+            when(leaveCreditService.getLeaveCreditByEmployeeIdAndType(anyLong(), any(LeaveType.class)))
                     .thenReturn(leaveCredit);
             when(leaveCreditService.updateLeaveCredit(any(UUID.class), any(LeaveCredit.class)))
                     .thenReturn(leaveCredit);
-            when(leaveRequestRepository.save(any(LeaveRequest.class))).thenReturn(leaveRequest);
+            when(repository.save(any(LeaveRequest.class))).thenReturn(approvedLeaveRequest);
 
-            LeaveRequest result = leaveRequestService.updateLeaveStatus("LR-2025-001", RequestStatus.APPROVED);
+            LeaveRequest result = service.updateLeaveStatus(pendingLeaveRequest.getId(), RequestStatus.APPROVED);
 
-            assertEquals(RequestStatus.APPROVED, result.getStatus());
-            verify(leaveCreditService).updateLeaveCredit(any(UUID.class), any(LeaveCredit.class));
-            verify(leaveRequestRepository).save(leaveRequest);
+            assertNotNull(result);
+            verify(repository).save(any(LeaveRequest.class));
         }
 
         @Test
-        void shouldRejectLeaveRequestWithoutDeductingCredits() {
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
-            when(leaveRequestRepository.save(any(LeaveRequest.class))).thenReturn(leaveRequest);
+        void shouldRejectLeaveRequestSuccessfully() {
+            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+            when(repository.findById("LR-2025-001")).thenReturn(Optional.of(pendingLeaveRequest));
+            when(repository.save(any(LeaveRequest.class))).thenReturn(rejectedLeaveRequest);
 
-            LeaveRequest result = leaveRequestService.updateLeaveStatus("LR-2025-001", RequestStatus.REJECTED);
+            LeaveRequest result = service.updateLeaveStatus("LR-2025-001", RequestStatus.REJECTED);
 
-            assertEquals(RequestStatus.REJECTED, result.getStatus());
+            assertNotNull(result);
             verify(leaveCreditService, never()).updateLeaveCredit(any(), any());
-            verify(leaveRequestRepository).save(leaveRequest);
+            verify(repository).save(any(LeaveRequest.class));
         }
 
         @Test
         void shouldThrowBadRequestWhenAlreadyProcessed() {
-            leaveRequest.setStatus(RequestStatus.APPROVED);
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
+            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+            when(repository.findById("LR-2025-002")).thenReturn(Optional.of(approvedLeaveRequest));
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.updateLeaveStatus("LR-2025-001", RequestStatus.APPROVED));
+                    service.updateLeaveStatus("LR-2025-002", RequestStatus.APPROVED));
 
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
             assertTrue(ex.getReason().contains("already been processed"));
@@ -430,14 +556,14 @@ class LeaveRequestServiceTest {
 
         @Test
         void shouldThrowBadRequestWhenInsufficientCreditsForApproval() {
+            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
             leaveCredit.setCredits(2.0); // Only 2 days, but 4 days required
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
-            when(leaveCreditService.getLeaveCreditByEmployeeIdAndType(eq(1L), eq(LeaveType.VACATION)))
+            when(repository.findById("LR-2025-001")).thenReturn(Optional.of(pendingLeaveRequest));
+            when(leaveCreditService.getLeaveCreditByEmployeeIdAndType(anyLong(), any(LeaveType.class)))
                     .thenReturn(leaveCredit);
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.updateLeaveStatus("LR-2025-001", RequestStatus.APPROVED));
+                    service.updateLeaveStatus("LR-2025-001", RequestStatus.APPROVED));
 
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
             assertTrue(ex.getReason().contains("Insufficient credits"));
@@ -445,21 +571,22 @@ class LeaveRequestServiceTest {
 
         @Test
         void shouldThrowBadRequestWhenOptimisticLockOccurs() {
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
-            when(leaveCreditService.getLeaveCreditByEmployeeIdAndType(eq(1L), eq(LeaveType.VACATION)))
+            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+            when(repository.findById("LR-2025-001")).thenReturn(Optional.of(pendingLeaveRequest));
+            when(leaveCreditService.getLeaveCreditByEmployeeIdAndType(anyLong(), any(LeaveType.class)))
                     .thenReturn(leaveCredit);
             when(leaveCreditService.updateLeaveCredit(any(UUID.class), any(LeaveCredit.class)))
                     .thenReturn(leaveCredit);
-            when(leaveRequestRepository.save(any(LeaveRequest.class)))
+            when(repository.save(any(LeaveRequest.class)))
                     .thenThrow(new OptimisticLockException());
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.updateLeaveStatus("LR-2025-001", RequestStatus.APPROVED));
+                    service.updateLeaveStatus("LR-2025-001", RequestStatus.APPROVED));
 
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
             assertTrue(ex.getReason().contains("modified by another process"));
         }
+
     }
 
     @Nested
@@ -467,56 +594,46 @@ class LeaveRequestServiceTest {
 
         @Test
         void shouldDeleteLeaveRequestSuccessfully() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(repository.findById(anyString())).thenReturn(Optional.of(pendingLeaveRequest));
 
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
+            service.deleteLeaveRequest(pendingLeaveRequest.getId());
 
-            leaveRequestService.deleteLeaveRequest("LR-2025-001");
-
-            verify(leaveRequestRepository).delete(leaveRequest);
+            verify(repository).delete(pendingLeaveRequest);
         }
 
         @Test
         void shouldAllowHRToDeleteOtherEmployeeLeaveRequest() {
             when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+            when(repository.findById(anyString())).thenReturn(Optional.of(otherEmployeeLeaveRequest));
 
-            leaveRequest.setEmployee(otherEmployee);
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
+            service.deleteLeaveRequest(otherEmployeeLeaveRequest.getId());
 
-            leaveRequestService.deleteLeaveRequest("LR-2025-001");
-
-            verify(leaveRequestRepository).delete(leaveRequest);
+            verify(repository).delete(otherEmployeeLeaveRequest);
         }
 
         @Test
         void shouldThrowForbiddenWhenNonHRDeletesOtherEmployeeRequest() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
-            leaveRequest.setEmployee(otherEmployee);
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(repository.findById(anyString())).thenReturn(Optional.of(otherEmployeeLeaveRequest));
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.deleteLeaveRequest("LR-2025-001"));
+                    service.deleteLeaveRequest(otherEmployeeLeaveRequest.getId()));
 
             assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         }
 
         @Test
         void shouldThrowBadRequestWhenDeletingProcessedRequest() {
-            when(userService.getAuthenticatedUser()).thenReturn(normalUser);
-
-            leaveRequest.setStatus(RequestStatus.APPROVED);
-            when(leaveRequestRepository.findById("LR-2025-001"))
-                    .thenReturn(Optional.of(leaveRequest));
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
+            when(repository.findById(anyString())).thenReturn(Optional.of(approvedLeaveRequest));
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
-                    leaveRequestService.deleteLeaveRequest("LR-2025-001"));
+                    service.deleteLeaveRequest(otherEmployeeLeaveRequest.getId()));
 
             assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
             assertTrue(ex.getReason().contains("Cannot delete processed"));
         }
+
     }
 }

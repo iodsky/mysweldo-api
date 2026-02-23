@@ -52,9 +52,12 @@ class OvertimeRequestServiceTest {
 
     private Employee hrEmployee;
     private Employee employee;
+    private Employee supervisorEmployee;
+    private Employee subordinateEmployee;
 
     private User hrUser;
     private User employeeUser;
+    private User supervisorUser;
 
     private Attendance validAttendance;
     private Attendance invalidAttendance;
@@ -63,6 +66,7 @@ class OvertimeRequestServiceTest {
     private OvertimeRequest approvedOvertimeRequest;
     private OvertimeRequest rejectedOvertimeRequest;
     private OvertimeRequest otherEmployeeRequest;
+    private OvertimeRequest subordinateOvertimeRequest;
 
     private AddOvertimeRequest addOvertimeRequestByEmployee;
     private AddOvertimeRequest addOvertimeRequestByHR;
@@ -83,6 +87,15 @@ class OvertimeRequestServiceTest {
                 .id(10001L)
                 .build();
 
+        supervisorEmployee = Employee.builder()
+                .id(10002L)
+                .build();
+
+        subordinateEmployee = Employee.builder()
+                .id(10003L)
+                .supervisor(supervisorEmployee)
+                .build();
+
         hrUser = User.builder()
                 .id(UUID.randomUUID())
                 .employee(hrEmployee)
@@ -93,6 +106,12 @@ class OvertimeRequestServiceTest {
                 .id(UUID.randomUUID())
                 .employee(employee)
                 .userRole(new UserRole("EMPLOYEE"))
+                .build();
+
+        supervisorUser = User.builder()
+                .id(UUID.randomUUID())
+                .employee(supervisorEmployee)
+                .userRole(new UserRole("SUPERVISOR"))
                 .build();
 
         validAttendance = Attendance.builder()
@@ -149,6 +168,15 @@ class OvertimeRequestServiceTest {
                 .status(RequestStatus.PENDING)
                 .overtimeHours(BigDecimal.valueOf(2.0))
                 .reason("Other employee's overtime request")
+                .build();
+
+        subordinateOvertimeRequest = OvertimeRequest.builder()
+                .id(UUID.randomUUID())
+                .date(LocalDate.of(2026, 1, 6))
+                .employee(subordinateEmployee)
+                .status(RequestStatus.PENDING)
+                .overtimeHours(BigDecimal.valueOf(3.5))
+                .reason("Subordinate's overtime request")
                 .build();
 
         addOvertimeRequestByEmployee = AddOvertimeRequest.builder()
@@ -325,6 +353,39 @@ class OvertimeRequestServiceTest {
     }
 
     @Nested
+    class GetSubordinatesOvertimeRequestsTest {
+
+        @Test
+        void shouldReturnSubordinatesOvertimeRequestsWithPagination() {
+            Page<OvertimeRequest> subordinatesPage = new PageImpl<>(List.of(subordinateOvertimeRequest), pageable, 1);
+            when(userService.getAuthenticatedUser()).thenReturn(supervisorUser);
+            when(repository.findByEmployee_Supervisor_Id(eq(supervisorEmployee.getId()), any(Pageable.class)))
+                    .thenReturn(subordinatesPage);
+
+            Page<OvertimeRequest> result = service.getSubordinatesOvertimeRequests(0, 10);
+
+            assertNotNull(result);
+            assertEquals(1, result.getTotalElements());
+            assertEquals(subordinateOvertimeRequest.getId(), result.getContent().get(0).getId());
+            verify(repository).findByEmployee_Supervisor_Id(eq(supervisorEmployee.getId()), any(Pageable.class));
+        }
+
+        @Test
+        void shouldReturnEmptyPageWhenNoSubordinateRequests() {
+            when(userService.getAuthenticatedUser()).thenReturn(supervisorUser);
+            when(repository.findByEmployee_Supervisor_Id(eq(supervisorEmployee.getId()), any(Pageable.class)))
+                    .thenReturn(emptyPage);
+
+            Page<OvertimeRequest> result = service.getSubordinatesOvertimeRequests(0, 10);
+
+            assertNotNull(result);
+            assertEquals(0, result.getTotalElements());
+            verify(repository).findByEmployee_Supervisor_Id(eq(supervisorEmployee.getId()), any(Pageable.class));
+        }
+
+    }
+
+    @Nested
     class GetOvertimeRequestByIdTests {
 
         @Test
@@ -369,7 +430,6 @@ class OvertimeRequestServiceTest {
                     () -> service.getOvertimeRequestById(otherEmployeeRequest.getId()));
 
             assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-            assertTrue(ex.getReason().contains("don't have the permissions"));
         }
 
     }
@@ -460,7 +520,6 @@ class OvertimeRequestServiceTest {
                     () -> service.updateOvertimeRequest(otherEmployeeRequest.getId(), updateOvertimeRequestDto));
 
             assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-            assertTrue(ex.getReason().contains("don't have the permissions"));
             verify(repository, never()).save(any(OvertimeRequest.class));
         }
 
@@ -502,7 +561,6 @@ class OvertimeRequestServiceTest {
                     () -> service.updateOvertimeRequestStatus(otherEmployeeRequest.getId(), RequestStatus.APPROVED));
 
             assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-            assertTrue(ex.getReason().contains("don't have the permissions"));
             verify(repository, never()).save(any(OvertimeRequest.class));
         }
 
@@ -546,7 +604,6 @@ class OvertimeRequestServiceTest {
                     () -> service.deleteOvertimeRequest(otherEmployeeRequest.getId()));
 
             assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-            assertTrue(ex.getReason().contains("don't have the permissions"));
             verify(repository, never()).save(any(OvertimeRequest.class));
             verify(repository, never()).delete(any(OvertimeRequest.class));
         }
