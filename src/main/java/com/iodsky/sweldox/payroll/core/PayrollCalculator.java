@@ -1,6 +1,5 @@
 package com.iodsky.sweldox.payroll.core;
 
-import com.iodsky.sweldox.attendance.Attendance;
 import com.iodsky.sweldox.benefit.Benefit;
 import com.iodsky.sweldox.payroll.contribution.pagIbig.PagibigContribution;
 import com.iodsky.sweldox.payroll.contribution.pagIbig.PagibigContributionRepository;
@@ -31,7 +30,6 @@ public class PayrollCalculator {
     private static final BigDecimal OVERTIME_MULTIPLIER = BigDecimal.valueOf(1.25);
     private static final BigDecimal STANDARD_WORK_HOURS = BigDecimal.valueOf(8);
     private static final BigDecimal PAY_PERIODS_PER_YEAR = BigDecimal.valueOf(24);
-
 
     public PayrollConfiguration loadConfiguration(LocalDate payrollDate) {
         PhilhealthContribution philhealth = philhealthContributionRepository
@@ -67,18 +65,6 @@ public class PayrollCalculator {
                 .sssContribution(sssContribution)
                 .incomeTaxBrackets(taxBrackets)
                 .build();
-    }
-
-    public BigDecimal calculateTotalHours(List<Attendance> attendances) {
-        return attendances.stream()
-                .map(Attendance::getTotalHours)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    public BigDecimal calculateOvertimeHours(List<Attendance> attendances) {
-        return attendances.stream()
-                .map(Attendance::getOvertime)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public BigDecimal calculateDailyRate(BigDecimal hourlyRate) {

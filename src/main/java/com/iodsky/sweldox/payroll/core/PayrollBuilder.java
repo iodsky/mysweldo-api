@@ -5,6 +5,7 @@ import com.iodsky.sweldox.attendance.AttendanceService;
 import com.iodsky.sweldox.employee.Employee;
 import com.iodsky.sweldox.employee.EmployeeService;
 import com.iodsky.sweldox.benefit.Benefit;
+import com.iodsky.sweldox.overtime.OvertimeRequestService;
 import com.iodsky.sweldox.payroll.deduction.Deduction;
 import com.iodsky.sweldox.payroll.deduction.DeductionTypeRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class PayrollBuilder {
 
     private final EmployeeService employeeService;
     private final AttendanceService attendanceService;
+    private final OvertimeRequestService overtimeRequestService;
     private final DeductionTypeRepository deductionTypeRepository;
     private final PayrollCalculator payrollCalculator;
 
@@ -48,13 +50,13 @@ public class PayrollBuilder {
         BigDecimal hourlyRate = employee.getHourlyRate();
 
         // Calculate hours
-        BigDecimal totalHours = payrollCalculator.calculateTotalHours(attendances);
-        BigDecimal overtimeHours = payrollCalculator.calculateOvertimeHours(attendances);
-        BigDecimal regularHours = totalHours.subtract(overtimeHours);
+        BigDecimal totalHours = attendanceService.calculateTotalHoursByEmployeeId(employeeId, periodStart, periodEnd);
+        BigDecimal approvedOvertimeHours = overtimeRequestService.calculateApprovedOvertimeHours(employeeId, periodStart, periodEnd);
+        BigDecimal regularHours = totalHours.subtract(approvedOvertimeHours);
 
         // Calculate pay
         BigDecimal regularPay = payrollCalculator.calculateRegularPay(hourlyRate, regularHours);
-        BigDecimal overtimePay = payrollCalculator.calculateOvertimePay(hourlyRate, overtimeHours);
+        BigDecimal overtimePay = payrollCalculator.calculateOvertimePay(hourlyRate, approvedOvertimeHours);
         BigDecimal grossPay = payrollCalculator.calculateGrossPay(regularPay, overtimePay);
 
         // Calculate benefits
@@ -75,14 +77,13 @@ public class PayrollBuilder {
         BigDecimal netPay = payrollCalculator.calculateNetPay(grossPay, totalBenefits, statutoryDeductions, withholdingTax);
 
         return PayrollContext.builder()
-                .employeeId(employeeId)
                 .employee(employee)
                 .attendances(attendances)
                 .benefits(benefits)
                 .hourlyRate(hourlyRate)
                 .basicSalary(basicSalary)
                 .totalHours(totalHours)
-                .overtimeHours(overtimeHours)
+                .overtimeHours(approvedOvertimeHours)
                 .regularHours(regularHours)
                 .regularPay(regularPay)
                 .overtimePay(overtimePay)
@@ -98,10 +99,6 @@ public class PayrollBuilder {
                 .build();
     }
 
-    /**
-     * Build payroll context using pre-loaded configuration to avoid repeated database queries.
-     * Use this method when processing multiple payrolls for the same period.
-     */
     private PayrollContext buildContext(Long employeeId, LocalDate periodStart, LocalDate periodEnd, LocalDate payDate, PayrollConfiguration config) {
         Employee employee = employeeService.getEmployeeById(employeeId);
         List<Attendance> attendances = attendanceService.getEmployeeAttendances(employeeId, periodStart, periodEnd);
@@ -111,13 +108,13 @@ public class PayrollBuilder {
         BigDecimal hourlyRate = employee.getHourlyRate();
 
         // Calculate hours
-        BigDecimal totalHours = payrollCalculator.calculateTotalHours(attendances);
-        BigDecimal overtimeHours = payrollCalculator.calculateOvertimeHours(attendances);
-        BigDecimal regularHours = totalHours.subtract(overtimeHours);
+        BigDecimal totalHours = attendanceService.calculateTotalHoursByEmployeeId(employeeId, periodStart, periodEnd);
+        BigDecimal approvedOvertimeHours = overtimeRequestService.calculateApprovedOvertimeHours(employeeId, periodStart, periodEnd);
+        BigDecimal regularHours = totalHours.subtract(approvedOvertimeHours);
 
         // Calculate pay
         BigDecimal regularPay = payrollCalculator.calculateRegularPay(hourlyRate, regularHours);
-        BigDecimal overtimePay = payrollCalculator.calculateOvertimePay(hourlyRate, overtimeHours);
+        BigDecimal overtimePay = payrollCalculator.calculateOvertimePay(hourlyRate, approvedOvertimeHours);
         BigDecimal grossPay = payrollCalculator.calculateGrossPay(regularPay, overtimePay);
 
         // Calculate benefits
@@ -138,14 +135,13 @@ public class PayrollBuilder {
         BigDecimal netPay = payrollCalculator.calculateNetPay(grossPay, totalBenefits, statutoryDeductions, withholdingTax);
 
         return PayrollContext.builder()
-                .employeeId(employeeId)
                 .employee(employee)
                 .attendances(attendances)
                 .benefits(benefits)
                 .hourlyRate(hourlyRate)
                 .basicSalary(basicSalary)
                 .totalHours(totalHours)
-                .overtimeHours(overtimeHours)
+                .overtimeHours(approvedOvertimeHours)
                 .regularHours(regularHours)
                 .regularPay(regularPay)
                 .overtimePay(overtimePay)
