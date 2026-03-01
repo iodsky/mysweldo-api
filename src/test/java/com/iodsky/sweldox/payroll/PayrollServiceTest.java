@@ -7,7 +7,7 @@ import com.iodsky.sweldox.payroll.core.*;
 import com.iodsky.sweldox.payroll.deduction.Deduction;
 import com.iodsky.sweldox.payroll.deduction.DeductionType;
 import com.iodsky.sweldox.security.user.User;
-import com.iodsky.sweldox.security.user.UserRole;
+import com.iodsky.sweldox.security.role.Role;
 import com.iodsky.sweldox.security.user.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -25,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -54,6 +55,7 @@ class PayrollServiceTest {
     private static final LocalDate PERIOD_START = LocalDate.of(2025, 11, 1);
     private static final LocalDate PERIOD_END = LocalDate.of(2025, 11, 15);
     private static final LocalDate PAY_DATE = LocalDate.of(2025, 11, 20);
+    private static final YearMonth YEAR_MONTH = YearMonth.of(2025, 11);
     private static final BigDecimal BASIC_SALARY = new BigDecimal("30000.00");
     private static final BigDecimal SEMI_MONTHLY_RATE = new BigDecimal("30000.00");
     private static final BigDecimal HOURLY_RATE = new BigDecimal("178.57");
@@ -111,15 +113,15 @@ class PayrollServiceTest {
 
         // Setup users
         payrollUser = new User();
-        payrollUser.setUserRole(new UserRole("PAYROLL"));
+        payrollUser.setRole(new Role("PAYROLL"));
         payrollUser.setEmployee(employee);
 
         hrUser = new User();
-        hrUser.setUserRole(new UserRole("HR"));
+        hrUser.setRole(new Role("HR"));
         hrUser.setEmployee(employee);
 
         normalUser = new User();
-        normalUser.setUserRole(new UserRole("EMPLOYEE"));
+        normalUser.setRole(new Role("EMPLOYEE"));
         normalUser.setEmployee(employee);
 
         // Setup payroll
@@ -410,20 +412,20 @@ class PayrollServiceTest {
     class GetAllPayrollTests {
 
         @Test
-        void shouldReturnAllPayrollWithinDateRange() {
+        void shouldReturnAllPayrollWithinPeriod() {
             List<Payroll> payrolls = List.of(payroll);
             Page<Payroll> page = new PageImpl<>(payrolls);
 
             when(payrollRepository.findAllByPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(PERIOD_END), eq(PERIOD_START), any(Pageable.class)))
+                    eq(YEAR_MONTH.atEndOfMonth()), eq(YEAR_MONTH.atDay(1)), any(Pageable.class)))
                     .thenReturn(page);
 
-            Page<Payroll> result = payrollService.getAllPayroll(0, 10, PERIOD_START, PERIOD_END);
+            Page<Payroll> result = payrollService.getAllPayroll(0, 10, YEAR_MONTH);
 
             assertNotNull(result);
             assertEquals(1, result.getTotalElements());
             verify(payrollRepository).findAllByPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(PERIOD_END), eq(PERIOD_START), any(Pageable.class));
+                    eq(YEAR_MONTH.atEndOfMonth()), eq(YEAR_MONTH.atDay(1)), any(Pageable.class));
         }
 
         @Test
@@ -431,10 +433,10 @@ class PayrollServiceTest {
             Page<Payroll> emptyPage = new PageImpl<>(Collections.emptyList());
 
             when(payrollRepository.findAllByPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(PERIOD_END), eq(PERIOD_START), any(Pageable.class)))
+                    eq(YEAR_MONTH.atEndOfMonth()), eq(YEAR_MONTH.atDay(1)), any(Pageable.class)))
                     .thenReturn(emptyPage);
 
-            Page<Payroll> result = payrollService.getAllPayroll(0, 10, PERIOD_START, PERIOD_END);
+            Page<Payroll> result = payrollService.getAllPayroll(0, 10, YEAR_MONTH);
 
             assertNotNull(result);
             assertEquals(0, result.getTotalElements());
@@ -446,9 +448,9 @@ class PayrollServiceTest {
             Page<Payroll> page = new PageImpl<>(payrolls, PageRequest.of(1, 2), 5);
 
             when(payrollRepository.findAllByPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(PERIOD_END), eq(PERIOD_START), any(Pageable.class))).thenReturn(page);
+                    eq(YEAR_MONTH.atEndOfMonth()), eq(YEAR_MONTH.atDay(1)), any(Pageable.class))).thenReturn(page);
 
-            Page<Payroll> result = payrollService.getAllPayroll(1, 2, PERIOD_START, PERIOD_END);
+            Page<Payroll> result = payrollService.getAllPayroll(1, 2, YEAR_MONTH);
 
             assertNotNull(result);
             assertEquals(3, result.getContent().size());
@@ -457,49 +459,17 @@ class PayrollServiceTest {
         }
 
         @Test
-        void shouldReturnAllPayrollsWhenNoDatesProvided() {
+        void shouldReturnAllPayrollsWhenNoPeriodProvided() {
             List<Payroll> payrolls = Arrays.asList(payroll, payroll);
             Page<Payroll> page = new PageImpl<>(payrolls);
 
             when(payrollRepository.findAll(any(Pageable.class))).thenReturn(page);
 
-            Page<Payroll> result = payrollService.getAllPayroll(0, 10, null, null);
+            Page<Payroll> result = payrollService.getAllPayroll(0, 10, null);
 
             assertNotNull(result);
             assertEquals(2, result.getTotalElements());
             verify(payrollRepository).findAll(any(Pageable.class));
-        }
-
-        @Test
-        void shouldReturnPayrollsStartingFromDateWhenOnlyStartDateProvided() {
-            List<Payroll> payrolls = List.of(payroll);
-            Page<Payroll> page = new PageImpl<>(payrolls);
-
-            when(payrollRepository.findAllByPeriodStartDateGreaterThanEqual(
-                    eq(PERIOD_START), any(Pageable.class))).thenReturn(page);
-
-            Page<Payroll> result = payrollService.getAllPayroll(0, 10, PERIOD_START, null);
-
-            assertNotNull(result);
-            assertEquals(1, result.getTotalElements());
-            verify(payrollRepository).findAllByPeriodStartDateGreaterThanEqual(
-                    eq(PERIOD_START), any(Pageable.class));
-        }
-
-        @Test
-        void shouldReturnPayrollsEndingBeforeDateWhenOnlyEndDateProvided() {
-            List<Payroll> payrolls = List.of(payroll);
-            Page<Payroll> page = new PageImpl<>(payrolls);
-
-            when(payrollRepository.findAllByPeriodEndDateLessThanEqual(
-                    eq(PERIOD_END), any(Pageable.class))).thenReturn(page);
-
-            Page<Payroll> result = payrollService.getAllPayroll(0, 10, null, PERIOD_END);
-
-            assertNotNull(result);
-            assertEquals(1, result.getTotalElements());
-            verify(payrollRepository).findAllByPeriodEndDateLessThanEqual(
-                    eq(PERIOD_END), any(Pageable.class));
         }
     }
 
@@ -513,15 +483,15 @@ class PayrollServiceTest {
             Page<Payroll> page = new PageImpl<>(payrolls);
 
             when(payrollRepository.findAllByEmployee_IdAndPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(employee.getId()), eq(PERIOD_END), eq(PERIOD_START), any(Pageable.class)))
+                    eq(employee.getId()), eq(YEAR_MONTH.atEndOfMonth()), eq(YEAR_MONTH.atDay(1)), any(Pageable.class)))
                     .thenReturn(page);
 
-            Page<Payroll> result = payrollService.getAllEmployeePayroll(0, 10, PERIOD_START, PERIOD_END);
+            Page<Payroll> result = payrollService.getAllEmployeePayroll(0, 10, YEAR_MONTH);
 
             assertNotNull(result);
             assertEquals(1, result.getTotalElements());
             verify(payrollRepository).findAllByEmployee_IdAndPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(employee.getId()), eq(PERIOD_END), eq(PERIOD_START), any(Pageable.class));
+                    eq(employee.getId()), eq(YEAR_MONTH.atEndOfMonth()), eq(YEAR_MONTH.atDay(1)), any(Pageable.class));
         }
 
         @Test
@@ -529,7 +499,7 @@ class PayrollServiceTest {
             when(userService.getAuthenticatedUser()).thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized"));
 
             ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                    () -> payrollService.getAllEmployeePayroll(0, 10, PERIOD_START, PERIOD_END));
+                    () -> payrollService.getAllEmployeePayroll(0, 10, YEAR_MONTH));
             assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
 
             verify(payrollRepository, never()).findAllByEmployee_IdAndPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
@@ -542,10 +512,10 @@ class PayrollServiceTest {
             Page<Payroll> emptyPage = new PageImpl<>(Collections.emptyList());
 
             when(payrollRepository.findAllByEmployee_IdAndPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(employee.getId()), eq(PERIOD_END), eq(PERIOD_START), any(Pageable.class)))
+                    eq(employee.getId()), eq(YEAR_MONTH.atEndOfMonth()), eq(YEAR_MONTH.atDay(1)), any(Pageable.class)))
                     .thenReturn(emptyPage);
 
-            Page<Payroll> result = payrollService.getAllEmployeePayroll(0, 10, PERIOD_START, PERIOD_END);
+            Page<Payroll> result = payrollService.getAllEmployeePayroll(0, 10, YEAR_MONTH);
 
             assertNotNull(result);
             assertEquals(0, result.getTotalElements());
@@ -557,13 +527,13 @@ class PayrollServiceTest {
             Page<Payroll> page = new PageImpl<>(List.of(payroll));
 
             when(payrollRepository.findAllByEmployee_IdAndPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(employee.getId()), eq(PERIOD_END), eq(PERIOD_START), any(Pageable.class)))
+                    eq(employee.getId()), eq(YEAR_MONTH.atEndOfMonth()), eq(YEAR_MONTH.atDay(1)), any(Pageable.class)))
                     .thenReturn(page);
 
-            payrollService.getAllEmployeePayroll(0, 10, PERIOD_START, PERIOD_END);
+            payrollService.getAllEmployeePayroll(0, 10, YEAR_MONTH);
 
             verify(payrollRepository).findAllByEmployee_IdAndPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(employee.getId()), eq(PERIOD_END), eq(PERIOD_START), any(Pageable.class));
+                    eq(employee.getId()), eq(YEAR_MONTH.atEndOfMonth()), eq(YEAR_MONTH.atDay(1)), any(Pageable.class));
             verify(payrollRepository, never()).findAllByEmployee_IdAndPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
                     eq(otherEmployee.getId()), any(), any(), any());
         }
@@ -575,10 +545,10 @@ class PayrollServiceTest {
             Page<Payroll> page = new PageImpl<>(payrolls, PageRequest.of(0, 2), 10);
 
             when(payrollRepository.findAllByEmployee_IdAndPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(employee.getId()), eq(PERIOD_END), eq(PERIOD_START), any(Pageable.class)))
+                    eq(employee.getId()), eq(YEAR_MONTH.atEndOfMonth()), eq(YEAR_MONTH.atDay(1)), any(Pageable.class)))
                     .thenReturn(page);
 
-            Page<Payroll> result = payrollService.getAllEmployeePayroll(0, 2, PERIOD_START, PERIOD_END);
+            Page<Payroll> result = payrollService.getAllEmployeePayroll(0, 2, YEAR_MONTH);
 
             assertNotNull(result);
             assertEquals(2, result.getContent().size());
@@ -586,18 +556,16 @@ class PayrollServiceTest {
         }
 
         @Test
-        void shouldUseDateRangeForEmployeePayrolls() {
+        void shouldReturnAllEmployeePayrollsWhenNoPeriodProvided() {
             when(userService.getAuthenticatedUser()).thenReturn(normalUser);
             Page<Payroll> page = new PageImpl<>(Collections.emptyList());
 
-            when(payrollRepository.findAllByEmployee_IdAndPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(employee.getId()), any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
+            when(payrollRepository.findAllByEmployee_Id(eq(employee.getId()), any(Pageable.class)))
                     .thenReturn(page);
 
-            payrollService.getAllEmployeePayroll(0, 10, PERIOD_START, PERIOD_END);
+            payrollService.getAllEmployeePayroll(0, 10, null);
 
-            verify(payrollRepository).findAllByEmployee_IdAndPeriodStartDateLessThanEqualAndPeriodEndDateGreaterThanEqual(
-                    eq(employee.getId()), any(LocalDate.class), any(LocalDate.class), any(Pageable.class));
+            verify(payrollRepository).findAllByEmployee_Id(eq(employee.getId()), any(Pageable.class));
         }
     }
 

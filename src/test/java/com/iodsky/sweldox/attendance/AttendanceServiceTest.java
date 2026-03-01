@@ -3,7 +3,7 @@ package com.iodsky.sweldox.attendance;
 import com.iodsky.sweldox.employee.EmployeeService;
 import com.iodsky.sweldox.employee.Employee;
 import com.iodsky.sweldox.security.user.User;
-import com.iodsky.sweldox.security.user.UserRole;
+import com.iodsky.sweldox.security.role.Role;
 import com.iodsky.sweldox.security.user.UserService;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,11 +57,11 @@ class AttendanceServiceTest {
         otherEmployee.setEndShift(PART_TIME_END);
 
         hrUser = new User();
-        hrUser.setUserRole(new UserRole("HR"));
+        hrUser.setRole(new Role("HR"));
         hrUser.setEmployee(currentEmployee);
 
         normalUser = new User();
-        normalUser.setUserRole(new UserRole("EMPLOYEE"));
+        normalUser.setRole(new Role("EMPLOYEE"));
         normalUser.setEmployee(currentEmployee);
 
         dto = AttendanceDto.builder()
@@ -400,13 +400,16 @@ class AttendanceServiceTest {
         void shouldReturnAllAttendancesForSpecificDate() {
             Pageable pageable = PageRequest.of(0, 10);
             Page<Attendance> attendancePage = new PageImpl<>(List.of(attendance), pageable, 1);
-            when(attendanceRepository.findAllByDate(eq(TODAY), any(Pageable.class))).thenReturn(attendancePage);
+
+            LocalDate expectedEndDate = TODAY.withDayOfMonth(TODAY.lengthOfMonth());
+            when(attendanceRepository.findAllByDateBetween(eq(TODAY), eq(expectedEndDate), any(Pageable.class)))
+                    .thenReturn(attendancePage);
 
             Page<Attendance> result = attendanceService.getAllAttendances(0, 10, TODAY, null);
 
             assertEquals(1, result.getTotalElements());
             assertEquals(1, result.getContent().size());
-            verify(attendanceRepository).findAllByDate(eq(TODAY), any(Pageable.class));
+            verify(attendanceRepository).findAllByDateBetween(eq(TODAY), eq(expectedEndDate), any(Pageable.class));
         }
 
         @Test

@@ -7,7 +7,7 @@ import com.iodsky.sweldox.leave.credit.LeaveCreditRepository;
 import com.iodsky.sweldox.leave.credit.LeaveCreditRequest;
 import com.iodsky.sweldox.leave.credit.LeaveCreditService;
 import com.iodsky.sweldox.security.user.User;
-import com.iodsky.sweldox.security.user.UserRole;
+import com.iodsky.sweldox.security.role.Role;
 import com.iodsky.sweldox.security.user.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -51,13 +51,10 @@ class LeaveCreditServiceTest {
         employee.setLastName("Dela Cruz");
 
         // Setup user
-        UserRole normalRole = new UserRole();
-        normalRole.setRole("EMPLOYEE");
-
         normalUser = new User();
         normalUser.setId(UUID.randomUUID());
         normalUser.setEmployee(employee);
-        normalUser.setUserRole(normalRole);
+        normalUser.setRole(new Role("EMPLOYEE"));
 
         // Setup leave credits
         vacationCredit = LeaveCredit.builder()

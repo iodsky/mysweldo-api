@@ -6,7 +6,7 @@ import com.iodsky.sweldox.leave.credit.LeaveCredit;
 import com.iodsky.sweldox.leave.credit.LeaveCreditService;
 import com.iodsky.sweldox.leave.request.*;
 import com.iodsky.sweldox.security.user.User;
-import com.iodsky.sweldox.security.user.UserRole;
+import com.iodsky.sweldox.security.role.Role;
 import com.iodsky.sweldox.security.user.UserService;
 import jakarta.persistence.OptimisticLockException;
 import org.junit.jupiter.api.BeforeEach;
@@ -98,19 +98,19 @@ class LeaveRequestServiceTest {
         hrUser = User.builder()
                 .id(UUID.randomUUID())
                 .employee(hrEmployee)
-                .userRole(new UserRole("HR"))
+                .role(new Role("HR"))
                 .build();
 
         employeeUser = User.builder()
                 .id(UUID.randomUUID())
                 .employee(employee)
-                .userRole(new UserRole("EMPLOYEE"))
+                .role(new Role("EMPLOYEE"))
                 .build();
 
         supervisorUser = User.builder()
                 .id(UUID.randomUUID())
                 .employee(supervisorEmployee)
-                .userRole(new UserRole("SUPERVISOR"))
+                .role(new Role("SUPERVISOR"))
                 .build();
 
         leaveRequestDto = LeaveRequestDto.builder()

@@ -6,7 +6,7 @@ import com.iodsky.sweldox.common.RequestStatus;
 import com.iodsky.sweldox.employee.Employee;
 import com.iodsky.sweldox.employee.EmployeeService;
 import com.iodsky.sweldox.security.user.User;
-import com.iodsky.sweldox.security.user.UserRole;
+import com.iodsky.sweldox.security.role.Role;
 import com.iodsky.sweldox.security.user.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -99,19 +99,19 @@ class OvertimeRequestServiceTest {
         hrUser = User.builder()
                 .id(UUID.randomUUID())
                 .employee(hrEmployee)
-                .userRole(new UserRole("HR"))
+                .role(new Role("HR"))
                 .build();
 
         employeeUser = User.builder()
                 .id(UUID.randomUUID())
                 .employee(employee)
-                .userRole(new UserRole("EMPLOYEE"))
+                .role(new Role("EMPLOYEE"))
                 .build();
 
         supervisorUser = User.builder()
                 .id(UUID.randomUUID())
                 .employee(supervisorEmployee)
-                .userRole(new UserRole("SUPERVISOR"))
+                .role(new Role("SUPERVISOR"))
                 .build();
 
         validAttendance = Attendance.builder()

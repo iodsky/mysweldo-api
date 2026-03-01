@@ -6,7 +6,6 @@ import com.iodsky.sweldox.common.DateRange;
 import com.iodsky.sweldox.common.RequestStatus;
 import com.iodsky.sweldox.employee.Employee;
 import com.iodsky.sweldox.employee.EmployeeService;
-import com.iodsky.sweldox.leave.request.LeaveRequest;
 import com.iodsky.sweldox.security.user.User;
 import com.iodsky.sweldox.security.user.UserService;
 import jakarta.transaction.Transactional;
@@ -36,7 +35,7 @@ public class OvertimeRequestService {
     @Transactional
     public OvertimeRequest createOvertimeRequest(AddOvertimeRequest request) {
         User authenticatedUser = userService.getAuthenticatedUser();
-        boolean isHR = authenticatedUser.getUserRole().getRole().equals("HR");
+        boolean isHR = authenticatedUser.getRole().getName().equals("HR");
         Long employeeId = request.getEmployeeId();
 
         if (employeeId == null) {
@@ -98,7 +97,7 @@ public class OvertimeRequestService {
 
     public OvertimeRequest getOvertimeRequestById(UUID id) {
         User authenticatedUser = userService.getAuthenticatedUser();
-        boolean isHR = authenticatedUser.getUserRole().getRole().equals("HR");
+        boolean isHR = authenticatedUser.getRole().getName().equals("HR");
         Long employeeId = authenticatedUser.getEmployee().getId();
 
         OvertimeRequest request = repository.findById(id)
@@ -146,7 +145,7 @@ public class OvertimeRequestService {
         User authenticatedUser = userService.getAuthenticatedUser();
         OvertimeRequest request = getOvertimeRequestById(id);
 
-        boolean isHR = authenticatedUser.getUserRole().getRole().equals("HR");
+        boolean isHR = authenticatedUser.getRole().getName().equals("HR");
 
         boolean isSupervisor = request.getEmployee().getSupervisor() != null &&
                 request.getEmployee().getSupervisor().getId().equals(authenticatedUser.getEmployee().getId());

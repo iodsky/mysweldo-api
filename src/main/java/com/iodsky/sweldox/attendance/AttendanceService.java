@@ -33,7 +33,7 @@ public class AttendanceService {
     public Attendance createAttendance(AttendanceDto attendanceDto) {
         User user = userService.getAuthenticatedUser();
 
-        boolean isHr = "HR".equalsIgnoreCase(user.getUserRole().getRole());
+        boolean isHr = "HR".equalsIgnoreCase(user.getRole().getName());
 
         // All roles may clock themselves in, but only HR can add for others
         Long currentEmployeeId = user.getEmployee().getId();
@@ -89,7 +89,7 @@ public class AttendanceService {
     public Attendance updateAttendance(UUID id, AttendanceDto attendanceDto) {
         User user = userService.getAuthenticatedUser();
 
-        boolean isHr = "HR".equalsIgnoreCase(user.getUserRole().getRole());
+        boolean isHr = "HR".equalsIgnoreCase(user.getRole().getName());
 
         Attendance attendance = repository.findById(id)
                 // Not yet clocked in
@@ -165,26 +165,18 @@ public class AttendanceService {
         return repository.save(attendance);
     }
 
-    public Page<Attendance> getAllAttendances(int page, int limit, LocalDate date, LocalDate endDate) {
+    public Page<Attendance> getAllAttendances(int page, int limit, LocalDate startDate, LocalDate endDate) {
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
         Pageable pageable = PageRequest.of(page, limit, sort);
 
-        if (date == null && endDate == null) {
-            return repository.findAll(pageable);
-        }
-
-        if (date != null && endDate == null) {
-            return repository.findAllByDate(date, pageable);
-        }
-
-        DateRange dateRange = new DateRange(date, endDate);
+        DateRange dateRange = new DateRange(startDate, endDate);
         return repository.findAllByDateBetween(dateRange.startDate(), dateRange.endDate(), pageable);
     }
 
     public Page<Attendance> getEmployeeAttendances(int page, int limit, Long employeeId, LocalDate startDate, LocalDate endDate) {
         User user = userService.getAuthenticatedUser();
 
-        String role = user.getUserRole().getRole();
+        String role = user.getRole().getName();
         boolean isAdmin = role.equalsIgnoreCase("HR") || role.equalsIgnoreCase("PAYROLL");
         Long currentEmployeeId = user.getEmployee().getId();
 

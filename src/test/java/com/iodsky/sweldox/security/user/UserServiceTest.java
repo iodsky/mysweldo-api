@@ -126,18 +126,6 @@ class UserServiceTest {
             verify(userRepository).findAllByRole_Name(eq("HR"), any(Pageable.class));
         }
 
-        @Test
-        void shouldThrowBadRequestWhenInvalidRoleProvided() {
-            when(roleService.getRoleByName("INVALID")).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Role INVALID not found"));
-
-            // This test needs to be adjusted based on actual service behavior
-            // The current implementation doesn't validate role existence before querying
-            Page<User> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
-            when(userRepository.findAllByRole_Name(eq("INVALID"), any(Pageable.class))).thenReturn(emptyPage);
-
-            Page<User> result = userService.getAllUsers(0, 10, "INVALID");
-            assertEquals(0, result.getTotalElements());
-        }
     }
 
     @Nested
@@ -205,11 +193,6 @@ class UserServiceTest {
 
             assertThrows(RuntimeException.class, () -> userService.createUser(userRequest));
         }
-    }
-
-    @Nested
-    class GetUserRoleTests {
-
     }
 
 }
