@@ -1,6 +1,6 @@
 spring:
   application:
-    name: sweldox
+    name: my-sweldo-api
   sql:
     init:
       mode: never

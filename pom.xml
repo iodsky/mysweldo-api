@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.iodsky</groupId>
-	<artifactId>sweldox</artifactId>
+	<artifactId>my-sweldo-api</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>Sweldox</name>
-	<description>Sweldox - HRIS RESTful API for employee, attendance, leave, and payroll management</description>
+	<name>my-sweldo-api</name>
+	<description>HRIS RESTful API for employee, attendance, leave, overtime, and payroll management</description>
 	<url/>
 	<licenses>
 		<license/>

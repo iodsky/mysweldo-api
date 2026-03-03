@@ -1,20 +1,19 @@
 services:
   spring:
-    container_name: sweldox-server
-    image: ghcr.io/iodsky/sweldox-api:latest
+    container_name: my-sweldo-server
+    image: ghcr.io/iodsky/my-sweldo-api:latest
     restart: always
     ports:
       - 8001:8001
     env_file:
       - .env
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.sweldox.rule=Host(`sweldox.iodsky.com`)"
-      - "traefik.http.routers.sweldox.entrypoints=websecure"
-      - "traefik.http.routers.sweldox.tls.certresolver=myresolver"
-      - "traefik.http.services.sweldox.loadbalancer.server.port=8001"
+      - "traefik.http.routers.my-sweldo-api.rule=Host(`my-sweldo.iodsky.com`)"
+      - "traefik.http.routers.my-sweldo-api.entrypoints=websecure"
+      - "traefik.http.routers.my-sweldo-api.tls.certresolver=myresolver"
+      - "traefik.http.services.my-sweldo-api.loadbalancer.server.port=8001"
     networks:
-      - sweldox-network
+      - my-sweldo-network
       - traefik
 
   watchtower:
@@ -28,12 +27,12 @@ services:
       WATCHTOWER_INCLUDE_RESTARTING: "true"
     command: --cleanup spring
     networks:
-      - sweldox-network
+      - my-sweldo-network
 
 volumes:
-  postgres-data:
+  my-sweldo-postgres-data:
 
 networks:
-  sweldox-network:
+  my-sweldo-network:
   traefik:
     external: true
