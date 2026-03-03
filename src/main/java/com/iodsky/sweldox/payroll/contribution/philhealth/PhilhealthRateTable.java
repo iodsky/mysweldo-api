@@ -3,6 +3,7 @@ package com.iodsky.sweldox.payroll.contribution.philhealth;
 import com.iodsky.sweldox.common.BaseModel;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -10,6 +11,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "philhealth_rate_table")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @AllArgsConstructor

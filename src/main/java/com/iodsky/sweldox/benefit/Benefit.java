@@ -5,12 +5,14 @@ import com.iodsky.sweldox.common.BaseModel;
 import com.iodsky.sweldox.employee.Employee;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
 @Table(name = "benefit")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @AllArgsConstructor

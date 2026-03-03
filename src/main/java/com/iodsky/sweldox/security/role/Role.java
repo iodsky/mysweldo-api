@@ -3,9 +3,11 @@ package com.iodsky.sweldox.security.role;
 import com.iodsky.sweldox.common.BaseModel;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "roles")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @AllArgsConstructor

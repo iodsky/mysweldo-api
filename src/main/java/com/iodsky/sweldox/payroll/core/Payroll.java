@@ -6,6 +6,7 @@ import com.iodsky.sweldox.employee.Employee;
 import com.iodsky.sweldox.payroll.deduction.Deduction;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,6 +20,7 @@ import java.util.UUID;
                 columnNames = {"employee_id", "period_start_date", "period_end_date"}
         )
 )
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @AllArgsConstructor

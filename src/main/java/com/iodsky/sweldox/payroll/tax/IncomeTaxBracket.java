@@ -3,6 +3,7 @@ package com.iodsky.sweldox.payroll.tax;
 import com.iodsky.sweldox.common.BaseModel;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,6 +14,7 @@ import java.util.UUID;
         name = "income_tax_bracket",
         uniqueConstraints = @UniqueConstraint(columnNames = {"effective_date", "min_income"})
 )
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @AllArgsConstructor

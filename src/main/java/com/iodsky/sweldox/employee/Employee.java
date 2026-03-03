@@ -7,6 +7,7 @@ import com.iodsky.sweldox.position.Position;
 import com.iodsky.sweldox.benefit.Benefit;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,6 +16,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "employee")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @AllArgsConstructor

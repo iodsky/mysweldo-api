@@ -5,9 +5,11 @@ import com.iodsky.sweldox.common.BaseModel;
 import com.iodsky.sweldox.department.Department;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "position")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @AllArgsConstructor

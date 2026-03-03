@@ -7,6 +7,7 @@ import com.iodsky.sweldox.employee.Employee;
 import com.iodsky.sweldox.leave.LeaveType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
 
@@ -17,6 +18,7 @@ import java.time.LocalDate;
                 columnNames = {"employee_id", "startDate", "endDate"}
         )
 )
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @AllArgsConstructor
