@@ -53,7 +53,7 @@ public class PayrollMapper {
 
     private BigDecimal getBenefitAmount(Payroll payroll, String type) {
         return payroll.getBenefits().stream()
-                .filter(b -> b.getBenefitType().getId().equalsIgnoreCase(type))
+                .filter(b -> b.getBenefit().getCode().equalsIgnoreCase(type))
                 .map(PayrollBenefit::getAmount)
                 .findFirst()
                 .orElse(BigDecimal.ZERO);
