@@ -2,12 +2,12 @@ package com.iodsky.mysweldo.payroll.core;
 
 import com.iodsky.mysweldo.attendance.Attendance;
 import com.iodsky.mysweldo.attendance.AttendanceService;
+import com.iodsky.mysweldo.deduction.DeductionService;
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.employee.EmployeeService;
 import com.iodsky.mysweldo.benefit.EmployeeBenefit;
 import com.iodsky.mysweldo.overtime.OvertimeRequestService;
 import com.iodsky.mysweldo.deduction.PayrollDeduction;
-import com.iodsky.mysweldo.deduction.DeductionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -24,7 +24,7 @@ public class PayrollBuilder {
     private final EmployeeService employeeService;
     private final AttendanceService attendanceService;
     private final OvertimeRequestService overtimeRequestService;
-    private final DeductionRepository deductionRepository;
+    private final DeductionService deductionService;
     private final PayrollCalculator payrollCalculator;
 
     public Payroll buildPayroll(Long employeeId, LocalDate periodStart, LocalDate periodEnd, LocalDate payDate) {
@@ -200,22 +200,22 @@ public class PayrollBuilder {
         List<PayrollDeduction> deductions = new ArrayList<>();
 
         deductions.add(PayrollDeduction.builder()
-                .deduction(deductionRepository.findByCode("SSS").orElseThrow())
+                .deduction(deductionService.getDeductionByCode("SSS"))
                 .amount(context.getSss())
                 .build());
 
         deductions.add(PayrollDeduction.builder()
-                .deduction(deductionRepository.findByCode("PHIC").orElseThrow())
+                .deduction(deductionService.getDeductionByCode("PHIC"))
                 .amount(context.getPhilhealth())
                 .build());
 
         deductions.add(PayrollDeduction.builder()
-                .deduction(deductionRepository.findByCode("HDMF").orElseThrow())
+                .deduction(deductionService.getDeductionByCode("HDMF"))
                 .amount(context.getPagibig())
                 .build());
 
         deductions.add(PayrollDeduction.builder()
-                .deduction(deductionRepository.findByCode("TAX").orElseThrow())
+                .deduction(deductionService.getDeductionByCode("TAX"))
                 .amount(context.getWithholdingTax())
                 .build());
 
