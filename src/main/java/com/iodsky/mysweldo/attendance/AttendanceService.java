@@ -107,12 +107,7 @@ public class AttendanceService {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "You have already clocked out for the day.");
             }
 
-            LocalTime clockOut = LocalTime.now();
-            if (clockOut.isBefore(attendance.getTimeIn())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Clock-out time cannot be before clock-in time");
-            }
-
-            attendance.setTimeOut(clockOut);
+            attendance.setTimeOut(LocalTime.now());
         }
         else {
             if (!isHr) {
@@ -130,6 +125,14 @@ public class AttendanceService {
             if (attendanceDto.getDate() != null) {
                 attendance.setDate(attendanceDto.getDate());
             }
+
+            LocalTime effectiveTimeIn = attendance.getTimeIn();
+            LocalTime effectiveTimeOut = attendance.getTimeOut();
+            if (effectiveTimeIn != null && effectiveTimeOut != null
+                    && !effectiveTimeOut.equals(LocalTime.MIN)
+                    && effectiveTimeOut.isBefore(effectiveTimeIn)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Clock-out time cannot be before clock-in time");
+            }
         }
 
         if (attendance.getTimeIn() != null && attendance.getTimeOut() != null && !attendance.getTimeOut().equals(LocalTime.MIN)) {
@@ -145,6 +148,9 @@ public class AttendanceService {
             LocalTime employeeEndShift = employee.getEndShift();
 
             Duration duration = Duration.between(attendance.getTimeIn(), attendance.getTimeOut());
+            if (duration.isNegative()) {
+                duration = duration.plusHours(24);
+            }
             BigDecimal totalHours = BigDecimal.valueOf(duration.toMinutes())
                     .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
