@@ -6,7 +6,6 @@ import com.iodsky.mysweldo.department.Department;
 import com.iodsky.mysweldo.department.DepartmentRepository;
 import com.iodsky.mysweldo.position.Position;
 import com.iodsky.mysweldo.position.PositionRepository;
-import com.iodsky.mysweldo.benefit.EmployeeBenefit;
 
 import com.iodsky.mysweldo.benefit.Benefit;
 import com.iodsky.mysweldo.benefit.BenefitRepository;

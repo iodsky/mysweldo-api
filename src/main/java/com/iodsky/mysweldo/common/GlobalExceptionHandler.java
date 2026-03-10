@@ -1,7 +1,7 @@
 package com.iodsky.mysweldo.common;
 
 import com.iodsky.mysweldo.common.response.ErrorResponse;
-import com.iodsky.mysweldo.payroll.core.PayrollRunException;
+import com.iodsky.mysweldo.payroll.run.PayrollRunException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;

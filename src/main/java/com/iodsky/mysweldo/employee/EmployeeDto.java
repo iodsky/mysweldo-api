@@ -1,6 +1,6 @@
 package com.iodsky.mysweldo.employee;
 
-import com.iodsky.mysweldo.benefit.EmployeeBenefitDto;
+import com.iodsky.mysweldo.batch.employee.EmployeeBenefitDto;
 import lombok.Builder;
 import lombok.Data;
 

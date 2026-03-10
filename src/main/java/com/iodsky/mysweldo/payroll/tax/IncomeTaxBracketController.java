@@ -24,7 +24,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/payroll-config/tax")
-@PreAuthorize("hasRole('PAYROLL')")
+@PreAuthorize("hasAnyRole('PAYROLL', 'SUPERUSER')")
 @Validated
 @RequiredArgsConstructor
 @Tag(name = "Payroll Configuration - Income Tax", description = "Manage income tax bracket configurations")

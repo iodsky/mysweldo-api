@@ -1,6 +1,6 @@
 package com.iodsky.mysweldo.employee;
 
-import com.iodsky.mysweldo.benefit.EmployeeBenefitRequest;
+import com.iodsky.mysweldo.batch.employee.EmployeeBenefitRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Data;

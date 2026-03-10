@@ -5,7 +5,7 @@ import com.iodsky.mysweldo.department.Department;
 import com.iodsky.mysweldo.department.DepartmentService;
 import com.iodsky.mysweldo.position.Position;
 import com.iodsky.mysweldo.position.PositionService;
-import com.iodsky.mysweldo.benefit.EmployeeBenefit;
+import com.iodsky.mysweldo.batch.employee.EmployeeBenefit;
 import com.iodsky.mysweldo.security.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

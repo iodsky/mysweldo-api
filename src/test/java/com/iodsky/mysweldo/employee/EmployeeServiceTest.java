@@ -1,7 +1,7 @@
 package com.iodsky.mysweldo.employee;
 
 import com.iodsky.mysweldo.benefit.BenefitService;
-import com.iodsky.mysweldo.benefit.EmployeeBenefit;
+import com.iodsky.mysweldo.batch.employee.EmployeeBenefit;
 import com.iodsky.mysweldo.benefit.Benefit;
 import com.iodsky.mysweldo.department.Department;
 import com.iodsky.mysweldo.department.DepartmentService;

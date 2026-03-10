@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.benefit;
+package com.iodsky.mysweldo.batch.employee;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

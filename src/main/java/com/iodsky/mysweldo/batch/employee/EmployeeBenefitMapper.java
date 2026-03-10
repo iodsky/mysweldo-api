@@ -1,5 +1,6 @@
-package com.iodsky.mysweldo.benefit;
+package com.iodsky.mysweldo.batch.employee;
 
+import com.iodsky.mysweldo.benefit.Benefit;
 import org.springframework.stereotype.Component;
 
 @Component
