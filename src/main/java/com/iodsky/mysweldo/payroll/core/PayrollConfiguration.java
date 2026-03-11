@@ -1,6 +1,6 @@
 package com.iodsky.mysweldo.payroll.core;
 
-import com.iodsky.mysweldo.pagIbig.PagibigRateTable;
+import com.iodsky.mysweldo.pagIbig.PagibigRate;
 import com.iodsky.mysweldo.philhealth.PhilhealthRate;
 import com.iodsky.mysweldo.sss.SssRate;
 import com.iodsky.mysweldo.tax.TaxBracket;
@@ -17,7 +17,7 @@ import java.util.List;
 @Builder
 public class PayrollConfiguration {
     private PhilhealthRate philhealthRateTable;
-    private PagibigRateTable pagibigRateTable;
+    private PagibigRate pagibigRateTable;
     private SssRate sssRateTable;
     private List<TaxBracket> incomeTaxBrackets;
 }

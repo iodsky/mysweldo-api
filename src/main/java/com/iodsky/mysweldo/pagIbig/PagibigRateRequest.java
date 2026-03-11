@@ -13,7 +13,7 @@ import java.time.LocalDate;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class PagibigRateTableRequest {
+public class PagibigRateRequest {
 
     @NotNull(message = "Employee rate is required")
     @DecimalMin(value = "0.0001", message = "Employee rate must be greater than 0")

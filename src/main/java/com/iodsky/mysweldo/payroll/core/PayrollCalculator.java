@@ -1,8 +1,8 @@
 package com.iodsky.mysweldo.payroll.core;
 
 import com.iodsky.mysweldo.batch.employee.EmployeeBenefit;
-import com.iodsky.mysweldo.pagIbig.PagibigRateTable;
-import com.iodsky.mysweldo.pagIbig.PagibigRateTableRepository;
+import com.iodsky.mysweldo.pagIbig.PagibigRate;
+import com.iodsky.mysweldo.pagIbig.PagibigRateRepository;
 import com.iodsky.mysweldo.philhealth.PhilhealthRate;
 import com.iodsky.mysweldo.philhealth.PhilhealthRateRepository;
 import com.iodsky.mysweldo.sss.SssRate;
@@ -23,7 +23,7 @@ import java.util.List;
 public class PayrollCalculator {
 
     private final PhilhealthRateRepository philhealthRateTableRepository;
-    private final PagibigRateTableRepository pagibigRateTableRepository;
+    private final PagibigRateRepository pagibigRateTableRepository;
     private final SssRateRepository sssRateTableRepository;
     private final TaxBracketRepository incomeTaxBracketRepository;
 
@@ -39,7 +39,7 @@ public class PayrollCalculator {
                         "PhilHealth rate table not found for date: " + payrollDate
                 ));
 
-        PagibigRateTable pagibig = pagibigRateTableRepository
+        PagibigRate pagibig = pagibigRateTableRepository
                 .findLatestByEffectiveDate(payrollDate)
             .orElseThrow(() -> new PayrollRunException(
                         "Pag-IBIG rate table not found for date: " + payrollDate
@@ -108,7 +108,7 @@ public class PayrollCalculator {
         return employeeShare.divide(SEMI_MONTHLY_DIVISOR, 2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculatePagibigDeduction(BigDecimal basicSalary, PagibigRateTable config) {
+    public BigDecimal calculatePagibigDeduction(BigDecimal basicSalary, PagibigRate config) {
         BigDecimal monthlySalary = basicSalary.min(config.getMaxSalaryCap());
         BigDecimal rate;
 
@@ -199,7 +199,7 @@ public class PayrollCalculator {
         return calculatePhilhealthDeduction(basicSalary, config);
     }
 
-    public BigDecimal calculatePagibigEmployerContribution(BigDecimal basicSalary, PagibigRateTable config) {
+    public BigDecimal calculatePagibigEmployerContribution(BigDecimal basicSalary, PagibigRate config) {
         // Employer always uses the flat employer_rate regardless of income tier
         BigDecimal monthlySalary = basicSalary.min(config.getMaxSalaryCap());
         BigDecimal monthlyContribution = monthlySalary.multiply(config.getEmployerRate());

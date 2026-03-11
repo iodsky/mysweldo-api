@@ -3,14 +3,14 @@ package com.iodsky.mysweldo.pagIbig;
 import org.springframework.stereotype.Component;
 
 @Component
-public class PagibigRateTableMapper {
+public class PagibigRateMapper {
 
-    public PagibigRateTableDto toDto(PagibigRateTable entity) {
+    public PagibigRateDto toDto(PagibigRate entity) {
         if (entity == null) {
             return null;
         }
 
-        return PagibigRateTableDto.builder()
+        return PagibigRateDto.builder()
                 .id(entity.getId())
                 .employeeRate(entity.getEmployeeRate())
                 .employerRate(entity.getEmployerRate())

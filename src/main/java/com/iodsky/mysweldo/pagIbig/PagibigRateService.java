@@ -16,12 +16,12 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class PagibigRateTableService {
+public class PagibigRateService {
 
-    private final PagibigRateTableRepository pagibigRateTableRepository;
+    private final PagibigRateRepository pagibigRateTableRepository;
 
     @Transactional
-    public PagibigRateTable createPagibigRateTable(PagibigRateTableRequest request) {
+    public PagibigRate createPagibigRateTable(PagibigRateRequest request) {
         if (pagibigRateTableRepository.findLatestByEffectiveDate(request.getEffectiveDate()).isPresent()) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -29,7 +29,7 @@ public class PagibigRateTableService {
             );
         }
 
-        PagibigRateTable rateTable = PagibigRateTable.builder()
+        PagibigRate rateTable = PagibigRate.builder()
                 .employeeRate(request.getEmployeeRate())
                 .employerRate(request.getEmployerRate())
                 .lowIncomeThreshold(request.getLowIncomeThreshold())
@@ -41,7 +41,7 @@ public class PagibigRateTableService {
         return pagibigRateTableRepository.save(rateTable);
     }
 
-    public Page<PagibigRateTable> getAllPagibigRateTables(int page, int limit, LocalDate effectiveDate) {
+    public Page<PagibigRate> getAllPagibigRateTables(int page, int limit, LocalDate effectiveDate) {
         Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "effectiveDate"));
 
         if (effectiveDate != null) {
@@ -60,7 +60,7 @@ public class PagibigRateTableService {
         );
     }
 
-    public PagibigRateTable getPagibigRateTableById(UUID id) {
+    public PagibigRate getPagibigRateTableById(UUID id) {
         return pagibigRateTableRepository.findById(id)
                 .filter(config -> config.getDeletedAt() == null)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -69,7 +69,7 @@ public class PagibigRateTableService {
                 ));
     }
 
-    public PagibigRateTable getLatestPagibigRateTable(LocalDate date) {
+    public PagibigRate getLatestPagibigRateTable(LocalDate date) {
         return pagibigRateTableRepository.findLatestByEffectiveDate(date)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -78,8 +78,8 @@ public class PagibigRateTableService {
     }
 
     @Transactional
-    public PagibigRateTable updatePagibigRateTable(UUID id, PagibigRateTableRequest request) {
-        PagibigRateTable rateTable = getPagibigRateTableById(id);
+    public PagibigRate updatePagibigRateTable(UUID id, PagibigRateRequest request) {
+        PagibigRate rateTable = getPagibigRateTableById(id);
 
         rateTable.setEmployeeRate(request.getEmployeeRate());
         rateTable.setEmployerRate(request.getEmployerRate());
@@ -93,7 +93,7 @@ public class PagibigRateTableService {
 
     @Transactional
     public void deletePagibigRateTable(UUID id) {
-        PagibigRateTable rateTable = getPagibigRateTableById(id);
+        PagibigRate rateTable = getPagibigRateTableById(id);
         rateTable.setDeletedAt(Instant.now());
         pagibigRateTableRepository.save(rateTable);
     }

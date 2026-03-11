@@ -1,9 +1,9 @@
 package com.iodsky.mysweldo.payroll.contribution.pagIbig;
 
-import com.iodsky.mysweldo.pagIbig.PagibigRateTable;
-import com.iodsky.mysweldo.pagIbig.PagibigRateTableRepository;
-import com.iodsky.mysweldo.pagIbig.PagibigRateTableRequest;
-import com.iodsky.mysweldo.pagIbig.PagibigRateTableService;
+import com.iodsky.mysweldo.pagIbig.PagibigRate;
+import com.iodsky.mysweldo.pagIbig.PagibigRateRepository;
+import com.iodsky.mysweldo.pagIbig.PagibigRateRequest;
+import com.iodsky.mysweldo.pagIbig.PagibigRateService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -31,20 +31,20 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class PagibigRateTableServiceTest {
+class PagibigRateServiceTest {
 
     @InjectMocks
-    private PagibigRateTableService service;
+    private PagibigRateService service;
 
     @Mock
-    private PagibigRateTableRepository pagibigRateTableRepository;
+    private PagibigRateRepository pagibigRateTableRepository;
 
-    private PagibigRateTable rateTable;
-    private PagibigRateTableRequest request;
+    private PagibigRate rateTable;
+    private PagibigRateRequest request;
 
     @BeforeEach
     void setUp() {
-        rateTable = PagibigRateTable.builder()
+        rateTable = PagibigRate.builder()
                 .id(UUID.randomUUID())
                 .employeeRate(new BigDecimal("0.0200"))
                 .employerRate(new BigDecimal("0.0200"))
@@ -54,7 +54,7 @@ class PagibigRateTableServiceTest {
                 .effectiveDate(LocalDate.of(2024, 1, 1))
                 .build();
 
-        request = PagibigRateTableRequest.builder()
+        request = PagibigRateRequest.builder()
                 .employeeRate(new BigDecimal("0.0200"))
                 .employerRate(new BigDecimal("0.0200"))
                 .lowIncomeThreshold(new BigDecimal("1500.00"))
@@ -65,15 +65,15 @@ class PagibigRateTableServiceTest {
     }
 
     @Nested
-    class CreatePagibigRateTableTests {
+    class CreatePagibigRateTests {
 
         @Test
         void shouldCreateRateTableWhenNoExistingRecordForEffectiveDate() {
             when(pagibigRateTableRepository.findLatestByEffectiveDate(request.getEffectiveDate()))
                     .thenReturn(Optional.empty());
-            when(pagibigRateTableRepository.save(any(PagibigRateTable.class))).thenReturn(rateTable);
+            when(pagibigRateTableRepository.save(any(PagibigRate.class))).thenReturn(rateTable);
 
-            PagibigRateTable result = service.createPagibigRateTable(request);
+            PagibigRate result = service.createPagibigRateTable(request);
 
             assertThat(result).isNotNull();
             assertThat(result.getEmployeeRate()).isEqualTo(request.getEmployeeRate());
@@ -104,11 +104,11 @@ class PagibigRateTableServiceTest {
         @SuppressWarnings("unchecked")
         @Test
         void shouldReturnPaginatedRateTablesWhenNoEffectiveDateFilterProvided() {
-            Page<PagibigRateTable> expectedPage = new PageImpl<>(List.of(rateTable));
+            Page<PagibigRate> expectedPage = new PageImpl<>(List.of(rateTable));
             when(pagibigRateTableRepository.findAll(any(Specification.class), any(Pageable.class)))
                     .thenReturn(expectedPage);
 
-            Page<PagibigRateTable> result = service.getAllPagibigRateTables(0, 10, null);
+            Page<PagibigRate> result = service.getAllPagibigRateTables(0, 10, null);
 
             assertThat(result.getContent()).hasSize(1);
             assertThat(result.getContent().getFirst()).isEqualTo(rateTable);
@@ -117,11 +117,11 @@ class PagibigRateTableServiceTest {
         @SuppressWarnings("unchecked")
         @Test
         void shouldReturnPaginatedRateTablesFilteredByEffectiveDateWhenDateProvided() {
-            Page<PagibigRateTable> expectedPage = new PageImpl<>(List.of(rateTable));
+            Page<PagibigRate> expectedPage = new PageImpl<>(List.of(rateTable));
             when(pagibigRateTableRepository.findAll(any(Specification.class), any(Pageable.class)))
                     .thenReturn(expectedPage);
 
-            Page<PagibigRateTable> result = service.getAllPagibigRateTables(0, 10, LocalDate.of(2024, 6, 1));
+            Page<PagibigRate> result = service.getAllPagibigRateTables(0, 10, LocalDate.of(2024, 6, 1));
 
             assertThat(result.getContent()).hasSize(1);
         }
@@ -129,25 +129,25 @@ class PagibigRateTableServiceTest {
         @SuppressWarnings("unchecked")
         @Test
         void shouldReturnEmptyPageWhenNoRateTablesExist() {
-            Page<PagibigRateTable> emptyPage = new PageImpl<>(List.of());
+            Page<PagibigRate> emptyPage = new PageImpl<>(List.of());
             when(pagibigRateTableRepository.findAll(any(Specification.class), any(Pageable.class)))
                     .thenReturn(emptyPage);
 
-            Page<PagibigRateTable> result = service.getAllPagibigRateTables(0, 10, null);
+            Page<PagibigRate> result = service.getAllPagibigRateTables(0, 10, null);
 
             assertThat(result.getContent()).isEmpty();
         }
     }
 
     @Nested
-    class GetPagibigRateTableByIdTests {
+    class GetPagibigRateByIdTests {
 
         @Test
         void shouldReturnRateTableWhenItExistsAndIsNotDeleted() {
             when(pagibigRateTableRepository.findById(rateTable.getId()))
                     .thenReturn(Optional.of(rateTable));
 
-            PagibigRateTable result = service.getPagibigRateTableById(rateTable.getId());
+            PagibigRate result = service.getPagibigRateTableById(rateTable.getId());
 
             assertThat(result).isEqualTo(rateTable);
         }
@@ -181,7 +181,7 @@ class PagibigRateTableServiceTest {
     }
 
     @Nested
-    class GetLatestPagibigRateTableTests {
+    class GetLatestPagibigRateTests {
 
         @Test
         void shouldReturnLatestRateTableForGivenDate() {
@@ -189,7 +189,7 @@ class PagibigRateTableServiceTest {
             when(pagibigRateTableRepository.findLatestByEffectiveDate(date))
                     .thenReturn(Optional.of(rateTable));
 
-            PagibigRateTable result = service.getLatestPagibigRateTable(date);
+            PagibigRate result = service.getLatestPagibigRateTable(date);
 
             assertThat(result).isEqualTo(rateTable);
         }
@@ -211,11 +211,11 @@ class PagibigRateTableServiceTest {
     }
 
     @Nested
-    class UpdatePagibigRateTableTests {
+    class UpdatePagibigRateTests {
 
         @Test
         void shouldUpdateAllFieldsAndReturnUpdatedRateTableWhenExists() {
-            PagibigRateTableRequest updateRequest = PagibigRateTableRequest.builder()
+            PagibigRateRequest updateRequest = PagibigRateRequest.builder()
                     .employeeRate(new BigDecimal("0.0300"))
                     .employerRate(new BigDecimal("0.0300"))
                     .lowIncomeThreshold(new BigDecimal("2000.00"))
@@ -226,9 +226,9 @@ class PagibigRateTableServiceTest {
 
             when(pagibigRateTableRepository.findById(rateTable.getId()))
                     .thenReturn(Optional.of(rateTable));
-            when(pagibigRateTableRepository.save(any(PagibigRateTable.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(pagibigRateTableRepository.save(any(PagibigRate.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            PagibigRateTable result = service.updatePagibigRateTable(rateTable.getId(), updateRequest);
+            PagibigRate result = service.updatePagibigRateTable(rateTable.getId(), updateRequest);
 
             assertThat(result.getEmployeeRate()).isEqualTo(updateRequest.getEmployeeRate());
             assertThat(result.getEmployerRate()).isEqualTo(updateRequest.getEmployerRate());
@@ -263,13 +263,13 @@ class PagibigRateTableServiceTest {
     }
 
     @Nested
-    class DeletePagibigRateTableTests {
+    class DeletePagibigRateTests {
 
         @Test
         void shouldSoftDeleteRateTableBySettingDeletedAt() {
             when(pagibigRateTableRepository.findById(rateTable.getId()))
                     .thenReturn(Optional.of(rateTable));
-            when(pagibigRateTableRepository.save(any(PagibigRateTable.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(pagibigRateTableRepository.save(any(PagibigRate.class))).thenAnswer(inv -> inv.getArgument(0));
 
             service.deletePagibigRateTable(rateTable.getId());
 

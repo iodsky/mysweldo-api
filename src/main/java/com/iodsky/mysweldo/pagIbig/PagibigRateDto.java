@@ -14,7 +14,7 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class PagibigRateTableDto {
+public class PagibigRateDto {
     private UUID id;
     private BigDecimal employeeRate;
     private BigDecimal employerRate;
