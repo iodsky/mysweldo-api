@@ -8,13 +8,14 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class PayrollDto {
+public class PayrollItemDto {
 
     private UUID id;
     private Long employeeId;
@@ -25,29 +26,11 @@ public class PayrollDto {
     private BigDecimal monthlyRate;
     private BigDecimal dailyRate;
     private BigDecimal grossPay;
-
-    private BenefitsDto benefits;
-    private DeductionsDto deductions;
-
     private BigDecimal netPay;
 
+    private List<PayrollBenefitDto> benefits;
+    private List<PayrollDeductionDto> deductions;
+    private List<EmployerContributionDto> employerContributions;
+
 }
 
-@Data
-@Builder
-class BenefitsDto {
-    private BigDecimal mealAllowance;
-    private BigDecimal clothingAllowance;
-    private BigDecimal phoneAllowance;
-    private BigDecimal totalBenefits;
-}
-
-@Data
-@Builder
-class DeductionsDto {
-    private BigDecimal sssDeduction;
-    private BigDecimal philhealthDeduction;
-    private BigDecimal pagibigDeduction;
-    private BigDecimal withholdingTax;
-    private BigDecimal totalDeductions;
-}
