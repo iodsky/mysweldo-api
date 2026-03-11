@@ -27,14 +27,14 @@ public class PayrollItemController {
 
     @GetMapping("/me")
     @Operation(summary = "Get my payroll records", description = "Retrieve payroll records for the authenticated employee")
-    public ResponseEntity<ApiResponse<List<PayrollDto>>> getAllEmployeePayroll(
+    public ResponseEntity<ApiResponse<List<PayrollItemDto>>> getAllEmployeePayroll(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
             @Parameter(description = "Filter by year and month") @RequestParam(required = false) YearMonth period
     ) {
         Page<PayrollItem> page = service.getAllEmployeePayroll(pageNo, limit, period);
 
-        List<PayrollDto> payroll = page.getContent().stream().map(mapper::toDto).toList();
+        List<PayrollItemDto> payroll = page.getContent().stream().map(mapper::toDto).toList();
 
         return ResponseFactory.ok("Payroll retrieved successfully", payroll, PaginationMeta.of(page));
     }

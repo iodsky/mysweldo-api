@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -24,5 +25,9 @@ public interface PayrollItemRepository extends JpaRepository<PayrollItem, UUID> 
     Boolean existsByPayrollRun_IdAndEmployee_Id(UUID payrollRunId, Long employeeId);
 
     List<PayrollItem> findAllByPayrollRun_Id(UUID payrollRunId);
+
+    Page<PayrollItem> findAllByPayrollRun_Id(UUID payrollRunId, Pageable pageable);
+
+    Optional<PayrollItem> findByPayrollRun_IdAndId(UUID payrollRun_id, UUID id);
 
 }
