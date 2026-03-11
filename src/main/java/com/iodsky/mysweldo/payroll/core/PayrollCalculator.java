@@ -9,7 +9,7 @@ import com.iodsky.mysweldo.sss.SssRateTable;
 import com.iodsky.mysweldo.sss.SssRateTableRepository;
 import com.iodsky.mysweldo.payroll.run.PayrollRunException;
 import com.iodsky.mysweldo.tax.TaxBracket;
-import com.iodsky.mysweldo.tax.IncomeTaxBracketRepository;
+import com.iodsky.mysweldo.tax.TaxBracketRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -25,7 +25,7 @@ public class PayrollCalculator {
     private final PhilhealthRateTableRepository philhealthRateTableRepository;
     private final PagibigRateTableRepository pagibigRateTableRepository;
     private final SssRateTableRepository sssRateTableRepository;
-    private final IncomeTaxBracketRepository incomeTaxBracketRepository;
+    private final TaxBracketRepository incomeTaxBracketRepository;
 
     private static final BigDecimal SEMI_MONTHLY_DIVISOR = BigDecimal.valueOf(2);
     private static final BigDecimal OVERTIME_MULTIPLIER = BigDecimal.valueOf(1.25);

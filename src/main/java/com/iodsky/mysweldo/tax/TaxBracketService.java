@@ -18,12 +18,12 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class IncomeTaxBracketService {
+public class TaxBracketService {
 
-    private final IncomeTaxBracketRepository repository;
+    private final TaxBracketRepository repository;
 
     @Transactional
-    public TaxBracket createIncomeTaxBracket(IncomeTaxBracketRequest request) {
+    public TaxBracket createIncomeTaxBracket(TaxBracketRequest request) {
         TaxBracket bracket = TaxBracket.builder()
                 .minIncome(request.getMinIncome())
                 .maxIncome(request.getMaxIncome())
@@ -86,7 +86,7 @@ public class IncomeTaxBracketService {
     }
 
     @Transactional
-    public TaxBracket updateIncomeTaxBracket(UUID id, IncomeTaxBracketRequest request) {
+    public TaxBracket updateIncomeTaxBracket(UUID id, TaxBracketRequest request) {
         TaxBracket bracket = getIncomeTaxBracketById(id);
 
         bracket.setMinIncome(request.getMinIncome());

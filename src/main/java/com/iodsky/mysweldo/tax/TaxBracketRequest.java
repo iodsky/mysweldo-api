@@ -13,7 +13,7 @@ import java.time.LocalDate;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class IncomeTaxBracketRequest {
+public class TaxBracketRequest {
 
     @NotNull(message = "Minimum income is required")
     @DecimalMin(value = "0.00", message = "Minimum income must be greater than or equal to 0")

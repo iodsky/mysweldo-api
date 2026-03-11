@@ -1,9 +1,9 @@
 package com.iodsky.mysweldo.payroll.tax;
 
 import com.iodsky.mysweldo.tax.TaxBracket;
-import com.iodsky.mysweldo.tax.IncomeTaxBracketRepository;
-import com.iodsky.mysweldo.tax.IncomeTaxBracketRequest;
-import com.iodsky.mysweldo.tax.IncomeTaxBracketService;
+import com.iodsky.mysweldo.tax.TaxBracketRepository;
+import com.iodsky.mysweldo.tax.TaxBracketRequest;
+import com.iodsky.mysweldo.tax.TaxBracketService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -34,13 +34,13 @@ import static org.mockito.Mockito.*;
 class TaxBracketServiceTest {
 
     @InjectMocks
-    private IncomeTaxBracketService service;
+    private TaxBracketService service;
 
     @Mock
-    private IncomeTaxBracketRepository repository;
+    private TaxBracketRepository repository;
 
     private TaxBracket bracket;
-    private IncomeTaxBracketRequest request;
+    private TaxBracketRequest request;
 
     @BeforeEach
     void setUp() {
@@ -54,7 +54,7 @@ class TaxBracketServiceTest {
                 .effectiveDate(LocalDate.of(2024, 1, 1))
                 .build();
 
-        request = IncomeTaxBracketRequest.builder()
+        request = TaxBracketRequest.builder()
                 .minIncome(new BigDecimal("20833.00"))
                 .maxIncome(new BigDecimal("33332.00"))
                 .baseTax(new BigDecimal("0.00"))
@@ -84,7 +84,7 @@ class TaxBracketServiceTest {
 
         @Test
         void shouldPersistBracketWithNullMaxIncomeForOpenEndedTopBracket() {
-            IncomeTaxBracketRequest openEndedRequest = IncomeTaxBracketRequest.builder()
+            TaxBracketRequest openEndedRequest = TaxBracketRequest.builder()
                     .minIncome(new BigDecimal("666667.00"))
                     .maxIncome(null)
                     .baseTax(new BigDecimal("130833.33"))
@@ -112,7 +112,7 @@ class TaxBracketServiceTest {
 
         @Test
         void shouldPersistBracketWithZeroBaseTaxForFirstBracket() {
-            IncomeTaxBracketRequest firstBracketRequest = IncomeTaxBracketRequest.builder()
+            TaxBracketRequest firstBracketRequest = TaxBracketRequest.builder()
                     .minIncome(BigDecimal.ZERO)
                     .maxIncome(new BigDecimal("20832.00"))
                     .baseTax(BigDecimal.ZERO)
@@ -329,7 +329,7 @@ class TaxBracketServiceTest {
 
         @Test
         void shouldUpdateAllFieldsAndReturnUpdatedBracket() {
-            IncomeTaxBracketRequest updateRequest = IncomeTaxBracketRequest.builder()
+            TaxBracketRequest updateRequest = TaxBracketRequest.builder()
                     .minIncome(new BigDecimal("33333.00"))
                     .maxIncome(new BigDecimal("66666.00"))
                     .baseTax(new BigDecimal("2500.00"))

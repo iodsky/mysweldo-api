@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface IncomeTaxBracketRepository extends JpaRepository<TaxBracket, UUID>, JpaSpecificationExecutor<TaxBracket> {
+public interface TaxBracketRepository extends JpaRepository<TaxBracket, UUID>, JpaSpecificationExecutor<TaxBracket> {
 
     @Query("SELECT i FROM TaxBracket i WHERE i.effectiveDate <= :date AND i.deletedAt IS NULL ORDER BY i.minIncome ASC")
     List<TaxBracket> findAllByEffectiveDate(@Param("date") LocalDate date);

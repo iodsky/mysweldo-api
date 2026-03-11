@@ -14,7 +14,7 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class IncomeTaxBracketDto {
+public class TaxBracketDto {
     private UUID id;
     private BigDecimal minIncome;
     private BigDecimal maxIncome;

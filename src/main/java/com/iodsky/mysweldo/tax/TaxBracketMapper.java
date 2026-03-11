@@ -3,14 +3,14 @@ package com.iodsky.mysweldo.tax;
 import org.springframework.stereotype.Component;
 
 @Component
-public class IncomeTaxBracketMapper {
+public class TaxBracketMapper {
 
-    public IncomeTaxBracketDto toDto(TaxBracket entity) {
+    public TaxBracketDto toDto(TaxBracket entity) {
         if (entity == null) {
             return null;
         }
 
-        return IncomeTaxBracketDto.builder()
+        return TaxBracketDto.builder()
                 .id(entity.getId())
                 .minIncome(entity.getMinIncome())
                 .maxIncome(entity.getMaxIncome())
