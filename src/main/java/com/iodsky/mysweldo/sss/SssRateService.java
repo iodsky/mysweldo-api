@@ -19,21 +19,21 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SssRateTableService {
+public class SssRateService {
 
-    private final SssRateTableRepository repositiry;
+    private final SssRateRepository repositiry;
 
     @Transactional
-    public SssRateTable createSssRateTable(SssRateTableRequest request) {
-        List<SssRateTable.SalaryBracket> brackets = request.getSalaryBrackets().stream()
-                .map(req -> SssRateTable.SalaryBracket.builder()
+    public SssRate createSssRateTable(SssRateRequest request) {
+        List<SssRate.SalaryBracket> brackets = request.getSalaryBrackets().stream()
+                .map(req -> SssRate.SalaryBracket.builder()
                         .minSalary(req.getMinSalary())
                         .maxSalary(req.getMaxSalary())
                         .msc(req.getMsc())
                         .build())
                 .collect(Collectors.toList());
 
-        SssRateTable rateTable = SssRateTable.builder()
+        SssRate rateTable = SssRate.builder()
                 .totalSss(request.getTotalSss())
                 .employeeRate(request.getEmployeeRate())
                 .employerRate(request.getEmployerRate())
@@ -44,7 +44,7 @@ public class SssRateTableService {
         return repositiry.save(rateTable);
     }
 
-    public Page<SssRateTable> getAllSssRateTables(
+    public Page<SssRate> getAllSssRateTables(
             int page, int limit, LocalDate effectiveDate) {
         Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "effectiveDate"));
 
@@ -61,7 +61,7 @@ public class SssRateTableService {
         }, pageable);
     }
 
-    public SssRateTable getSssRateTableById(UUID id) {
+    public SssRate getSssRateTableById(UUID id) {
         return repositiry.findById(id)
                 .filter(config -> config.getDeletedAt() == null)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -70,8 +70,8 @@ public class SssRateTableService {
                 ));
     }
 
-    public SssRateTable getSssRateTableBySalaryAndDate(BigDecimal salary, LocalDate date) {
-        SssRateTable config = repositiry.findLatestByEffectiveDate(date)
+    public SssRate getSssRateTableBySalaryAndDate(BigDecimal salary, LocalDate date) {
+        SssRate config = repositiry.findLatestByEffectiveDate(date)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "No SSS rate table found for date: " + date
@@ -91,11 +91,11 @@ public class SssRateTableService {
     }
 
     @Transactional
-    public SssRateTable updateSssRateTable(UUID id, SssRateTableRequest request) {
-        SssRateTable rateTable = getSssRateTableById(id);
+    public SssRate updateSssRateTable(UUID id, SssRateRequest request) {
+        SssRate rateTable = getSssRateTableById(id);
 
-        List<SssRateTable.SalaryBracket> brackets = request.getSalaryBrackets().stream()
-                .map(req -> SssRateTable.SalaryBracket.builder()
+        List<SssRate.SalaryBracket> brackets = request.getSalaryBrackets().stream()
+                .map(req -> SssRate.SalaryBracket.builder()
                         .minSalary(req.getMinSalary())
                         .maxSalary(req.getMaxSalary())
                         .msc(req.getMsc())
@@ -113,7 +113,7 @@ public class SssRateTableService {
 
     @Transactional
     public void deleteSssRateTable(UUID id) {
-        SssRateTable rateTable = getSssRateTableById(id);
+        SssRate rateTable = getSssRateTableById(id);
         rateTable.setDeletedAt(Instant.now());
         repositiry.save(rateTable);
     }

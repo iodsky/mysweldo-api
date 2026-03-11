@@ -23,21 +23,21 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/payroll-config/sss")
+@RequestMapping("/payroll-config/sss-rates")
 @PreAuthorize("hasAnyRole('PAYROLL', 'SUPERUSER')")
 @Validated
 @RequiredArgsConstructor
 @Tag(name = "Payroll Configuration - SSS", description = "Manage SSS rate table configurations")
-public class SssRateTableController {
+public class SssRateController {
 
-    private final SssRateTableService service;
-    private final SssRateTableMapper mapper;
+    private final SssRateService service;
+    private final SssRateMapper mapper;
 
     @PostMapping
     @Operation(summary = "Create SSS rate table", description = "Create a new SSS rate table with salary brackets. Requires PAYROLL role.")
-    public ResponseEntity<ApiResponse<SssRateTableDto>> createSssRateTable(
-            @Valid @RequestBody SssRateTableRequest request) {
-        SssRateTable rateTable = service.createSssRateTable(request);
+    public ResponseEntity<ApiResponse<SssRateDto>> createSssRateTable(
+            @Valid @RequestBody SssRateRequest request) {
+        SssRate rateTable = service.createSssRateTable(request);
         return ResponseFactory.created(
                 "SSS rate table created successfully",
                 mapper.toDto(rateTable)
@@ -46,14 +46,14 @@ public class SssRateTableController {
 
     @GetMapping
     @Operation(summary = "Get all SSS rate tables", description = "Retrieve all SSS rate tables with pagination and filters. Requires PAYROLL role.")
-    public ResponseEntity<ApiResponse<List<SssRateTableDto>>> getAllSssRateTables(
+    public ResponseEntity<ApiResponse<List<SssRateDto>>> getAllSssRateTables(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit,
             @Parameter(description = "Filter by effective date") @RequestParam(required = false) LocalDate effectiveDate
     ) {
-        Page<SssRateTable> page = service.getAllSssRateTables(
+        Page<SssRate> page = service.getAllSssRateTables(
                 pageNo, limit, effectiveDate);
-        List<SssRateTableDto> rateTables = page.getContent().stream()
+        List<SssRateDto> rateTables = page.getContent().stream()
                 .map(mapper::toDto)
                 .toList();
 
@@ -66,9 +66,9 @@ public class SssRateTableController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get SSS rate table by ID", description = "Retrieve a specific SSS rate table. Requires PAYROLL role.")
-    public ResponseEntity<ApiResponse<SssRateTableDto>> getSssRateTableById(
+    public ResponseEntity<ApiResponse<SssRateDto>> getSssRateTableById(
             @Parameter(description = "Rate table ID") @PathVariable UUID id) {
-        SssRateTable rateTable = service.getSssRateTableById(id);
+        SssRate rateTable = service.getSssRateTableById(id);
         return ResponseFactory.ok(
                 "SSS rate table retrieved successfully",
                 mapper.toDto(rateTable)
@@ -77,12 +77,12 @@ public class SssRateTableController {
 
     @GetMapping("/lookup")
     @Operation(summary = "Lookup SSS rate table by salary", description = "Find the SSS rate table for a given salary and date. Requires PAYROLL role.")
-    public ResponseEntity<ApiResponse<SssRateTableDto>> getSssRateTableBySalary(
+    public ResponseEntity<ApiResponse<SssRateDto>> getSssRateTableBySalary(
             @Parameter(description = "Salary amount") @RequestParam BigDecimal salary,
             @Parameter(description = "Date to check (defaults to today)") @RequestParam(required = false) LocalDate date
     ) {
         LocalDate effectiveDate = date != null ? date : LocalDate.now();
-        SssRateTable rateTable = service.getSssRateTableBySalaryAndDate(salary, effectiveDate);
+        SssRate rateTable = service.getSssRateTableBySalaryAndDate(salary, effectiveDate);
         return ResponseFactory.ok(
                 "SSS rate table found for salary",
                 mapper.toDto(rateTable)
@@ -91,10 +91,10 @@ public class SssRateTableController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update SSS rate table", description = "Update an existing SSS rate table. Requires PAYROLL role.")
-    public ResponseEntity<ApiResponse<SssRateTableDto>> updateSssRateTable(
+    public ResponseEntity<ApiResponse<SssRateDto>> updateSssRateTable(
             @Parameter(description = "Rate table ID") @PathVariable UUID id,
-            @Valid @RequestBody SssRateTableRequest request) {
-        SssRateTable rateTable = service.updateSssRateTable(id, request);
+            @Valid @RequestBody SssRateRequest request) {
+        SssRate rateTable = service.updateSssRateTable(id, request);
         return ResponseFactory.ok(
                 "SSS rate table updated successfully",
                 mapper.toDto(rateTable)

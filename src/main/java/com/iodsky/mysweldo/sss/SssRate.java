@@ -13,14 +13,14 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "sss_rate_table")
+@Table(name = "sss_rate")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class SssRateTable extends BaseModel {
+public class SssRate extends BaseModel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

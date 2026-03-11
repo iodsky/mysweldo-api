@@ -5,8 +5,8 @@ import com.iodsky.mysweldo.pagIbig.PagibigRateTable;
 import com.iodsky.mysweldo.pagIbig.PagibigRateTableRepository;
 import com.iodsky.mysweldo.philhealth.PhilhealthRateTable;
 import com.iodsky.mysweldo.philhealth.PhilhealthRateTableRepository;
-import com.iodsky.mysweldo.sss.SssRateTable;
-import com.iodsky.mysweldo.sss.SssRateTableRepository;
+import com.iodsky.mysweldo.sss.SssRate;
+import com.iodsky.mysweldo.sss.SssRateRepository;
 import com.iodsky.mysweldo.payroll.run.PayrollRunException;
 import com.iodsky.mysweldo.tax.TaxBracket;
 import com.iodsky.mysweldo.tax.TaxBracketRepository;
@@ -24,7 +24,7 @@ public class PayrollCalculator {
 
     private final PhilhealthRateTableRepository philhealthRateTableRepository;
     private final PagibigRateTableRepository pagibigRateTableRepository;
-    private final SssRateTableRepository sssRateTableRepository;
+    private final SssRateRepository sssRateTableRepository;
     private final TaxBracketRepository incomeTaxBracketRepository;
 
     private static final BigDecimal SEMI_MONTHLY_DIVISOR = BigDecimal.valueOf(2);
@@ -45,7 +45,7 @@ public class PayrollCalculator {
                         "Pag-IBIG rate table not found for date: " + payrollDate
                 ));
 
-        SssRateTable sssRateTable = sssRateTableRepository
+        SssRate sssRateTable = sssRateTableRepository
                 .findLatestByEffectiveDate(payrollDate)
                 .orElseThrow(() -> new PayrollRunException(
                         "SSS rate table not found for date: " + payrollDate
@@ -122,9 +122,9 @@ public class PayrollCalculator {
         return monthlyContribution.divide(SEMI_MONTHLY_DIVISOR, 2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculateSssDeduction(BigDecimal basicSalary, SssRateTable sssRateTable) {
+    public BigDecimal calculateSssDeduction(BigDecimal basicSalary, SssRate sssRateTable) {
         // Find the appropriate salary bracket
-        SssRateTable.SalaryBracket bracket = sssRateTable.findBracket(basicSalary);
+        SssRate.SalaryBracket bracket = sssRateTable.findBracket(basicSalary);
 
         // Calculate the monthly contribution based on MSC
         BigDecimal monthlyContribution = bracket.getMsc().multiply(sssRateTable.getEmployeeRate());
@@ -171,7 +171,7 @@ public class PayrollCalculator {
     }
 
     public BigDecimal calculateSssEmployerContribution(BigDecimal basicSalary, LocalDate payrollDate) {
-        SssRateTable config = sssRateTableRepository
+        SssRate config = sssRateTableRepository
                 .findLatestByEffectiveDate(payrollDate)
                 .orElseThrow(() -> new PayrollRunException(
                         "SSS rate table not found for date: " + payrollDate
@@ -179,8 +179,8 @@ public class PayrollCalculator {
         return calculateSssEmployerContribution(basicSalary, config);
     }
 
-    public BigDecimal calculateSssEmployerContribution(BigDecimal basicSalary, SssRateTable config) {
-        SssRateTable.SalaryBracket bracket = config.findBracket(basicSalary);
+    public BigDecimal calculateSssEmployerContribution(BigDecimal basicSalary, SssRate config) {
+        SssRate.SalaryBracket bracket = config.findBracket(basicSalary);
         BigDecimal monthlyContribution = bracket.getMsc().multiply(config.getEmployerRate());
         return monthlyContribution.divide(SEMI_MONTHLY_DIVISOR, 2, RoundingMode.HALF_UP);
     }

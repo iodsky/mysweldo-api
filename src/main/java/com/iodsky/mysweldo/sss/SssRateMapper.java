@@ -5,14 +5,14 @@ import org.springframework.stereotype.Component;
 import java.util.stream.Collectors;
 
 @Component
-public class SssRateTableMapper {
+public class SssRateMapper {
 
-    public SssRateTableDto toDto(SssRateTable entity) {
+    public SssRateDto toDto(SssRate entity) {
         if (entity == null) {
             return null;
         }
 
-        return SssRateTableDto.builder()
+        return SssRateDto.builder()
                 .id(entity.getId())
                 .totalSss(entity.getTotalSss())
                 .employeeSss(entity.getEmployeeRate())
@@ -26,8 +26,8 @@ public class SssRateTableMapper {
                 .build();
     }
 
-    private SssRateTableDto.SalaryBracketDto toBracketDto(SssRateTable.SalaryBracket bracket) {
-        return SssRateTableDto.SalaryBracketDto.builder()
+    private SssRateDto.SalaryBracketDto toBracketDto(SssRate.SalaryBracket bracket) {
+        return SssRateDto.SalaryBracketDto.builder()
                 .minSalary(bracket.getMinSalary())
                 .maxSalary(bracket.getMaxSalary())
                 .msc(bracket.getMsc())

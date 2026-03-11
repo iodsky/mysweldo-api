@@ -1,9 +1,9 @@
 package com.iodsky.mysweldo.payroll.contribution.sss;
 
-import com.iodsky.mysweldo.sss.SssRateTable;
-import com.iodsky.mysweldo.sss.SssRateTableRepository;
-import com.iodsky.mysweldo.sss.SssRateTableRequest;
-import com.iodsky.mysweldo.sss.SssRateTableService;
+import com.iodsky.mysweldo.sss.SssRate;
+import com.iodsky.mysweldo.sss.SssRateRepository;
+import com.iodsky.mysweldo.sss.SssRateRequest;
+import com.iodsky.mysweldo.sss.SssRateService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -31,33 +31,33 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class SssRateTableServiceTest {
+class SssRateServiceTest {
 
     @InjectMocks
-    private SssRateTableService service;
+    private SssRateService service;
 
     @Mock
-    private SssRateTableRepository sssRateTableRepository;
+    private SssRateRepository sssRateTableRepository;
 
-    private SssRateTable rateTable;
-    private SssRateTableRequest request;
+    private SssRate rateTable;
+    private SssRateRequest request;
 
     @BeforeEach
     void setUp() {
-        List<SssRateTable.SalaryBracket> brackets = List.of(
-                SssRateTable.SalaryBracket.builder()
+        List<SssRate.SalaryBracket> brackets = List.of(
+                SssRate.SalaryBracket.builder()
                         .minSalary(new BigDecimal("0.00"))
                         .maxSalary(new BigDecimal("4999.99"))
                         .msc(new BigDecimal("5000.00"))
                         .build(),
-                SssRateTable.SalaryBracket.builder()
+                SssRate.SalaryBracket.builder()
                         .minSalary(new BigDecimal("5000.00"))
                         .maxSalary(null)
                         .msc(new BigDecimal("20000.00"))
                         .build()
         );
 
-        rateTable = SssRateTable.builder()
+        rateTable = SssRate.builder()
                 .id(UUID.randomUUID())
                 .totalSss(new BigDecimal("1800.00"))
                 .employeeRate(new BigDecimal("0.0450"))
@@ -66,20 +66,20 @@ class SssRateTableServiceTest {
                 .effectiveDate(LocalDate.of(2024, 1, 1))
                 .build();
 
-        List<SssRateTableRequest.SalaryBracketRequest> bracketRequests = List.of(
-                SssRateTableRequest.SalaryBracketRequest.builder()
+        List<SssRateRequest.SalaryBracketRequest> bracketRequests = List.of(
+                SssRateRequest.SalaryBracketRequest.builder()
                         .minSalary(new BigDecimal("0.00"))
                         .maxSalary(new BigDecimal("4999.99"))
                         .msc(new BigDecimal("5000.00"))
                         .build(),
-                SssRateTableRequest.SalaryBracketRequest.builder()
+                SssRateRequest.SalaryBracketRequest.builder()
                         .minSalary(new BigDecimal("5000.00"))
                         .maxSalary(null)
                         .msc(new BigDecimal("20000.00"))
                         .build()
         );
 
-        request = SssRateTableRequest.builder()
+        request = SssRateRequest.builder()
                 .totalSss(new BigDecimal("1800.00"))
                 .employeeRate(new BigDecimal("0.0450"))
                 .employerRate(new BigDecimal("0.0950"))
@@ -89,13 +89,13 @@ class SssRateTableServiceTest {
     }
 
     @Nested
-    class CreateSssRateTableTests {
+    class CreateSssRateTests {
 
         @Test
         void shouldReturnSavedRateTableWhenValidRequestProvided() {
-            when(sssRateTableRepository.save(any(SssRateTable.class))).thenReturn(rateTable);
+            when(sssRateTableRepository.save(any(SssRate.class))).thenReturn(rateTable);
 
-            SssRateTable result = service.createSssRateTable(request);
+            SssRate result = service.createSssRateTable(request);
 
             assertThat(result).isNotNull();
             assertThat(result.getTotalSss()).isEqualTo(request.getTotalSss());
@@ -106,9 +106,9 @@ class SssRateTableServiceTest {
 
         @Test
         void shouldMapSalaryBracketsCorrectlyFromRequest() {
-            when(sssRateTableRepository.save(any(SssRateTable.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(sssRateTableRepository.save(any(SssRate.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            SssRateTable result = service.createSssRateTable(request);
+            SssRate result = service.createSssRateTable(request);
 
             assertThat(result.getSalaryBrackets()).hasSize(2);
             assertThat(result.getSalaryBrackets().get(0).getMinSalary()).isEqualTo(new BigDecimal("0.00"));
@@ -119,9 +119,9 @@ class SssRateTableServiceTest {
         @Test
         void shouldSaveRateTableWithEmptySalaryBracketsWhenNoneProvided() {
             request.setSalaryBrackets(List.of());
-            when(sssRateTableRepository.save(any(SssRateTable.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(sssRateTableRepository.save(any(SssRate.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            SssRateTable result = service.createSssRateTable(request);
+            SssRate result = service.createSssRateTable(request);
 
             assertThat(result.getSalaryBrackets()).isEmpty();
         }
@@ -133,11 +133,11 @@ class SssRateTableServiceTest {
         @SuppressWarnings("unchecked")
         @Test
         void shouldReturnPaginatedRateTablesWhenNoEffectiveDateFilterProvided() {
-            Page<SssRateTable> expectedPage = new PageImpl<>(List.of(rateTable));
+            Page<SssRate> expectedPage = new PageImpl<>(List.of(rateTable));
             when(sssRateTableRepository.findAll(any(Specification.class), any(Pageable.class)))
                     .thenReturn(expectedPage);
 
-            Page<SssRateTable> result = service.getAllSssRateTables(0, 10, null);
+            Page<SssRate> result = service.getAllSssRateTables(0, 10, null);
 
             assertThat(result.getContent()).hasSize(1);
             assertThat(result.getContent().getFirst()).isEqualTo(rateTable);
@@ -146,11 +146,11 @@ class SssRateTableServiceTest {
         @SuppressWarnings("unchecked")
         @Test
         void shouldReturnRateTablesFilteredByEffectiveDateWhenDateProvided() {
-            Page<SssRateTable> expectedPage = new PageImpl<>(List.of(rateTable));
+            Page<SssRate> expectedPage = new PageImpl<>(List.of(rateTable));
             when(sssRateTableRepository.findAll(any(Specification.class), any(Pageable.class)))
                     .thenReturn(expectedPage);
 
-            Page<SssRateTable> result = service.getAllSssRateTables(0, 10, LocalDate.of(2024, 1, 1));
+            Page<SssRate> result = service.getAllSssRateTables(0, 10, LocalDate.of(2024, 1, 1));
 
             assertThat(result.getContent()).hasSize(1);
         }
@@ -158,25 +158,25 @@ class SssRateTableServiceTest {
         @SuppressWarnings("unchecked")
         @Test
         void shouldReturnEmptyPageWhenNoRateTablesExist() {
-            Page<SssRateTable> emptyPage = new PageImpl<>(List.of());
+            Page<SssRate> emptyPage = new PageImpl<>(List.of());
             when(sssRateTableRepository.findAll(any(Specification.class), any(Pageable.class)))
                     .thenReturn(emptyPage);
 
-            Page<SssRateTable> result = service.getAllSssRateTables(0, 10, null);
+            Page<SssRate> result = service.getAllSssRateTables(0, 10, null);
 
             assertThat(result.getContent()).isEmpty();
         }
     }
 
     @Nested
-    class GetSssRateTableByIdTests {
+    class GetSssRateByIdTests {
 
         @Test
         void shouldReturnRateTableWhenItExistsAndIsNotDeleted() {
             when(sssRateTableRepository.findById(rateTable.getId()))
                     .thenReturn(Optional.of(rateTable));
 
-            SssRateTable result = service.getSssRateTableById(rateTable.getId());
+            SssRate result = service.getSssRateTableById(rateTable.getId());
 
             assertThat(result).isEqualTo(rateTable);
         }
@@ -209,7 +209,7 @@ class SssRateTableServiceTest {
     }
 
     @Nested
-    class GetSssRateTableBySalaryAndDateTests {
+    class GetSssRateBySalaryAndDateTests {
 
         @Test
         void shouldReturnRateTableWhenSalaryFallsWithinABracketForGivenDate() {
@@ -218,7 +218,7 @@ class SssRateTableServiceTest {
             when(sssRateTableRepository.findLatestByEffectiveDate(date))
                     .thenReturn(Optional.of(rateTable));
 
-            SssRateTable result = service.getSssRateTableBySalaryAndDate(salary, date);
+            SssRate result = service.getSssRateTableBySalaryAndDate(salary, date);
 
             assertThat(result).isEqualTo(rateTable);
         }
@@ -257,19 +257,19 @@ class SssRateTableServiceTest {
     }
 
     @Nested
-    class UpdateSssRateTableTests {
+    class UpdateSssRateTests {
 
         @Test
         void shouldUpdateAllFieldsAndReturnUpdatedRateTableWhenExists() {
-            List<SssRateTableRequest.SalaryBracketRequest> newBracketRequests = List.of(
-                    SssRateTableRequest.SalaryBracketRequest.builder()
+            List<SssRateRequest.SalaryBracketRequest> newBracketRequests = List.of(
+                    SssRateRequest.SalaryBracketRequest.builder()
                             .minSalary(new BigDecimal("0.00"))
                             .maxSalary(new BigDecimal("9999.99"))
                             .msc(new BigDecimal("10000.00"))
                             .build()
             );
 
-            SssRateTableRequest updateRequest = SssRateTableRequest.builder()
+            SssRateRequest updateRequest = SssRateRequest.builder()
                     .totalSss(new BigDecimal("2400.00"))
                     .employeeRate(new BigDecimal("0.0500"))
                     .employerRate(new BigDecimal("0.1000"))
@@ -279,9 +279,9 @@ class SssRateTableServiceTest {
 
             when(sssRateTableRepository.findById(rateTable.getId()))
                     .thenReturn(Optional.of(rateTable));
-            when(sssRateTableRepository.save(any(SssRateTable.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(sssRateTableRepository.save(any(SssRate.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            SssRateTable result = service.updateSssRateTable(rateTable.getId(), updateRequest);
+            SssRate result = service.updateSssRateTable(rateTable.getId(), updateRequest);
 
             assertThat(result.getTotalSss()).isEqualTo(updateRequest.getTotalSss());
             assertThat(result.getEmployeeRate()).isEqualTo(updateRequest.getEmployeeRate());
@@ -316,13 +316,13 @@ class SssRateTableServiceTest {
     }
 
     @Nested
-    class DeleteSssRateTableTests {
+    class DeleteSssRateTests {
 
         @Test
         void shouldSoftDeleteRateTableBySettingDeletedAtWhenExists() {
             when(sssRateTableRepository.findById(rateTable.getId()))
                     .thenReturn(Optional.of(rateTable));
-            when(sssRateTableRepository.save(any(SssRateTable.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(sssRateTableRepository.save(any(SssRate.class))).thenAnswer(inv -> inv.getArgument(0));
 
             service.deleteSssRateTable(rateTable.getId());
 

@@ -14,7 +14,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class SssRateTableRequest {
+public class SssRateRequest {
 
     @NotNull(message = "Total SSS contribution is required")
     @DecimalMin(value = "0.01", message = "Total SSS must be greater than 0")
