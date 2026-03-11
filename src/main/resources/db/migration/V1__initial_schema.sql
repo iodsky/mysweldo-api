@@ -370,7 +370,7 @@ CREATE TABLE IF NOT EXISTS overtime_request (
     CONSTRAINT uk_employee_id_date UNIQUE(employee_id, date)
 );
 
-CREATE TABLE IF NOT EXISTS pagibig_rate_table (
+CREATE TABLE IF NOT EXISTS pagibig_rate (
     id UUID PRIMARY KEY,
     employee_rate DECIMAL(5,4) NOT NULL, -- 2%
     employer_rate DECIMAL(5,4) NOT NULL, -- 2%
@@ -386,8 +386,7 @@ CREATE TABLE IF NOT EXISTS pagibig_rate_table (
     version BIGINT
 );
 
--- PhilHealth Rate Table
-CREATE TABLE IF NOT EXISTS philhealth_rate_table (
+CREATE TABLE IF NOT EXISTS philhealth_rate (
     id UUID PRIMARY KEY,
     premium_rate DECIMAL(5, 4) NOT NULL, -- 0.05 (5%)
     max_salary_cap NUMERIC NOT NULL DEFAULT 100000.00,
@@ -402,8 +401,7 @@ CREATE TABLE IF NOT EXISTS philhealth_rate_table (
     version BIGINT
 );
 
--- SSS Rate Table
-CREATE TABLE sss_rate_table (
+CREATE TABLE IF NOT EXISTS sss_rate (
     id UUID PRIMARY KEY,
     total_sss NUMERIC NOT NULL,
     employee_sss DECIMAL(5,4) NOT NULL,
@@ -418,8 +416,7 @@ CREATE TABLE sss_rate_table (
     version BIGINT
 );
 
--- Income Tax Bracket Table
-CREATE TABLE IF NOT EXISTS income_tax_bracket (
+CREATE TABLE IF NOT EXISTS tax_bracket (
     id UUID PRIMARY KEY,
     min_income NUMERIC NOT NULL,
     max_income NUMERIC,
