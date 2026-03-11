@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.tax;
+package com.iodsky.mysweldo.tax;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;

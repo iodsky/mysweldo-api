@@ -8,8 +8,8 @@ import com.iodsky.mysweldo.philhealth.PhilhealthRateTableRepository;
 import com.iodsky.mysweldo.sss.SssRateTable;
 import com.iodsky.mysweldo.sss.SssRateTableRepository;
 import com.iodsky.mysweldo.payroll.run.PayrollRunException;
-import com.iodsky.mysweldo.payroll.tax.IncomeTaxBracket;
-import com.iodsky.mysweldo.payroll.tax.IncomeTaxBracketRepository;
+import com.iodsky.mysweldo.tax.IncomeTaxBracket;
+import com.iodsky.mysweldo.tax.IncomeTaxBracketRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

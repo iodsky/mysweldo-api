@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.tax;
+package com.iodsky.mysweldo.tax;
 
 import com.iodsky.mysweldo.common.response.ApiResponse;
 import com.iodsky.mysweldo.common.response.DeleteResponse;

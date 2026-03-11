@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.tax;
+package com.iodsky.mysweldo.tax;
 
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;

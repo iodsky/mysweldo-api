@@ -3,7 +3,7 @@ package com.iodsky.mysweldo.payroll.core;
 import com.iodsky.mysweldo.pagIbig.PagibigRateTable;
 import com.iodsky.mysweldo.philhealth.PhilhealthRateTable;
 import com.iodsky.mysweldo.sss.SssRateTable;
-import com.iodsky.mysweldo.payroll.tax.IncomeTaxBracket;
+import com.iodsky.mysweldo.tax.IncomeTaxBracket;
 import lombok.Builder;
 import lombok.Getter;
 

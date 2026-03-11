@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.tax;
+package com.iodsky.mysweldo.tax;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

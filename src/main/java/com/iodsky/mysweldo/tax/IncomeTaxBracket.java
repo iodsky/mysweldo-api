@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.tax;
+package com.iodsky.mysweldo.tax;
 
 import com.iodsky.mysweldo.common.BaseModel;
 import jakarta.persistence.*;

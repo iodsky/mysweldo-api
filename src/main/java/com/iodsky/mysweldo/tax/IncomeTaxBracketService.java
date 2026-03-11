@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.tax;
+package com.iodsky.mysweldo.tax;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
