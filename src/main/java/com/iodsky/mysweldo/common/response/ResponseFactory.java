@@ -1,40 +1,32 @@
 package com.iodsky.mysweldo.common.response;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-
 public class ResponseFactory {
 
     private ResponseFactory() {}
 
-    public static <T> ResponseEntity<ApiResponse<T>> ok(String message, T data) {
-        ApiResponse<T> res = new ApiResponse<>(
-                true,
-                message,
-                data
-        );
-        return ResponseEntity.ok(res);
+    public static ApiResponse<Void> success(String message) {
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .message(message)
+                .data(null)
+                .build();
     }
 
-    public static <T> ResponseEntity<ApiResponse<T>> ok(String message, T data, PaginationMeta meta) {
-
-        PagedApiResponse<T> res = new PagedApiResponse<>(
-                true,
-                message,
-                data,
-                meta
-        );
-
-        return ResponseEntity.ok(res);
+    public static <T> ApiResponse<T> success(String message, T data) {
+        return ApiResponse.<T>builder()
+                .success(true)
+                .message(message)
+                .data(data)
+                .build();
     }
 
-    public static <T> ResponseEntity<ApiResponse<T>> created(String message, T data) {
-        ApiResponse<T> res = new ApiResponse<>(
-                true,
-                message,
-                data
-        );
-        return new ResponseEntity<>(res, HttpStatus.CREATED);
+    public static <T> ApiResponse<T> success(String message, T data, PaginationMeta meta) {
+        return ApiResponse.<T>builder()
+                .success(true)
+                .message(message)
+                .data(data)
+                .meta(meta)
+                .build();
     }
 
 }

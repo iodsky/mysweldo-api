@@ -13,7 +13,6 @@ import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,7 +46,7 @@ public class BatchController {
             summary = "Import employees from CSV file",
             description = "Upload a CSV file to import employees via batch job. Returns job execution ID for tracking."
     )
-    public ResponseEntity<ApiResponse<JobLaunchResponse>> importEmployees(
+    public ApiResponse<JobLaunchResponse> importEmployees(
             @RequestPart("file") MultipartFile file) {
 
         try {
@@ -60,7 +59,7 @@ public class BatchController {
                     .message("Employee import job launched successfully")
                     .build();
 
-            return ResponseFactory.ok("Job launched successfully", response);
+            return ResponseFactory.success("Job launched successfully", response);
 
         } catch (Exception e) {
             log.error("Failed to launch employee import job", e);
@@ -74,7 +73,7 @@ public class BatchController {
             summary = "Import users from CSV file",
             description = "Upload a CSV file to import users via batch job. Returns job execution ID for tracking. Restricted to IT role only."
     )
-    public ResponseEntity<ApiResponse<JobLaunchResponse>> importUsers(
+    public ApiResponse<JobLaunchResponse> importUsers(
             @RequestPart("file") MultipartFile file) {
 
         try {
@@ -87,7 +86,7 @@ public class BatchController {
                     .message("User import job launched successfully")
                     .build();
 
-            return ResponseFactory.ok("Job launched successfully", response);
+            return ResponseFactory.success("Job launched successfully", response);
 
         } catch (Exception e) {
             log.error("Failed to launch user import job", e);
@@ -101,7 +100,7 @@ public class BatchController {
             summary = "Get job execution details",
             description = "Retrieve detailed information about a batch job execution including status and metrics."
     )
-    public ResponseEntity<ApiResponse<JobDetailsResponse>> getJobExecutionDetails(
+    public ApiResponse<JobDetailsResponse> getJobExecutionDetails(
             @PathVariable Long jobExecutionId) {
 
         JobExecution jobExecution = jobExplorer.getJobExecution(jobExecutionId);
@@ -132,7 +131,7 @@ public class BatchController {
                 .exitDescription(jobExecution.getExitStatus().getExitDescription())
                 .build();
 
-        return ResponseFactory.ok("Job execution details retrieved successfully", details);
+        return ResponseFactory.success("Job execution details retrieved successfully", details);
     }
 
     /**

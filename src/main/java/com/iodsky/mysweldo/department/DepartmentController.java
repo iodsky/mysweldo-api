@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -28,19 +28,20 @@ public class DepartmentController {
     private final DepartmentMapper mapper;
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Create a new department",
             description = "Create a new department. Requires HR role.",
             operationId = "createDepartment"
     )
-    public ResponseEntity<ApiResponse<DepartmentDto>> createDepartment(@Valid @RequestBody DepartmentRequest request) {
+    public ApiResponse<DepartmentDto> createDepartment(@Valid @RequestBody DepartmentRequest request) {
         DepartmentDto department = mapper.toDto(service.createDepartment(request));
-        return ResponseFactory.created("Department created successfully", department);
+        return ResponseFactory.success("Department created successfully", department);
     }
 
     @GetMapping
     @Operation(summary = "Get all departments", description = "Retrieve a paginated list of departments. Requires HR role.")
-    public ResponseEntity<ApiResponse<List<DepartmentDto>>> getAllDepartments(
+    public ApiResponse<List<DepartmentDto>> getAllDepartments(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit
     ) {
@@ -50,7 +51,7 @@ public class DepartmentController {
                 .map(mapper::toDto)
                 .toList();
 
-        return ResponseFactory.ok(
+        return ResponseFactory.success(
                 "Departments retrieved successfully",
                 departments,
                 PaginationMeta.of(page)
@@ -59,31 +60,30 @@ public class DepartmentController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get department by ID", description = "Retrieve a specific department by its ID. Requires HR role.")
-    public ResponseEntity<ApiResponse<DepartmentDto>> getDepartmentById(
+    public ApiResponse<DepartmentDto> getDepartmentById(
             @Parameter(description = "Department ID") @PathVariable String id
     ) {
         DepartmentDto department = mapper.toDto(service.getDepartmentById(id));
-        return ResponseFactory.ok("Department retrieved successfully", department);
+        return ResponseFactory.success("Department retrieved successfully", department);
     }
 
     @PreAuthorize("hasRole('HR')")
     @PutMapping("/{id}")
     @Operation(summary = "Update department", description = "Update an existing department's information. Requires HR role.")
-    public ResponseEntity<ApiResponse<DepartmentDto>> updateDepartment(
+    public ApiResponse<DepartmentDto> updateDepartment(
             @Parameter(description = "Department ID") @PathVariable String id,
             @Valid @RequestBody DepartmentUpdateRequest request
     ) {
         DepartmentDto department = mapper.toDto(service.updateDepartment(id, request));
-        return ResponseFactory.ok("Department updated successfully", department);
+        return ResponseFactory.success("Department updated successfully", department);
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete department", description = "Delete a department. Requires HR role.")
-    public ResponseEntity<ApiResponse<DeleteResponse>> deleteDepartment(
+    public ApiResponse<Void> deleteDepartment(
             @Parameter(description = "Department ID") @PathVariable String id
     ) {
         service.deleteDepartment(id);
-        DeleteResponse res = new DeleteResponse("Department", id);
-        return ResponseFactory.ok("Department deleted successfully", res);
+        return ResponseFactory.success("Department deleted successfully");
     }
 }

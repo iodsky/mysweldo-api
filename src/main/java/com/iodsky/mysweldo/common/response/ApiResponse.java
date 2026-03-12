@@ -20,20 +20,14 @@ import java.time.Instant;
         "data",
         "meta",
         "timestamp",
-        "path"
 })
 public class ApiResponse<T> {
 
     private boolean success;
     private String message;
     private T data;
-    private Instant timestamp;
-    private String path;
+    private  PaginationMeta meta;
 
-    public ApiResponse(boolean success, String message, T data) {
-        this.success = success;
-        this.message = message;
-        this.data = data;
-    }
-
+    @Builder.Default
+    private Instant timestamp = Instant.now();
 }

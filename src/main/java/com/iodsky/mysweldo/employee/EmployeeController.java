@@ -10,8 +10,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -30,20 +30,21 @@ public class EmployeeController {
 
     @PreAuthorize("hasAnyRole('HR', 'SUPERUSER')")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Create a new employee",
             description = "Create a new employee record. Requires HR role.",
             operationId = "createEmployee"
     )
-    public ResponseEntity<ApiResponse<EmployeeDto>> createEmployee(@Valid @RequestBody EmployeeRequest request) {
+    public ApiResponse<EmployeeDto> createEmployee(@Valid @RequestBody EmployeeRequest request) {
         EmployeeDto employee = mapper.toDto(service.createEmployee(request));
-        return ResponseFactory.created("Employee created successfully", employee);
+        return ResponseFactory.success("Employee created successfully", employee);
     }
 
     @PreAuthorize("hasAnyRole('HR', 'IT', 'PAYROLL', 'SUPERUSER')")
     @GetMapping
     @Operation(summary = "Get all employees", description = "Retrieve a paginated list of employees with optional filters. Requires HR, IT, or PAYROLL role.")
-    public ResponseEntity<ApiResponse<List<EmployeeDto>>> getAllEmployees(
+    public ApiResponse<List<EmployeeDto>> getAllEmployees(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
             @Parameter(description = "Filter by department") @RequestParam(required = false) String department,
@@ -54,7 +55,7 @@ public class EmployeeController {
 
         List<EmployeeDto> employees = page.getContent().stream().map(mapper::toDto).toList();
 
-        return ResponseFactory.ok(
+        return ResponseFactory.success(
                 "Employees retrieved successfully",
                 employees,
                 PaginationMeta.of(page)
@@ -64,34 +65,32 @@ public class EmployeeController {
 
     @GetMapping("/me")
     @Operation(summary = "Get current employee", description = "Retrieve the authenticated employee's information")
-    public ResponseEntity<ApiResponse<EmployeeDto>> getAuthenticatedEmployee() {
+    public ApiResponse<EmployeeDto> getAuthenticatedEmployee() {
         EmployeeDto employee =  mapper.toDto(service.getAuthenticatedEmployee());
-        return ResponseFactory.ok("Employee retrieved successfully", employee);
+        return ResponseFactory.success("Employee retrieved successfully", employee);
     }
 
     @PreAuthorize("hasAnyRole('HR', 'IT', 'PAYROLL', 'SUPERUSER')")
     @GetMapping("/{id}")
     @Operation(summary = "Get employee by ID", description = "Retrieve a specific employee by their ID. Requires HR, IT, or PAYROLL role.")
-    public ResponseEntity<ApiResponse<EmployeeDto>> getEmployeeById(@Parameter(description = "Employee ID") @PathVariable long id) {
+    public ApiResponse<EmployeeDto> getEmployeeById(@Parameter(description = "Employee ID") @PathVariable long id) {
         EmployeeDto employee = mapper.toDto(service.getEmployeeById(id));
-        return ResponseFactory.ok("Employee retrieved successfully", employee);
+        return ResponseFactory.success("Employee retrieved successfully", employee);
     }
 
     @PreAuthorize("hasAnyRole('HR', 'SUPERUSER')")
     @PutMapping("/{id}")
     @Operation(summary = "Update employee", description = "Update an existing employee's information. Requires HR role.")
-    public ResponseEntity<ApiResponse<EmployeeDto>> updateEmployee(@Parameter(description = "Employee ID") @PathVariable long id, @Valid @RequestBody EmployeeRequest request) {
+    public ApiResponse<EmployeeDto> updateEmployee(@Parameter(description = "Employee ID") @PathVariable long id, @Valid @RequestBody EmployeeRequest request) {
         EmployeeDto employee = mapper.toDto(service.updateEmployeeById(id, request));
-        return ResponseFactory.ok("Employee updated successfully", employee);
+        return ResponseFactory.success("Employee updated successfully", employee);
     }
 
     @PreAuthorize("hasRole('HR')")
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete employee", description = "Delete or deactivate an employee. Requires HR role.")
-    public ResponseEntity<ApiResponse<DeleteResponse>> deleteEmployee(@Parameter(description = "Employee ID") @PathVariable long id, @Parameter(description = "Status to set (INACTIVE or TERMINATED)") @RequestParam Status status) {
+    public ApiResponse<Void> deleteEmployee(@Parameter(description = "Employee ID") @PathVariable long id, @Parameter(description = "Status to set (INACTIVE or TERMINATED)") @RequestParam Status status) {
         service.deleteEmployeeById(id, status);
-        DeleteResponse res = new DeleteResponse("Employee", id);
-        return ResponseFactory.ok("Employee deleted successfully", res);
+        return ResponseFactory.success("Employee deleted successfully");
     }
-
 }

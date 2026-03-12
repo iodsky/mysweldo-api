@@ -1,11 +1,12 @@
 package com.iodsky.mysweldo.security.auth;
 
+import com.iodsky.mysweldo.common.response.ApiResponse;
+import com.iodsky.mysweldo.common.response.ResponseFactory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,10 +24,10 @@ public class AuthenticationController {
 
     @PostMapping("/login")
     @Operation(summary = "Login to get JWT token", description = "Authenticate with email and password to receive a JWT token for accessing protected endpoints")
-    @SecurityRequirements() // This endpoint doesn't require authentication
-    public ResponseEntity<Map<String, String>> authenticate(@Valid @RequestBody  LoginRequest loginRequest) {
+    @SecurityRequirements()
+    public ApiResponse<Map<String, String>> authenticate(@Valid @RequestBody  LoginRequest loginRequest) {
         String token = service.authenticate(loginRequest);
-        return ResponseEntity.ok(Map.of("token", token));
+        return ResponseFactory.success("Login successful", Map.of("token", token));
     }
 
 }

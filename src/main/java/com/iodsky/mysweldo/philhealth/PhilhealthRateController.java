@@ -1,7 +1,6 @@
 package com.iodsky.mysweldo.philhealth;
 
 import com.iodsky.mysweldo.common.response.ApiResponse;
-import com.iodsky.mysweldo.common.response.DeleteResponse;
 import com.iodsky.mysweldo.common.response.PaginationMeta;
 import com.iodsky.mysweldo.common.response.ResponseFactory;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,7 +11,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -33,11 +32,12 @@ public class PhilhealthRateController {
     private final PhilhealthRateMapper mapper;
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create PhilHealth rate", description = "Create a new PhilHealth rate. Requires PAYROLL role.")
-    public ResponseEntity<ApiResponse<PhilhealthRateDto>> createPhilhealthRate(
+    public ApiResponse<PhilhealthRateDto> createPhilhealthRate(
             @Valid @RequestBody PhilhealthRateRequest request) {
         PhilhealthRate philhealthRate = service.createPhilhealthRate(request);
-        return ResponseFactory.created(
+        return ResponseFactory.success(
                 "PhilHealth rate created successfully",
                 mapper.toDto(philhealthRate)
         );
@@ -45,7 +45,7 @@ public class PhilhealthRateController {
 
     @GetMapping
     @Operation(summary = "Get all PhilHealth rates", description = "Retrieve all PhilHealth rates with pagination. Requires PAYROLL role.")
-    public ResponseEntity<ApiResponse<List<PhilhealthRateDto>>> getAllPhilhealthRates(
+    public ApiResponse<List<PhilhealthRateDto>> getAllPhilhealthRates(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
             @Parameter(description = "Filter by effective date (on or before)") @RequestParam(required = false) LocalDate effectiveDate
@@ -55,7 +55,7 @@ public class PhilhealthRateController {
                 .map(mapper::toDto)
                 .toList();
 
-        return ResponseFactory.ok(
+        return ResponseFactory.success(
                 "PhilHealth rates retrieved successfully",
                 philhealthRates,
                 PaginationMeta.of(page)
@@ -64,10 +64,10 @@ public class PhilhealthRateController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get PhilHealth rate by ID", description = "Retrieve a specific PhilHealth rate. Requires PAYROLL role.")
-    public ResponseEntity<ApiResponse<PhilhealthRateDto>> getPhilhealthRateById(
+    public ApiResponse<PhilhealthRateDto> getPhilhealthRateById(
             @Parameter(description = "Rate ID") @PathVariable UUID id) {
         PhilhealthRate philhealthRate = service.getPhilhealthRateById(id);
-        return ResponseFactory.ok(
+        return ResponseFactory.success(
                 "PhilHealth rate retrieved successfully",
                 mapper.toDto(philhealthRate)
         );
@@ -75,12 +75,12 @@ public class PhilhealthRateController {
 
     @GetMapping("/latest")
     @Operation(summary = "Get latest PhilHealth rate", description = "Retrieve the latest PhilHealth rate for a given date. Requires PAYROLL role.")
-    public ResponseEntity<ApiResponse<PhilhealthRateDto>> getLatestPhilhealthRate(
+    public ApiResponse<PhilhealthRateDto> getLatestPhilhealthRate(
             @Parameter(description = "Date to check (defaults to today)") @RequestParam(required = false) LocalDate date
     ) {
         LocalDate effectiveDate = date != null ? date : LocalDate.now();
         PhilhealthRate philhealthRate = service.getLatestPhilhealthRate(effectiveDate);
-        return ResponseFactory.ok(
+        return ResponseFactory.success(
                 "Latest PhilHealth rate retrieved successfully",
                 mapper.toDto(philhealthRate)
         );
@@ -88,11 +88,11 @@ public class PhilhealthRateController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update PhilHealth rate", description = "Update an existing PhilHealth rate. Requires PAYROLL role.")
-    public ResponseEntity<ApiResponse<PhilhealthRateDto>> updatePhilhealthRate(
+    public ApiResponse<PhilhealthRateDto> updatePhilhealthRate(
             @Parameter(description = "Rate ID") @PathVariable UUID id,
             @Valid @RequestBody PhilhealthRateRequest request) {
         PhilhealthRate philhealthRate = service.updatePhilhealthRate(id, request);
-        return ResponseFactory.ok(
+        return ResponseFactory.success(
                 "PhilHealth rate updated successfully",
                 mapper.toDto(philhealthRate)
         );
@@ -100,12 +100,9 @@ public class PhilhealthRateController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete PhilHealth rate", description = "Soft delete a PhilHealth rate. Requires PAYROLL role.")
-    public ResponseEntity<ApiResponse<DeleteResponse>> deletePhilhealthRate(
+    public ApiResponse<Void> deletePhilhealthRate(
             @Parameter(description = "Rate ID") @PathVariable UUID id) {
         service.deletePhilhealthRate(id);
-        return ResponseFactory.ok(
-                "PhilHealth rate deleted successfully",
-                new DeleteResponse("PhilHealthRate", id)
-        );
+        return ResponseFactory.success("PhilHealth rate deleted successfully");
     }
 }
