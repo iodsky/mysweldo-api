@@ -180,7 +180,7 @@ public class PayrollRunService {
         PayrollRun run = findPayrollRun(id);
 
         if (!run.getStatus().equals(PayrollRunStatus.DRAFT)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " already processed");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " has been already " + run.getStatus());
         }
 
         // 2. FETCH PAYROLL ITEM
@@ -226,7 +226,7 @@ public class PayrollRunService {
         PayrollRun run = findPayrollRun(id);
 
         if (!run.getStatus().equals(PayrollRunStatus.DRAFT)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " already processed");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " has been already " + run.getStatus());
         }
 
         PayrollItem item = findPayrollItem(id, itemId);
@@ -267,7 +267,7 @@ public class PayrollRunService {
         PayrollRun run = findPayrollRun(id);
 
         if (!run.getStatus().equals(PayrollRunStatus.DRAFT)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " already processed");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " has been already " + run.getStatus());
         }
 
         PayrollItem item = findPayrollItem(id, itemId);
@@ -298,6 +298,30 @@ public class PayrollRunService {
 
         PayrollItem updated = payrollItemRepository.save(item);
         return payrollItemMapper.toDto(updated);
+    }
+
+    public PayrollRunDto updatePayrollRunStatus(UUID id, PayrollRunStatus status) {
+        PayrollRun run = findPayrollRun(id);
+
+        if (run.getStatus().equals(PayrollRunStatus.PROCESSED)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " has already been processed");
+        }
+
+        // Enforce valid transitions: DRAFT → APPROVED → PROCESSED
+        boolean validTransition = switch (run.getStatus()) {
+            case DRAFT -> status == PayrollRunStatus.APPROVED;
+            case APPROVED -> status == PayrollRunStatus.PROCESSED;
+            default -> false;
+        };
+
+        if (!validTransition) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid status transition from " + run.getStatus() + " to " + status);
+        }
+
+        run.setStatus(status);
+        repository.save(run);
+        return mapper.toDto(run);
     }
 
     public void deletePayrollItem(UUID id, UUID itemId) {

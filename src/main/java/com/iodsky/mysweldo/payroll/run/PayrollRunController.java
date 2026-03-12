@@ -80,6 +80,12 @@ public class PayrollRunController {
         return ResponseFactory.ok("Payroll item retrieved successfully", item);
     }
 
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<PayrollRunDto>> updatePayrollRunStatus(@PathVariable UUID id, @RequestParam PayrollRunStatus status) {
+        PayrollRunDto run = service.updatePayrollRunStatus(id, status);
+        return ResponseFactory.ok("Payroll run status has been successfully updated",  run );
+    }
+
     @PatchMapping("/{id}/items/{itemId}/deductions")
     public ResponseEntity<ApiResponse<PayrollItemDto>> updatePayrollDeductions(@PathVariable UUID id,
                                                                                    @PathVariable UUID itemId,
