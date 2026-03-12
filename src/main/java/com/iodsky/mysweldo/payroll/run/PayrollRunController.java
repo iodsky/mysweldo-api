@@ -5,6 +5,9 @@ import com.iodsky.mysweldo.common.response.DeleteResponse;
 import com.iodsky.mysweldo.common.response.PaginationMeta;
 import com.iodsky.mysweldo.common.response.ResponseFactory;
 import com.iodsky.mysweldo.payroll.core.PayrollItemDto;
+import com.iodsky.mysweldo.payroll.core.UpdatePayrollBenefitRequest;
+import com.iodsky.mysweldo.payroll.core.UpdatePayrollContributionRequest;
+import com.iodsky.mysweldo.payroll.core.UpdatePayrollDeductionRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -75,6 +78,33 @@ public class PayrollRunController {
     public ResponseEntity<ApiResponse<PayrollItemDto>> getPayrollItem(@PathVariable UUID id, @PathVariable UUID itemId) {
         PayrollItemDto item = service.getPayrollItem(id, itemId);
         return ResponseFactory.ok("Payroll item retrieved successfully", item);
+    }
+
+    @PatchMapping("/{id}/items/{itemId}/deductions")
+    public ResponseEntity<ApiResponse<PayrollItemDto>> updatePayrollDeductions(@PathVariable UUID id,
+                                                                                   @PathVariable UUID itemId,
+                                                                                   @Valid @RequestBody UpdatePayrollDeductionRequest request
+    ) {
+        PayrollItemDto payrollItemDto = service.updatePayrollDeductions(id, itemId, request);
+        return ResponseFactory.ok("Payroll updated successfully", payrollItemDto);
+    }
+
+    @PatchMapping("/{id}/items/{itemId}/benefits")
+    public ResponseEntity<ApiResponse<PayrollItemDto>> updatePayrollBenefits(@PathVariable UUID id,
+                                                                                   @PathVariable UUID itemId,
+                                                                                   @Valid @RequestBody UpdatePayrollBenefitRequest request
+    ) {
+        PayrollItemDto payrollItemDto = service.updatePayrollBenefits(id, itemId, request);
+        return ResponseFactory.ok("Payroll updated successfully", payrollItemDto);
+    }
+
+    @PatchMapping("/{id}/items/{itemId}/contributions")
+    public ResponseEntity<ApiResponse<PayrollItemDto>> updatePayrollContributions(@PathVariable UUID id,
+                                                                                 @PathVariable UUID itemId,
+                                                                                 @Valid @RequestBody UpdatePayrollContributionRequest request
+    ) {
+        PayrollItemDto payrollItemDto = service.updatePayrollContributions(id, itemId, request);
+        return ResponseFactory.ok("Payroll updated successfully", payrollItemDto);
     }
 
     @DeleteMapping("/{id}/items/{itemId}")

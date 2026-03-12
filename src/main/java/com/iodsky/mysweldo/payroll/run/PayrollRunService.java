@@ -1,6 +1,13 @@
 package com.iodsky.mysweldo.payroll.run;
 
+import com.iodsky.mysweldo.contribution.Contribution;
+
+import com.iodsky.mysweldo.contribution.ContributionService;
+import com.iodsky.mysweldo.benefit.Benefit;
+import com.iodsky.mysweldo.benefit.BenefitService;
 import com.iodsky.mysweldo.common.DateRange;
+import com.iodsky.mysweldo.deduction.Deduction;
+import com.iodsky.mysweldo.deduction.DeductionService;
 import com.iodsky.mysweldo.employee.EmployeeService;
 import com.iodsky.mysweldo.attendance.AttendanceService;
 import com.iodsky.mysweldo.payroll.core.*;
@@ -16,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 
@@ -33,6 +41,9 @@ public class PayrollRunService {
     private final PayrollItemRepository payrollItemRepository;
     private final PayrollBuilder payrollBuilder;
     private final PayrollItemMapper payrollItemMapper;
+    private final DeductionService deductionService;
+    private final BenefitService benefitService;
+    private final ContributionService contributionService;
 
     public PayrollRunDto createPayrollRun(PayrollRunRequest request) {
 
@@ -56,7 +67,7 @@ public class PayrollRunService {
     public GeneratePayrollResponse generatePayroll(UUID id, GeneratePayrollRequest request) {
 
         // 1. FETCH & VALIDATE PAYROLL RUN
-        PayrollRun run = getPayrollRunEntityById(id);
+        PayrollRun run = findPayrollRun(id);
 
         if (!run.getStatus().equals(PayrollRunStatus.DRAFT)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " already processed");
@@ -146,7 +157,7 @@ public class PayrollRunService {
     }
 
     public PayrollRunDto getPayrollRunById(UUID id) {
-        return mapper.toDto(getPayrollRunEntityById(id));
+        return mapper.toDto(findPayrollRun(id));
     }
 
     public Page<PayrollItemDto> getPayrollItems(UUID id, Integer pageNo, Integer limit) {
@@ -159,14 +170,138 @@ public class PayrollRunService {
     }
 
     public PayrollItemDto getPayrollItem(UUID id, UUID itemId) {
-        PayrollItem item = payrollItemRepository.findByPayrollRun_IdAndId(id, itemId).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Payroll item " + itemId + " not found"));
+        PayrollItem item = findPayrollItem(id, itemId);
 
         return payrollItemMapper.toDto(item);
     }
 
+    public PayrollItemDto updatePayrollDeductions(UUID id, UUID itemId, UpdatePayrollDeductionRequest request) {
+        // 1. FETCH & VALIDATE PAYROLL RUN
+        PayrollRun run = findPayrollRun(id);
+
+        if (!run.getStatus().equals(PayrollRunStatus.DRAFT)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " already processed");
+        }
+
+        // 2. FETCH PAYROLL ITEM
+        PayrollItem item = findPayrollItem(id, itemId);
+
+        // 3. APPLY DEDUCTION OVERRIDES / ADDITIONS
+        //    For each LineItemEntry in request.getDeductions():
+        for (LineItemEntry entry : request.getDeductions()) {
+            //      - Look up an existing PayrollDeduction in item.getDeductions() where deduction.getCode() == entry.getCode()
+            Optional<PayrollDeduction> existing = item.getDeductions().stream()
+                    .filter(d -> d.getDeduction().getCode().equals(entry.getCode()))
+                    .findFirst();
+            //      - If found  → update its amount (override)
+            if (existing.isPresent()) {
+                existing.get().setAmount(entry.getAmount());
+            } else {
+                //      - If not found → create a new PayrollDeduction, look up the Deduction entity by code, link to item, and add to item.getDeductions()
+                Deduction deduction = deductionService.getDeductionByCode(entry.getCode());
+
+                PayrollDeduction newDeduction = PayrollDeduction.builder()
+                        .deduction(deduction)
+                        .amount(entry.getAmount())
+                        .payroll(item)
+                        .build();
+
+                item.getDeductions().add(newDeduction);
+            }
+        }
+
+        item.setTotalDeductions(item.getDeductions().stream()
+                .map(PayrollDeduction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        item.setNetPay(item.getGrossPay()
+                .add(item.getTotalBenefits())
+                .subtract(item.getTotalDeductions()));
+
+        PayrollItem updated = payrollItemRepository.save(item);
+        return payrollItemMapper.toDto(updated);
+    }
+
+    public PayrollItemDto updatePayrollBenefits(UUID id, UUID itemId, UpdatePayrollBenefitRequest request) {
+        PayrollRun run = findPayrollRun(id);
+
+        if (!run.getStatus().equals(PayrollRunStatus.DRAFT)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " already processed");
+        }
+
+        PayrollItem item = findPayrollItem(id, itemId);
+
+        for (LineItemEntry entry : request.getBenefits()) {
+            Optional<PayrollBenefit> existing = item.getBenefits().stream()
+                    .filter(b -> b.getBenefit().getCode().equals(entry.getCode()))
+                    .findFirst();
+
+            if (existing.isPresent()) {
+                existing.get().setAmount(entry.getAmount());
+            } else {
+                Benefit benefit = benefitService.getBenefitByCode(entry.getCode());
+
+                PayrollBenefit newBenefit = PayrollBenefit.builder()
+                        .benefit(benefit)
+                        .amount(entry.getAmount())
+                        .payroll(item)
+                        .build();
+
+                item.getBenefits().add(newBenefit);
+            }
+        }
+
+        item.setTotalBenefits(item.getBenefits().stream()
+                .map(PayrollBenefit::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        item.setNetPay(item.getGrossPay()
+                .add(item.getTotalBenefits())
+                .subtract(item.getTotalDeductions()));
+
+        PayrollItem updated = payrollItemRepository.save(item);
+        return payrollItemMapper.toDto(updated);
+    }
+
+    public PayrollItemDto updatePayrollContributions(UUID id, UUID itemId, UpdatePayrollContributionRequest request) {
+        PayrollRun run = findPayrollRun(id);
+
+        if (!run.getStatus().equals(PayrollRunStatus.DRAFT)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " already processed");
+        }
+
+        PayrollItem item = findPayrollItem(id, itemId);
+
+        for (LineItemEntry entry : request.getContributions()) {
+            Optional<EmployerContribution> existing = item.getEmployerContributions().stream()
+                    .filter(c -> c.getContribution().getCode().equals(entry.getCode()))
+                    .findFirst();
+
+            if (existing.isPresent()) {
+                existing.get().setAmount(entry.getAmount());
+            } else {
+                Contribution contribution = contributionService.getContributionByCode(entry.getCode());
+
+                EmployerContribution newContribution = EmployerContribution.builder()
+                        .contribution(contribution)
+                        .amount(entry.getAmount())
+                        .payrollItem(item)
+                        .build();
+
+                item.getEmployerContributions().add(newContribution);
+            }
+        }
+
+        item.setTotalEmployerContributions(item.getEmployerContributions().stream()
+                .map(EmployerContribution::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        PayrollItem updated = payrollItemRepository.save(item);
+        return payrollItemMapper.toDto(updated);
+    }
+
     public void deletePayrollItem(UUID id, UUID itemId) {
-        PayrollRun run = getPayrollRunEntityById(id);
+        PayrollRun run = findPayrollRun(id);
 
         if (!run.getStatus().equals(PayrollRunStatus.DRAFT)) {
             throw new ResponseStatusException(
@@ -175,8 +310,7 @@ public class PayrollRunService {
             );
         }
 
-        PayrollItem item = payrollItemRepository.findByPayrollRun_IdAndId(id, itemId).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Payroll item " + itemId + " not found"));
+        PayrollItem item = findPayrollItem(id, itemId);
 
         payrollItemRepository.delete(item);
 
@@ -184,7 +318,12 @@ public class PayrollRunService {
         repository.save(run);
     }
 
-    private PayrollRun getPayrollRunEntityById(UUID id) {
+    private PayrollItem findPayrollItem(UUID id, UUID itemId) {
+        return payrollItemRepository.findByPayrollRun_IdAndId(id, itemId).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Payroll item " + itemId + " not found"));
+    }
+
+    private PayrollRun findPayrollRun(UUID id) {
         return  repository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Payroll run " + id + " not found"));
     }
