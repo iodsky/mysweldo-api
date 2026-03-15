@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS position (
 CREATE TABLE IF NOT EXISTS deduction (
     code VARCHAR(255) PRIMARY KEY,
     description VARCHAR(255),
+    statutory BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP,
@@ -48,6 +49,8 @@ CREATE TABLE IF NOT EXISTS contribution (
 CREATE TABLE IF NOT EXISTS benefit (
     code VARCHAR(255) PRIMARY KEY,
     description VARCHAR(255),
+    taxable BOOLEAN NOT NULL DEFAULT FALSE,
+    non_taxable_limit NUMERIC(19, 2),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP,
@@ -84,11 +87,23 @@ CREATE TABLE IF NOT EXISTS employee (
     position_id VARCHAR(20),
     department_id VARCHAR(20),
     status VARCHAR(50),
-    basic_salary NUMERIC(19, 2),
-    hourly_rate NUMERIC(19, 2),
-    semi_monthly_rate NUMERIC(19, 2),
+    type VARCHAR(50),
     start_shift TIME,
     end_shift TIME,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
+    created_by UUID,
+    last_modified_by UUID,
+    version BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS salary (
+    id UUID PRIMARY KEY,
+    employee_id BIGINT NOT NULL,
+    type VARCHAR(50),
+    amount NUMERIC(19 ,2),
+    effective_date DATE NOT NULL DEFAULT NOW(),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP,
@@ -196,6 +211,11 @@ ALTER TABLE contribution
     ADD CONSTRAINT fk_contribution_created_by FOREIGN KEY (created_by) REFERENCES users(id),
     ADD CONSTRAINT fk_contribution_last_modified_by FOREIGN KEY (last_modified_by) REFERENCES users(id);
 
+ALTER TABLE salary
+    ADD CONSTRAINT fk_salary_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    ADD CONSTRAINT fk_salary_last_modified_by FOREIGN KEY (last_modified_by) REFERENCES users(id),
+    ADD CONSTRAINT uk_salary_employee UNIQUE (employee_id);
+
 CREATE TABLE IF NOT EXISTS attendance (
     id UUID PRIMARY KEY,
     employee_id BIGINT NOT NULL,
@@ -280,10 +300,8 @@ CREATE TABLE IF NOT EXISTS payroll_item (
     id UUID PRIMARY KEY,
     payroll_run_id UUID,
     employee_id BIGINT NOT NULL,
-    days_worked INTEGER,
-    overtime NUMERIC(19, 2),
-    monthly_rate NUMERIC(19, 2),
-    daily_rate NUMERIC(19, 2),
+    base_salary NUMERIC(19,2),
+    overtime_pay NUMERIC(19, 2),
     gross_pay NUMERIC(19, 2),
     total_benefits NUMERIC(19, 2),
     total_deductions NUMERIC(19, 2),
@@ -566,10 +584,100 @@ INSERT INTO deduction (code, description, created_at, updated_at, version) VALUE
     ('HDMF', 'Pag-IBIG', NOW(), NOW(), 0),
     ('TAX', 'Withholding Tax', NOW(), NOW(), 0);
 
-INSERT INTO benefit (code, description, created_at, updated_at, version)VALUES
-    ('MEAL', 'MEAL ALLOWANCE', NOW(), NOW(), 0),
-    ('PHONE', 'PHONE ALLOWANCE', NOW(), NOW(), 0),
-    ('CLOTHING', 'CLOTHING ALLOWANCE', NOW(), NOW(), 0);
+INSERT INTO benefit (code, description, taxable, non_taxable_limit, created_at, updated_at, version) VALUES
+    ('MEAL', 'MEAL ALLOWANCE', FALSE, 2500, NOW(), NOW(), 0),
+    ('PHONE', 'PHONE ALLOWANCE', TRUE, NULL, NOW(), NOW(), 0),
+    ('CLOTHING', 'CLOTHING ALLOWANCE', FALSE, 5000, NOW(), NOW(), 0);
+
+INSERT INTO tax_bracket (id, min_income, max_income, base_tax, marginal_rate, threshold, effective_date, created_at, version) VALUES
+-- 0% Tax
+(GEN_RANDOM_UUID(), 0.00, 20833.00, 0.00, 0.0000, 0.00, '2026-01-01', CURRENT_TIMESTAMP, 0),
+-- 15% of excess over 20,833
+(GEN_RANDOM_UUID(), 20833.01, 33333.00, 0.00, 0.1500, 20833.00, '2026-01-01', CURRENT_TIMESTAMP, 0),
+-- 1,875 + 20% of excess over 33,333
+(GEN_RANDOM_UUID(), 33333.01, 66667.00, 1875.00, 0.2000, 33333.00, '2026-01-01', CURRENT_TIMESTAMP, 0),
+-- 8,541.80 + 25% of excess over 66,667
+(GEN_RANDOM_UUID(), 66667.01, 166667.00, 8541.80, 0.2500, 66667.00, '2026-01-01', CURRENT_TIMESTAMP, 0),
+-- 33,541.80 + 30% of excess over 166,667
+(GEN_RANDOM_UUID(), 166667.01, 666667.00, 33541.80, 0.3000, 166667.00, '2026-01-01', CURRENT_TIMESTAMP, 0),
+-- 183,541.80 + 35% of excess over 666,667
+(GEN_RANDOM_UUID(), 666667.01, NULL, 183541.80, 0.3500, 666667.00, '2026-01-01', CURRENT_TIMESTAMP, 0);
+
+INSERT INTO philhealth_rate (id, premium_rate, max_salary_cap, min_salary_floor, fixed_contribution, effective_date, created_at, version) VALUES
+    (GEN_RANDOM_UUID(), 0.0500,100000.00, 10000.00, 500.00, '2026-01-01',  CURRENT_TIMESTAMP, 0);
+
+INSERT INTO pagibig_rate (id, employee_rate, employer_rate, low_income_threshold, low_income_employee_rate, max_salary_cap, effective_date, created_at, version) VALUES
+    (GEN_RANDOM_UUID(), 0.0200, 0.0200, 1500.00, 0.0100, 10000.00, '2026-01-01', CURRENT_TIMESTAMP, 0);
+
+INSERT INTO sss_rate (id, total_sss, employee_sss, employer_sss, salary_brackets, effective_date, created_at, version)
+VALUES (GEN_RANDOM_UUID(), 0.15, 0.0500, 0.1000,
+           '[
+             {"msc": 5000, "maxSalary": 5249.99, "minSalary": 0.00},
+             {"msc": 5500, "maxSalary": 5749.99, "minSalary": 5250.00},
+             {"msc": 6000, "maxSalary": 6249.99, "minSalary": 5750.00},
+             {"msc": 6500, "maxSalary": 6749.99, "minSalary": 6250.00},
+             {"msc": 7000, "maxSalary": 7249.99, "minSalary": 6750.00},
+             {"msc": 7500, "maxSalary": 7749.99, "minSalary": 7250.00},
+             {"msc": 8000, "maxSalary": 8249.99, "minSalary": 7750.00},
+             {"msc": 8500, "maxSalary": 8749.99, "minSalary": 8250.00},
+             {"msc": 9000, "maxSalary": 9249.99, "minSalary": 8750.00},
+             {"msc": 9500, "maxSalary": 9749.99, "minSalary": 9250.00},
+             {"msc": 10000, "maxSalary": 10249.99, "minSalary": 9750.00},
+             {"msc": 10500, "maxSalary": 10749.99, "minSalary": 10250.00},
+             {"msc": 11000, "maxSalary": 11249.99, "minSalary": 10750.00},
+             {"msc": 11500, "maxSalary": 11749.99, "minSalary": 11250.00},
+             {"msc": 12000, "maxSalary": 12249.99, "minSalary": 11750.00},
+             {"msc": 12500, "maxSalary": 12749.99, "minSalary": 12250.00},
+             {"msc": 13000, "maxSalary": 13249.99, "minSalary": 12750.00},
+             {"msc": 13500, "maxSalary": 13749.99, "minSalary": 13250.00},
+             {"msc": 14000, "maxSalary": 14249.99, "minSalary": 13750.00},
+             {"msc": 14500, "maxSalary": 14749.99, "minSalary": 14250.00},
+             {"msc": 15000, "maxSalary": 15249.99, "minSalary": 14750.00},
+             {"msc": 15500, "maxSalary": 15749.99, "minSalary": 15250.00},
+             {"msc": 16000, "maxSalary": 16249.99, "minSalary": 15750.00},
+             {"msc": 16500, "maxSalary": 16749.99, "minSalary": 16250.00},
+             {"msc": 17000, "maxSalary": 17249.99, "minSalary": 16750.00},
+             {"msc": 17500, "maxSalary": 17749.99, "minSalary": 17250.00},
+             {"msc": 18000, "maxSalary": 18249.99, "minSalary": 17750.00},
+             {"msc": 18500, "maxSalary": 18749.99, "minSalary": 18250.00},
+             {"msc": 19000, "maxSalary": 19249.99, "minSalary": 18750.00},
+             {"msc": 19500, "maxSalary": 19749.99, "minSalary": 19250.00},
+             {"msc": 20000, "maxSalary": 20249.99, "minSalary": 19750.00},
+             {"msc": 20500, "maxSalary": 20749.99, "minSalary": 20250.00},
+             {"msc": 21000, "maxSalary": 21249.99, "minSalary": 20750.00},
+             {"msc": 21500, "maxSalary": 21749.99, "minSalary": 21250.00},
+             {"msc": 22000, "maxSalary": 22249.99, "minSalary": 21750.00},
+             {"msc": 22500, "maxSalary": 22749.99, "minSalary": 22250.00},
+             {"msc": 23000, "maxSalary": 23249.99, "minSalary": 22750.00},
+             {"msc": 23500, "maxSalary": 23749.99, "minSalary": 23250.00},
+             {"msc": 24000, "maxSalary": 24249.99, "minSalary": 23750.00},
+             {"msc": 24500, "maxSalary": 24749.99, "minSalary": 24250.00},
+             {"msc": 25000, "maxSalary": 25249.99, "minSalary": 24750.00},
+             {"msc": 25500, "maxSalary": 25749.99, "minSalary": 25250.00},
+             {"msc": 26000, "maxSalary": 26249.99, "minSalary": 25750.00},
+             {"msc": 26500, "maxSalary": 26749.99, "minSalary": 26250.00},
+             {"msc": 27000, "maxSalary": 27249.99, "minSalary": 26750.00},
+             {"msc": 27500, "maxSalary": 27749.99, "minSalary": 27250.00},
+             {"msc": 28000, "maxSalary": 28249.99, "minSalary": 27750.00},
+             {"msc": 28500, "maxSalary": 28749.99, "minSalary": 28250.00},
+             {"msc": 29000, "maxSalary": 29249.99, "minSalary": 28750.00},
+             {"msc": 29500, "maxSalary": 29749.99, "minSalary": 29250.00},
+             {"msc": 30000, "maxSalary": 30249.99, "minSalary": 29750.00},
+             {"msc": 30500, "maxSalary": 30749.99, "minSalary": 30250.00},
+             {"msc": 31000, "maxSalary": 31249.99, "minSalary": 30750.00},
+             {"msc": 31500, "maxSalary": 31749.99, "minSalary": 31250.00},
+             {"msc": 32000, "maxSalary": 32249.99, "minSalary": 31750.00},
+             {"msc": 32500, "maxSalary": 32749.99, "minSalary": 32250.00},
+             {"msc": 33000, "maxSalary": 33249.99, "minSalary": 32750.00},
+             {"msc": 33500, "maxSalary": 33749.99, "minSalary": 33250.00},
+             {"msc": 34000, "maxSalary": 34249.99, "minSalary": 33750.00},
+             {"msc": 34500, "maxSalary": 34749.99, "minSalary": 34250.00},
+             {"msc": 35000, "maxSalary": null, "minSalary": 34750.00}
+           ]',
+            '2026-01-01',
+            '2026-03-14 08:51:05.965609',
+            0
+       );
 
 INSERT INTO roles (name, created_at, updated_at, version) VALUES
     ('SUPERUSER', NOW(), NOW(), 0),
