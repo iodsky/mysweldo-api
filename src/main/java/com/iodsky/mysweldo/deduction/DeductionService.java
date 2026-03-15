@@ -28,6 +28,7 @@ public class DeductionService {
 
         Deduction deduction = Deduction.builder()
                 .code(request.getCode())
+                .statutory(request.isStatutory())
                 .description(request.getDescription())
                 .build();
 

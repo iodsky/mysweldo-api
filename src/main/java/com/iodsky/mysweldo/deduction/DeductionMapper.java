@@ -13,6 +13,7 @@ public class DeductionMapper {
         return DeductionDto.builder()
                 .code(entity.getCode())
                 .description(entity.getDescription())
+                .statutory(entity.isStatutory())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();

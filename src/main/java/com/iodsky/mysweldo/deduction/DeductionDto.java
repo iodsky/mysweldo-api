@@ -14,6 +14,7 @@ import java.time.Instant;
 public class DeductionDto {
     private String code;
     private String description;
+    private Boolean statutory;
     private Instant createdAt;
     private Instant updatedAt;
 }

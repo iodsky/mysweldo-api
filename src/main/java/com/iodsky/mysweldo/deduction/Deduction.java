@@ -19,4 +19,6 @@ public class Deduction extends BaseModel {
     @Id
     private String code;
     private String description;
+    @Builder.Default
+    private boolean statutory = true;
 }

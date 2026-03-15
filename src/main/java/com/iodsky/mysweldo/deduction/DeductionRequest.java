@@ -20,4 +20,6 @@ public class DeductionRequest {
     @NotBlank(message = "Description is required")
     @Size(max = 255, message = "Description must not exceed 255 characters")
     private String description;
+
+    private boolean statutory;
 }
