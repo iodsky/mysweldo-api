@@ -300,19 +300,33 @@ CREATE TABLE IF NOT EXISTS payroll_item (
     id UUID PRIMARY KEY,
     payroll_run_id UUID,
     employee_id BIGINT NOT NULL,
-    base_salary NUMERIC(19,2),
-    overtime_pay NUMERIC(19, 2),
-    gross_pay NUMERIC(19, 2),
+    days_worked NUMERIC(5,2) NOT NULL,
+
+    monthly_rate NUMERIC(19, 2),
+    semi_monthly_rate NUMERIC(19, 2),
+    daily_rate NUMERIC(19, 2),
+    hourly_rate NUMERIC(19, 2),
+    salary_type VARCHAR(50),
+
+    absences NUMERIC(5,2),
+    tardiness_minutes INTEGER,
+    undertime_minutes INTEGER,
+    overtime_minutes INTEGER,
+
+    ovetime_pay NUMERIC(19, 2),
     total_benefits NUMERIC(19, 2),
+    gross_pay NUMERIC(19, 2),
+
     total_deductions NUMERIC(19, 2),
-    total_employer_contributions NUMERIC(19, 2),
     net_pay NUMERIC(19, 2),
+
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP,
     created_by UUID,
     last_modified_by UUID,
     version BIGINT,
+
     CONSTRAINT fk_payroll_run_payroll_item FOREIGN KEY (payroll_run_id) REFERENCES payroll_run(id),
     CONSTRAINT fk_payroll_item_employee FOREIGN KEY (employee_id) REFERENCES employee(id),
     CONSTRAINT fk_payroll_item_created_by FOREIGN KEY (created_by) REFERENCES users(id),

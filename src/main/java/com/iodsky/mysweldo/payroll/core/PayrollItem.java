@@ -3,6 +3,7 @@ package com.iodsky.mysweldo.payroll.core;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.iodsky.mysweldo.common.BaseModel;
 import com.iodsky.mysweldo.employee.Employee;
+import com.iodsky.mysweldo.employee.SalaryType;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;
 import jakarta.persistence.*;
 import lombok.*;
@@ -40,40 +41,55 @@ public class PayrollItem extends BaseModel {
     @JsonIgnore
     private Employee employee;
 
-    @OneToMany(mappedBy = "payroll", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<PayrollDeduction> deductions;
+    @Column(name = "days_worked")
+    private BigDecimal daysWorked;
+
+    @Column(name = "monthly_rate")
+    private BigDecimal monthlyRate;
+
+    @Column(name = "semi_monthly_rate")
+    private BigDecimal semiMonthlyRate;
+
+    @Column(name = "daily_rate")
+    private BigDecimal dailyRate;
+
+    @Column(name = "hourly_rate")
+    private BigDecimal hourlyRate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "salary_type")
+    private SalaryType salaryType;
+
+    private BigDecimal absences;
+
+    @Column(name = "tardiness_minutes")
+    private Integer tardinessMinutes;
+
+    @Column(name = "undertime_minutes")
+    private Integer undertimeMinutes;
+
+    @Column(name = "overtime_minutes")
+    private Integer overtimeMinutes;
+
+    @Column(name = "ovetime_pay")
+    private BigDecimal overtimePay;
 
     @OneToMany(mappedBy = "payroll", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<PayrollBenefit> benefits;
 
-    @OneToMany(mappedBy = "payrollItem", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JsonIgnore
-    private List<EmployerContribution> employerContributions;
-
-    @Column(name = "days_worked")
-    private int daysWorked;
-
-    private BigDecimal overtime;
-
-    @Column(name = "monthly_rate")
-    private BigDecimal monthlyRate;
-
-    @Column(name = "daily_rate")
-    private BigDecimal dailyRate;
+    @Column(name = "total_benefits")
+    private BigDecimal totalBenefits;
 
     @Column(name = "gross_pay")
     private BigDecimal grossPay;
 
-    @Column(name = "total_benefits")
-    private BigDecimal totalBenefits;
+    @OneToMany(mappedBy = "payroll", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<PayrollDeduction> deductions;
 
     @Column(name = "total_deductions")
     private BigDecimal totalDeductions;
-
-    @Column(name = "total_employer_contributions")
-    private BigDecimal totalEmployerContributions;
 
     @Column(name = "net_pay")
     private BigDecimal netPay;
