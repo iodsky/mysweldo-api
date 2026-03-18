@@ -2,7 +2,7 @@ package com.iodsky.mysweldo.payroll.core;
 
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
+import java.util.Collections;
 
 @Component
 public class PayrollItemMapper {
@@ -12,47 +12,41 @@ public class PayrollItemMapper {
 
         return PayrollItemDto.builder()
                 .id(payroll.getId())
-                .employeeId(payroll.getEmployee().getId())
-                .periodStartDate(payroll.getPayrollRun().getPeriodStartDate())
-                .periodEndDate(payroll.getPayrollRun().getPeriodEndDate())
+                .employeeId(payroll.getEmployee() != null ? payroll.getEmployee().getId() : null)
+                .periodStartDate(payroll.getPayrollRun() != null ? payroll.getPayrollRun().getPeriodStartDate() : null)
+                .periodEndDate(payroll.getPayrollRun() != null ? payroll.getPayrollRun().getPeriodEndDate() : null)
+
+                // Work & time
                 .daysWorked(payroll.getDaysWorked())
-                .overtime(payroll.getOvertime())
+                .absences(payroll.getAbsences())
+                .tardinessMinutes(payroll.getTardinessMinutes())
+                .undertimeMinutes(payroll.getUndertimeMinutes())
+                .overtimeMinutes(payroll.getOvertimeMinutes())
+                .overtimePay(payroll.getOvertimePay())
+
+                // Rates
                 .monthlyRate(payroll.getMonthlyRate())
+                .semiMonthlyRate(payroll.getSemiMonthlyRate())
                 .dailyRate(payroll.getDailyRate())
+                .hourlyRate(payroll.getHourlyRate())
+                .salaryType(payroll.getSalaryType())
+
+                // Payroll amounts
+                .totalBenefits(payroll.getTotalBenefits())
                 .grossPay(payroll.getGrossPay())
-                .benefits(payroll.getBenefits()
-                        .stream()
-                        .map(this::toDto)
-                        .toList()
-                )
-                .deductions(payroll.getDeductions()
-                        .stream()
-                        .map(this::toDto)
-                        .toList()
-                )
-                .employerContributions(payroll.getEmployerContributions()
-                        .stream()
-                        .map(this::toDto)
-                        .toList()
-                )
+                .totalDeductions(payroll.getTotalDeductions())
                 .netPay(payroll.getNetPay())
+
+                // Related entities
+                .benefits(payroll.getBenefits() != null
+                        ? payroll.getBenefits().stream().map(this::toDto).toList()
+                        : Collections.emptyList()
+                )
+                .deductions(payroll.getDeductions() != null
+                        ? payroll.getDeductions().stream().map(this::toDto).toList()
+                        : Collections.emptyList()
+                )
                 .build();
-    }
-
-    private BigDecimal getDeductionAmount(PayrollItem payroll, String type) {
-        return payroll.getDeductions().stream()
-                .filter(d -> d.getDeduction().getCode().equalsIgnoreCase(type))
-                .map(PayrollDeduction::getAmount)
-                .findFirst()
-                .orElse(BigDecimal.ZERO);
-    }
-
-    private BigDecimal getBenefitAmount(PayrollItem payroll, String type) {
-        return payroll.getBenefits().stream()
-                .filter(b -> b.getBenefit().getCode().equalsIgnoreCase(type))
-                .map(PayrollBenefit::getAmount)
-                .findFirst()
-                .orElse(BigDecimal.ZERO);
     }
 
     private PayrollBenefitDto toDto(PayrollBenefit entity) {
@@ -73,13 +67,5 @@ public class PayrollItemMapper {
                 .build();
     }
 
-    private EmployerContributionDto toDto(EmployerContribution entity) {
-        if (entity == null) return null;
-
-        return EmployerContributionDto.builder()
-                .contribution(entity.getContribution().getCode())
-                .amount(entity.getAmount())
-                .build();
-    }
 
 }
