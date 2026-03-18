@@ -29,10 +29,11 @@ public class Salary extends BaseModel {
     @JsonIgnore
     private Employee employee;
 
+    @Column(name = "base_amount")
+    private BigDecimal baseAmount;
+
     @Enumerated(EnumType.STRING)
     private SalaryType type;
-
-    private BigDecimal amount;
 
     @Column(name = "effective_date")
     @Builder.Default

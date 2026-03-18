@@ -26,7 +26,7 @@ public class EmployeeMapper  {
                         .build())
                 .toList();
 
-        BigDecimal salary = employee.getSalary().getAmount() != null ? employee.getSalary().getAmount() : BigDecimal.ZERO;
+        BigDecimal salary = employee.getSalary().getBaseAmount() != null ? employee.getSalary().getBaseAmount() : BigDecimal.ZERO;
         return EmployeeDto.builder()
                 .id(employee.getId())
                 .firstName(employee.getFirstName())
@@ -122,7 +122,7 @@ public class EmployeeMapper  {
         existing.setStartShift(request.getStartShift());
         existing.setEndShift(request.getEndShift());
 
-        existing.getSalary().setAmount(request.getBasicSalary());
+        existing.getSalary().setBaseAmount(request.getBasicSalary());
 
         List<EmployeeBenefit> benefits = request.getBenefits()
                 .stream()

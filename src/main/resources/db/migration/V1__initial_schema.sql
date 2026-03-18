@@ -101,8 +101,8 @@ CREATE TABLE IF NOT EXISTS employee (
 CREATE TABLE IF NOT EXISTS salary (
     id UUID PRIMARY KEY,
     employee_id BIGINT NOT NULL,
+    base_amount NUMERIC(19 ,2),
     type VARCHAR(50),
-    amount NUMERIC(19 ,2),
     effective_date DATE NOT NULL DEFAULT NOW(),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
