@@ -55,9 +55,8 @@ public class EmployeeRequest {
     @NotNull(message = "End shift is required")
     private LocalTime endShift;
 
-    @NotNull(message = "Basic salary is required")
-    @Positive
-    private BigDecimal basicSalary;
+    @NotNull(message = "Salary request is required")
+    private SalaryRequest salaryRequest;
 
     @NotNull
     private List<EmployeeBenefitRequest> benefits;

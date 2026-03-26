@@ -3,6 +3,7 @@ package com.iodsky.mysweldo.batch.employee;
 
 import com.iodsky.mysweldo.batch.DateTimeUtil;
 import com.iodsky.mysweldo.employee.*;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -25,12 +26,14 @@ public class EmployeeImportRecord {
             "tinNumber",
             "pagIbigNumber",
             "status",
-            "type",
+            "employmentType",
             "position",
             "supervisorId",
             "startShift",
             "endShift",
-            "basicSalary",
+            "rate",
+            "payType",
+            "payrollFrequency",
             "mealAllowance",
             "phoneAllowance",
             "clothingAllowance"
@@ -46,12 +49,14 @@ public class EmployeeImportRecord {
     private String tinNumber;
     private String pagIbigNumber;
     private String status;
-    private String type;
+    private String employmentType;
     private String position;
     private String supervisorId;
     private String startShift;
     private String endShift;
-    private String basicSalary;
+    private String rate;
+    private String payType;
+    private String payrollFrequency;
     private String mealAllowance;
     private String phoneAllowance;
     private String clothingAllowance;
@@ -66,8 +71,9 @@ public class EmployeeImportRecord {
                 .build();
 
         Salary salary = Salary.builder()
-                .type(SalaryType.MONTHLY)
-                .amount(new BigDecimal(record.getBasicSalary()))
+                .rate(BigDecimal.valueOf(Long.parseLong(record.getRate())))
+                .payType(PayType.valueOf(record.getPayType()))
+                .payrollFrequency(PayrollFrequency.valueOf(record.getPayrollFrequency()))
                 .build();
 
         Employee employee = Employee.builder()
@@ -79,7 +85,7 @@ public class EmployeeImportRecord {
                 .governmentId(governmentId)
                 .salary(salary)
                 .status(EmploymentStatus.valueOf(record.getStatus().toUpperCase()))
-                .type(EmploymentType.valueOf(record.getType().toUpperCase()))
+                .type(EmploymentType.valueOf(record.getEmploymentType().toUpperCase()))
                 .startShift(DateTimeUtil.parseTime(record.getStartShift()))
                 .endShift(DateTimeUtil.parseTime(record.getEndShift()))
                 .build();

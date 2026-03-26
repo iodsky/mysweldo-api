@@ -2,12 +2,12 @@ package com.iodsky.mysweldo.employee;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.iodsky.mysweldo.common.BaseModel;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -29,14 +29,14 @@ public class Salary extends BaseModel {
     @JsonIgnore
     private Employee employee;
 
-    @Column(name = "base_amount")
-    private BigDecimal baseAmount;
+    private BigDecimal rate;
 
     @Enumerated(EnumType.STRING)
-    private SalaryType type;
+    @Column(name = "pay_type")
+    private PayType payType;
 
-    @Column(name = "effective_date")
-    @Builder.Default
-    private LocalDate effectiveDate = LocalDate.now();
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payroll_frequency")
+    private PayrollFrequency payrollFrequency;
 
 }

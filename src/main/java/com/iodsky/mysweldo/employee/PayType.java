@@ -1,6 +1,6 @@
 package com.iodsky.mysweldo.employee;
 
-public enum SalaryType {
+public enum PayType {
     MONTHLY,
     DAILY,
     HOURLY

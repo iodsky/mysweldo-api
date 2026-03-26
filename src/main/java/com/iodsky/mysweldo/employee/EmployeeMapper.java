@@ -26,7 +26,7 @@ public class EmployeeMapper  {
                         .build())
                 .toList();
 
-        BigDecimal salary = employee.getSalary().getBaseAmount() != null ? employee.getSalary().getBaseAmount() : BigDecimal.ZERO;
+        BigDecimal salary = employee.getSalary().getRate() != null ? employee.getSalary().getRate() : BigDecimal.ZERO;
         return EmployeeDto.builder()
                 .id(employee.getId())
                 .firstName(employee.getFirstName())
@@ -73,8 +73,9 @@ public class EmployeeMapper  {
 
         Salary salary = Salary.builder()
                 .employee(employee)
-                .type(SalaryType.MONTHLY)
-                .amount(request.getBasicSalary())
+                .rate(request.getSalaryRequest().getRate())
+                .payType(request.getSalaryRequest().getPayType())
+                .payrollFrequency(request.getSalaryRequest().getPayrollFrequency())
                 .build();
 
         List<EmployeeBenefit> benefits = request.getBenefits()
@@ -122,7 +123,10 @@ public class EmployeeMapper  {
         existing.setStartShift(request.getStartShift());
         existing.setEndShift(request.getEndShift());
 
-        existing.getSalary().setBaseAmount(request.getBasicSalary());
+        Salary salary = existing.getSalary();
+        salary.setRate(request.getSalaryRequest().getRate());
+        salary.setPayType(request.getSalaryRequest().getPayType());
+        salary.setPayrollFrequency(request.getSalaryRequest().getPayrollFrequency());
 
         List<EmployeeBenefit> benefits = request.getBenefits()
                 .stream()
