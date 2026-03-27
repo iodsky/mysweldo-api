@@ -60,9 +60,9 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
         }
 
         BigDecimal monthlyRate = employee.getSalary().getRate();
-        BigDecimal semiMonthlyRate = monthlyRate.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
-        BigDecimal dailyRate = monthlyRate.divide(BigDecimal.valueOf(21.75), 2, RoundingMode.HALF_UP);
-        BigDecimal hourlyRate = dailyRate.divide(BigDecimal.valueOf(8), 2, RoundingMode.HALF_UP);
+        BigDecimal semiMonthlyRate = payrollCalculator.calculateSemiMonthlyRate(monthlyRate);
+        BigDecimal dailyRate = payrollCalculator.calculateDailyRate(monthlyRate);
+        BigDecimal hourlyRate = payrollCalculator.calculateHourlyRate(dailyRate);
 
         // 2. CALCULATE HOURS
         BigDecimal totalHours = attendanceService.calculateTotalHoursByEmployeeId(

@@ -22,12 +22,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PayrollCalculator {
 
+    public static final BigDecimal STANDARD_WORK_HOURS_PER_DAY = BigDecimal.valueOf(8);
     private final PhilhealthRateRepository philhealthRateTableRepository;
     private final PagibigRateRepository pagibigRateTableRepository;
     private final SssRateRepository sssRateTableRepository;
     private final TaxBracketRepository incomeTaxBracketRepository;
 
     private static final BigDecimal SEMI_MONTHLY_PERIODS_PER_MONTH = BigDecimal.valueOf(2);
+    public static final BigDecimal AVERAGE_WORKING_DAYS_PER_MONTH = BigDecimal.valueOf(21.75);
     private static final BigDecimal OVERTIME_MULTIPLIER = BigDecimal.valueOf(1.25);
 
     public PayrollConfiguration loadConfiguration(LocalDate payrollDate) {
@@ -64,6 +66,18 @@ public class PayrollCalculator {
                 .sssRateTable(sssRateTable)
                 .incomeTaxBrackets(taxBrackets)
                 .build();
+    }
+
+    public BigDecimal calculateSemiMonthlyRate(BigDecimal monthlyRate) {
+        return monthlyRate.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateDailyRate(BigDecimal monthlyRate) {
+        return monthlyRate.divide(AVERAGE_WORKING_DAYS_PER_MONTH, 2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateHourlyRate(BigDecimal dailyRate) {
+        return dailyRate.divide(STANDARD_WORK_HOURS_PER_DAY, 2, RoundingMode.HALF_UP);
     }
 
     public BigDecimal calculateOvertimePay(BigDecimal hourlyRate, BigDecimal overtimeHours) {
