@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.payroll.core;
 
+import com.iodsky.mysweldo.benefit.Benefit;
 import com.iodsky.mysweldo.employee.EmployeeBenefit;
 import com.iodsky.mysweldo.pagIbig.PagibigRate;
 import com.iodsky.mysweldo.pagIbig.PagibigRateRepository;
@@ -86,14 +87,28 @@ public class PayrollCalculator {
                 .multiply(OVERTIME_MULTIPLIER);
     }
 
-    public BigDecimal calculateGrossPay(BigDecimal regularPay, BigDecimal overtimePay) {
-        return regularPay.add(overtimePay).setScale(2, RoundingMode.HALF_UP);
+    public BigDecimal calculateTaxableBenefits(List<EmployeeBenefit> benefits) {
+        return benefits.stream()
+                .map(EmployeeBenefit::getTaxableAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculateTotalBenefits(List<EmployeeBenefit> employeeBenefits) {
-        return employeeBenefits.stream()
-                .map(EmployeeBenefit::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    public BigDecimal calculateNonTaxableBenefits(List<EmployeeBenefit> benefits) {
+        return benefits.stream()
+                .map(EmployeeBenefit::getNonTaxableAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateTotalBenefits(BigDecimal taxableBenefits, BigDecimal nonTaxableBenefits) {
+        return taxableBenefits.add(nonTaxableBenefits).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateGrossPay(BigDecimal regularPay, BigDecimal overtimePay, BigDecimal taxableBenefit) {
+        return regularPay.add(overtimePay)
+                .add(taxableBenefit)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     public BigDecimal calculatePhilhealthDeduction(BigDecimal basicSalary, PhilhealthRate config) {
@@ -136,6 +151,10 @@ public class PayrollCalculator {
         return monthlyContribution.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
     }
 
+    public BigDecimal calculateTotalStatutoryDeductions(BigDecimal sss, BigDecimal philhealth, BigDecimal pagibig) {
+        return sss.add(philhealth).add(pagibig).setScale(2, RoundingMode.HALF_UP);
+    }
+
     public BigDecimal calculateWithholdingTax(BigDecimal semiMonthlyTaxableIncome, List<TaxBracket> taxBrackets) {
 
         BigDecimal monthlyTaxableIncome = semiMonthlyTaxableIncome.multiply(SEMI_MONTHLY_PERIODS_PER_MONTH);
@@ -166,6 +185,10 @@ public class PayrollCalculator {
         return monthlyTax.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
     }
 
+    public BigDecimal calculateTotalDeductions(BigDecimal withholdingTax, BigDecimal totalStatutoryDeductions) {
+        return withholdingTax.add(totalStatutoryDeductions).setScale(2, RoundingMode.HALF_UP);
+    }
+
     public BigDecimal calculateSssEmployerContribution(BigDecimal basicSalary, SssRate config) {
         SssRate.SalaryBracket bracket = config.findBracket(basicSalary);
         BigDecimal monthlyContribution = bracket.getMsc().multiply(config.getEmployerRate());
@@ -184,22 +207,17 @@ public class PayrollCalculator {
         return monthlyContribution.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculateTotalEmployerContributions(
-            BigDecimal sssEr, BigDecimal philhealthEr, BigDecimal pagibigEr) {
+    public BigDecimal calculateTotalEmployerContributions(BigDecimal sssEr, BigDecimal philhealthEr, BigDecimal pagibigEr) {
         return sssEr.add(philhealthEr).add(pagibigEr).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculateTotalStatutoryDeductions(
-            BigDecimal sss, BigDecimal philhealth, BigDecimal pagibig) {
-        return sss.add(philhealth).add(pagibig).setScale(2, RoundingMode.HALF_UP);
-    }
 
     public BigDecimal calculateTaxableIncome(BigDecimal grossPay, BigDecimal statutoryDeductions) {
         return grossPay.subtract(statutoryDeductions).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculateNetPay( BigDecimal grossPay, BigDecimal totalBenefits, BigDecimal statutoryDeductions, BigDecimal withholdingTax) {
-        return grossPay.add(totalBenefits)
+    public BigDecimal calculateNetPay( BigDecimal grossPay, BigDecimal nonTaxableBenefit, BigDecimal statutoryDeductions, BigDecimal withholdingTax) {
+        return grossPay.add(nonTaxableBenefit)
                 .subtract(statutoryDeductions)
                 .subtract(withholdingTax)
                 .setScale(2, RoundingMode.HALF_UP);

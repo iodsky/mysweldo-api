@@ -14,12 +14,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 
 /**
- * Strategy for computing SEMI_MONTHLY payroll.
- *
+* Strategy for computing SEMI_MONTHLY payroll
  * Responsibilities:
  * - Fetch required data for the payroll period
  * - Orchestrate calculations using PayrollCalculator
@@ -64,7 +62,7 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
         BigDecimal dailyRate = payrollCalculator.calculateDailyRate(monthlyRate);
         BigDecimal hourlyRate = payrollCalculator.calculateHourlyRate(dailyRate);
 
-        // 2. CALCULATE HOURS
+        // CALCULATE HOURS
         BigDecimal totalHours = attendanceService.calculateTotalHoursByEmployeeId(
                 employee.getId(),
                 payrollRun.getPeriodStartDate(),
@@ -80,34 +78,41 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
         BigDecimal standardHours = BigDecimal.valueOf(attendances.size()).multiply(BigDecimal.valueOf(8));
         BigDecimal regularHours = totalHours.subtract(approvedOvertimeHours).min(standardHours);
 
-        // 3. CALCULATE PAY
+        // OVERTIME PAY
         BigDecimal overtimePay = payrollCalculator.calculateOvertimePay(hourlyRate, approvedOvertimeHours);
-        BigDecimal grossPay = payrollCalculator.calculateGrossPay(semiMonthlyRate, overtimePay);
 
-        // 4. CALCULATE BENEFITS
-        BigDecimal totalBenefits = payrollCalculator.calculateTotalBenefits(benefits);
+        // BENEFITS
+        BigDecimal taxableBenefits = payrollCalculator.calculateTaxableBenefits(benefits);
+        BigDecimal nonTaxableBenefits = payrollCalculator.calculateNonTaxableBenefits(benefits);
+        BigDecimal totalBenefits = payrollCalculator.calculateTotalBenefits(taxableBenefits,  nonTaxableBenefits);
 
-        // 5. CALCULATE STATUTORY DEDUCTIONS (using preloaded configuration)
+        // GROSS PAY
+        BigDecimal grossPay = payrollCalculator.calculateGrossPay(semiMonthlyRate, overtimePay, taxableBenefits);
+
+        // STATUTORY DEDUCTIONS
         BigDecimal sss = payrollCalculator.calculateSssDeduction(monthlyRate, config.getSssRateTable());
         BigDecimal philhealth = payrollCalculator.calculatePhilhealthDeduction(monthlyRate, config.getPhilhealthRateTable());
         BigDecimal pagibig = payrollCalculator.calculatePagibigDeduction(monthlyRate, config.getPagibigRateTable());
+        BigDecimal totalStatutoryDeductions = payrollCalculator.calculateTotalStatutoryDeductions(sss, philhealth, pagibig);
 
-        // 6. CALCULATE EMPLOYER CONTRIBUTIONS (using preloaded configuration)
+        // EMPLOYER CONTRIBUTIONS
         BigDecimal sssEr = payrollCalculator.calculateSssEmployerContribution(monthlyRate, config.getSssRateTable());
         BigDecimal philhealthEr = payrollCalculator.calculatePhilhealthEmployerContribution(monthlyRate, config.getPhilhealthRateTable());
         BigDecimal pagibigEr = payrollCalculator.calculatePagibigEmployerContribution(monthlyRate, config.getPagibigRateTable());
         BigDecimal totalEmployerContributions = payrollCalculator.calculateTotalEmployerContributions(sssEr, philhealthEr, pagibigEr);
 
-        // 7. CALCULATE TAXABLE INCOME AND WITHHOLDING TAX (using preloaded configuration)
-        BigDecimal statutoryDeductions = payrollCalculator.calculateTotalStatutoryDeductions(sss, philhealth, pagibig);
-        BigDecimal taxableIncome = payrollCalculator.calculateTaxableIncome(grossPay, statutoryDeductions);
+        // TAXABLE INCOME
+        BigDecimal taxableIncome = payrollCalculator.calculateTaxableIncome(grossPay, totalStatutoryDeductions);
+
+        //  WITHHOLDING TAX
         BigDecimal withholdingTax = payrollCalculator.calculateWithholdingTax(taxableIncome, config.getIncomeTaxBrackets());
-        BigDecimal totalDeductions = withholdingTax.add(statutoryDeductions).setScale(2, RoundingMode.HALF_UP);
 
-        // 8. CALCULATE NET PAY
-        BigDecimal netPay = payrollCalculator.calculateNetPay(grossPay, totalBenefits, statutoryDeductions, withholdingTax);
+        // TOTAL DEDUCTIONS
+        BigDecimal totalDeductions = payrollCalculator.calculateTotalDeductions(withholdingTax, totalStatutoryDeductions);
 
-        // 9. BUILD AND RETURN CONTEXT
+        // NET PAY
+        BigDecimal netPay = payrollCalculator.calculateNetPay(grossPay, nonTaxableBenefits, totalStatutoryDeductions, withholdingTax);
+
         return PayrollContext.builder()
                 .employee(employee)
                 .attendances(attendances)
