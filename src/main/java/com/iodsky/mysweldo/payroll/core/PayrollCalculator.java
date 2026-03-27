@@ -1,6 +1,5 @@
 package com.iodsky.mysweldo.payroll.core;
 
-import com.iodsky.mysweldo.benefit.Benefit;
 import com.iodsky.mysweldo.employee.EmployeeBenefit;
 import com.iodsky.mysweldo.pagIbig.PagibigRate;
 import com.iodsky.mysweldo.pagIbig.PagibigRateRepository;
@@ -105,9 +104,9 @@ public class PayrollCalculator {
         return taxableBenefits.add(nonTaxableBenefits).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculateGrossPay(BigDecimal regularPay, BigDecimal overtimePay, BigDecimal taxableBenefit) {
+    public BigDecimal calculateGrossPay(BigDecimal regularPay, BigDecimal overtimePay, BigDecimal taxableBenefits) {
         return regularPay.add(overtimePay)
-                .add(taxableBenefit)
+                .add(taxableBenefits)
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
@@ -216,8 +215,8 @@ public class PayrollCalculator {
         return grossPay.subtract(statutoryDeductions).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculateNetPay( BigDecimal grossPay, BigDecimal nonTaxableBenefit, BigDecimal statutoryDeductions, BigDecimal withholdingTax) {
-        return grossPay.add(nonTaxableBenefit)
+    public BigDecimal calculateNetPay( BigDecimal grossPay, BigDecimal nonTaxableBenefits, BigDecimal statutoryDeductions, BigDecimal withholdingTax) {
+        return grossPay.add(nonTaxableBenefits)
                 .subtract(statutoryDeductions)
                 .subtract(withholdingTax)
                 .setScale(2, RoundingMode.HALF_UP);
