@@ -165,7 +165,6 @@ class PayrollRunServiceTest {
             when(attendanceService.hasAttendance(eq(1L), any(), any())).thenReturn(true);
             when(attendanceService.hasAttendance(eq(2L), any(), any())).thenReturn(true);
             when(calculator.loadConfiguration(any())).thenReturn(configuration());
-            when(strategyFactory.getStrategy(PayrollFrequency.SEMI_MONTHLY)).thenReturn(payrollComputationStrategy);
             when(payrollBuilder.buildPayroll(eq(1L), eq(run), any())).thenReturn(item1);
             when(payrollBuilder.buildPayroll(eq(2L), eq(run), any())).thenReturn(item2);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(List.of(item1, item2));
@@ -194,7 +193,6 @@ class PayrollRunServiceTest {
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 10L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(10L), any(), any())).thenReturn(true);
             when(calculator.loadConfiguration(any())).thenReturn(configuration());
-            when(strategyFactory.getStrategy(PayrollFrequency.SEMI_MONTHLY)).thenReturn(payrollComputationStrategy);
             when(payrollBuilder.buildPayroll(eq(10L), eq(run), any())).thenReturn(item);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(List.of(item));
             when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().build());
@@ -220,8 +218,6 @@ class PayrollRunServiceTest {
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 10L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(10L), any(), any())).thenReturn(true);
             when(calculator.loadConfiguration(any())).thenReturn(configuration());
-            when(strategyFactory.getStrategy(PayrollFrequency.SEMI_MONTHLY)).thenReturn(payrollComputationStrategy);
-            when(payrollBuilder.buildPayroll(eq(10L), eq(run), any())).thenReturn(item);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(List.of(item));
             when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().build());
 
@@ -241,7 +237,6 @@ class PayrollRunServiceTest {
 
             when(repository.findById(runId)).thenReturn(Optional.of(run));
             when(calculator.loadConfiguration(any())).thenReturn(configuration());
-            when(strategyFactory.getStrategy(PayrollFrequency.SEMI_MONTHLY)).thenReturn(payrollComputationStrategy);
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 1L)).thenReturn(true);
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 2L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(2L), any(), any())).thenReturn(true);
@@ -264,7 +259,6 @@ class PayrollRunServiceTest {
 
             when(repository.findById(runId)).thenReturn(Optional.of(run));
             when(calculator.loadConfiguration(any())).thenReturn(configuration());
-            when(strategyFactory.getStrategy(PayrollFrequency.SEMI_MONTHLY)).thenReturn(payrollComputationStrategy);
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 1L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(1L), any(), any())).thenReturn(false);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(Collections.emptyList());
@@ -282,16 +276,20 @@ class PayrollRunServiceTest {
             GeneratePayrollRequest request = new GeneratePayrollRequest();
             request.setEmployeeIds(List.of(1L));
 
+            EmployerContribution ec = EmployerContribution.builder()
+                    .amount(BigDecimal.valueOf(1500))
+                    .build();
+
             PayrollItem item = PayrollItem.builder()
                     .grossPay(BigDecimal.valueOf(30000))
                     .totalBenefits(BigDecimal.valueOf(1000))
                     .totalDeductions(BigDecimal.valueOf(2000))
                     .netPay(BigDecimal.valueOf(29000))
+                    .employerContributions(List.of(ec))
                     .build();
 
             when(repository.findById(runId)).thenReturn(Optional.of(run));
             when(calculator.loadConfiguration(any())).thenReturn(configuration());
-            when(strategyFactory.getStrategy(PayrollFrequency.SEMI_MONTHLY)).thenReturn(payrollComputationStrategy);
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 1L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(1L), any(), any())).thenReturn(true);
             when(payrollBuilder.buildPayroll(eq(1L), eq(run), any())).thenReturn(item);
@@ -304,7 +302,7 @@ class PayrollRunServiceTest {
             assertEquals(BigDecimal.valueOf(1000), run.getTotalBenefits());
             assertEquals(BigDecimal.valueOf(2000), run.getTotalDeductions());
             assertEquals(BigDecimal.valueOf(29000), run.getTotalNetPay());
-            assertEquals(BigDecimal.valueOf(500), run.getTotalEmployerCost());
+            assertEquals(BigDecimal.valueOf(1500), run.getTotalEmployerCost());
         }
 
         @Test
@@ -569,7 +567,7 @@ class PayrollRunServiceTest {
 
             service.updatePayrollDeductions(runId, itemId, request);
 
-            assertEquals(BigDecimal.valueOf(800), item.getDeductions().get(0).getAmount());
+            assertEquals(BigDecimal.valueOf(800), item.getDeductions().getFirst().getAmount());
         }
 
         @Test
@@ -604,7 +602,7 @@ class PayrollRunServiceTest {
             service.updatePayrollDeductions(runId, itemId, request);
 
             assertEquals(1, item.getDeductions().size());
-            assertEquals("PAGIBIG", item.getDeductions().get(0).getDeduction().getCode());
+            assertEquals("PAGIBIG", item.getDeductions().getFirst().getDeduction().getCode());
         }
 
         @Test

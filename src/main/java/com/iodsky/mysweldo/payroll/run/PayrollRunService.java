@@ -20,10 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Stream;
 
 
 @Service
@@ -323,6 +321,14 @@ public class PayrollRunService {
         run.setTotalBenefits(allItems.stream().map(PayrollItem::getTotalBenefits).reduce(BigDecimal.ZERO, BigDecimal::add));
         run.setTotalDeductions(allItems.stream().map(PayrollItem::getTotalDeductions).reduce(BigDecimal.ZERO, BigDecimal::add));
         run.setTotalNetPay(allItems.stream().map(PayrollItem::getNetPay).reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        run.setTotalEmployerCost(allItems.stream()
+                .flatMap(item -> item.getEmployerContributions() == null
+                        ? Stream.empty()
+                        : item.getEmployerContributions().stream())
+                .map(EmployerContribution::getAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
     }
 
 }
