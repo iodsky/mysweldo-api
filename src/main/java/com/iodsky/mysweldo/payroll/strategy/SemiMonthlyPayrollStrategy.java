@@ -1,6 +1,6 @@
 package com.iodsky.mysweldo.payroll.strategy;
 
-import com.iodsky.mysweldo.attendance.Attendance;
+import com.iodsky.mysweldo.attendance.AttendancePayrollSummary;
 import com.iodsky.mysweldo.attendance.AttendanceService;
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.employee.EmployeeBenefit;
@@ -41,8 +41,7 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
      */
     @Override
     public PayrollContext compute(Employee employee, PayrollRun payrollRun, PayrollConfiguration config) {
-        // 1. FETCH REQUIRED DATA
-        List<Attendance> attendances = attendanceService.getEmployeeAttendances(
+        AttendancePayrollSummary attendanceSummary = attendanceService.getAttendanceSummary(
                 employee.getId(),
                 payrollRun.getPeriodStartDate(),
                 payrollRun.getPeriodEndDate()
@@ -50,7 +49,6 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
 
         List<EmployeeBenefit> benefits = employee.getBenefits();
 
-        // Fetch salary information from the related Salary entity
         if (employee.getSalary() == null) {
             throw new PayrollRunException(
                     "No salary record found for employee: " + employee.getId()
@@ -62,7 +60,6 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
         BigDecimal dailyRate = payrollCalculator.calculateDailyRate(monthlyRate);
         BigDecimal hourlyRate = payrollCalculator.calculateHourlyRate(dailyRate);
 
-        // CALCULATE HOURS
         BigDecimal totalHours = attendanceService.calculateTotalHoursByEmployeeId(
                 employee.getId(),
                 payrollRun.getPeriodStartDate(),
@@ -75,56 +72,80 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
                 payrollRun.getPeriodEndDate()
         );
 
-        BigDecimal standardHours = BigDecimal.valueOf(attendances.size()).multiply(BigDecimal.valueOf(8));
+        BigDecimal standardHours = attendanceSummary.getDaysWorked().multiply(BigDecimal.valueOf(8));
         BigDecimal regularHours = totalHours.subtract(approvedOvertimeHours).min(standardHours);
 
-        // OVERTIME PAY
+        BigDecimal absenceDeduction = payrollCalculator.calculateAbsenceDeduction(
+                dailyRate,
+                attendanceSummary.getAbsenceDays()
+        );
+
+        BigDecimal tardinessDeduction = payrollCalculator.calculateTardinessDeduction(
+                hourlyRate,
+                attendanceSummary.getTardinessMinutes()
+        );
+
+        BigDecimal undertimeDeduction = payrollCalculator.calculateUndertimeDeduction(
+                hourlyRate,
+                attendanceSummary.getUndertimeMinutes()
+        );
+
+        BigDecimal regularPay = payrollCalculator.calculateRegularPay(
+                semiMonthlyRate,
+                absenceDeduction,
+                tardinessDeduction,
+                undertimeDeduction
+        );
+
         BigDecimal overtimePay = payrollCalculator.calculateOvertimePay(hourlyRate, approvedOvertimeHours);
 
-        // BENEFITS
         BigDecimal taxableBenefits = payrollCalculator.calculateTaxableBenefits(benefits);
         BigDecimal nonTaxableBenefits = payrollCalculator.calculateNonTaxableBenefits(benefits);
-        BigDecimal totalBenefits = payrollCalculator.calculateTotalBenefits(taxableBenefits,  nonTaxableBenefits);
+        BigDecimal totalBenefits = payrollCalculator.calculateTotalBenefits(taxableBenefits, nonTaxableBenefits);
 
-        // GROSS PAY
-        BigDecimal grossPay = payrollCalculator.calculateGrossPay(semiMonthlyRate, overtimePay, taxableBenefits);
+        BigDecimal grossPay = payrollCalculator.calculateGrossPay(regularPay, overtimePay, taxableBenefits);
 
-        // STATUTORY DEDUCTIONS
         BigDecimal sss = payrollCalculator.calculateSssDeduction(monthlyRate, config.getSssRateTable());
         BigDecimal philhealth = payrollCalculator.calculatePhilhealthDeduction(monthlyRate, config.getPhilhealthRateTable());
         BigDecimal pagibig = payrollCalculator.calculatePagibigDeduction(monthlyRate, config.getPagibigRateTable());
         BigDecimal totalStatutoryDeductions = payrollCalculator.calculateTotalStatutoryDeductions(sss, philhealth, pagibig);
 
-        // EMPLOYER CONTRIBUTIONS
         BigDecimal sssEr = payrollCalculator.calculateSssEmployerContribution(monthlyRate, config.getSssRateTable());
         BigDecimal philhealthEr = payrollCalculator.calculatePhilhealthEmployerContribution(monthlyRate, config.getPhilhealthRateTable());
         BigDecimal pagibigEr = payrollCalculator.calculatePagibigEmployerContribution(monthlyRate, config.getPagibigRateTable());
         BigDecimal totalEmployerContributions = payrollCalculator.calculateTotalEmployerContributions(sssEr, philhealthEr, pagibigEr);
 
-        // TAXABLE INCOME
         BigDecimal taxableIncome = payrollCalculator.calculateTaxableIncome(grossPay, totalStatutoryDeductions);
 
-        //  WITHHOLDING TAX
         BigDecimal withholdingTax = payrollCalculator.calculateWithholdingTax(taxableIncome, config.getIncomeTaxBrackets());
 
-        // TOTAL DEDUCTIONS
         BigDecimal totalDeductions = payrollCalculator.calculateTotalDeductions(withholdingTax, totalStatutoryDeductions);
 
-        // NET PAY
-        BigDecimal netPay = payrollCalculator.calculateNetPay(grossPay, nonTaxableBenefits, totalStatutoryDeductions, withholdingTax);
+        BigDecimal netPay = payrollCalculator.calculateNetPay(
+                grossPay,
+                nonTaxableBenefits,
+                totalStatutoryDeductions,
+                withholdingTax
+        );
 
         return PayrollContext.builder()
                 .employee(employee)
-                .attendances(attendances)
                 .employeeBenefits(benefits)
                 .monthlyRate(monthlyRate)
                 .semiMonthlyRate(semiMonthlyRate)
                 .dailyRate(dailyRate)
                 .hourlyRate(hourlyRate)
+                .daysWorked(attendanceSummary.getDaysWorked())
+                .absenceDays(attendanceSummary.getAbsenceDays())
+                .tardinessMinutes(attendanceSummary.getTardinessMinutes())
+                .undertimeMinutes(attendanceSummary.getUndertimeMinutes())
                 .totalHours(totalHours)
                 .overtimeHours(approvedOvertimeHours)
                 .regularHours(regularHours)
-                .regularPay(semiMonthlyRate)
+                .absenceDeduction(absenceDeduction)
+                .tardinessDeduction(tardinessDeduction)
+                .undertimeDeduction(undertimeDeduction)
+                .regularPay(regularPay)
                 .overtimePay(overtimePay)
                 .grossPay(grossPay)
                 .totalBenefits(totalBenefits)

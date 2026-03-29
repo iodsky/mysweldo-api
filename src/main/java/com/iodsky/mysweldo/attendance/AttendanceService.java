@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -210,6 +211,55 @@ public class AttendanceService {
 
     public BigDecimal calculateTotalHoursByEmployeeId(Long employeeId, LocalDate startDate, LocalDate endDate) {
         return repository.sumTotalHoursByEmployee_IdAndDateBetween(employeeId, startDate, endDate);
+    }
+
+    public AttendancePayrollSummary getAttendanceSummary(Long employeeId, LocalDate startDate, LocalDate endDate) {
+        List<Attendance> attendances = getEmployeeAttendances(employeeId, startDate, endDate);
+
+        long expectedWorkDays = countWorkDays(startDate, endDate);
+        int daysWorked = attendances.size();
+        long absenceDays = Math.max(expectedWorkDays - daysWorked, 0);
+
+        int totalTardinessMinutes = 0;
+        int totalUndertimeMinutes = 0;
+        for (Attendance a: attendances) {
+            Employee employee = a.getEmployee();
+            if (employee == null) continue;
+
+            LocalTime shiftStart = employee.getStartShift();
+            LocalTime shiftEnd = employee.getEndShift();
+            LocalTime timeIn = a.getTimeIn();
+            LocalTime timeOut = a.getTimeOut();
+
+            if (shiftStart != null && timeIn !=null) {
+                LocalTime tardyThreshold = shiftStart.plusMinutes(15);
+
+                if (timeIn.isAfter(tardyThreshold)) {
+                    totalTardinessMinutes += (int) Duration.between(shiftStart, timeIn).toMinutes();
+                }
+            }
+
+            if (shiftEnd != null && timeOut != null && !LocalTime.MIN.equals(timeOut)) {
+                LocalTime undertimeThreshold = shiftEnd.minusMinutes(15);
+
+                if (timeOut.isBefore(undertimeThreshold)) {
+                    totalUndertimeMinutes += (int) Duration.between(timeOut, shiftEnd).toMinutes();
+                }
+            }
+        }
+
+        return AttendancePayrollSummary.builder()
+                .daysWorked(BigDecimal.valueOf(daysWorked))
+                .absenceDays(BigDecimal.valueOf(absenceDays))
+                .tardinessMinutes(totalTardinessMinutes)
+                .undertimeMinutes(totalUndertimeMinutes)
+                .build();
+    }
+
+    private long countWorkDays(LocalDate startDate, LocalDate endDate) {
+        return startDate.datesUntil(endDate.plusDays(1))
+                .filter(d -> !d.getDayOfWeek().equals(DayOfWeek.SATURDAY) && !d.getDayOfWeek().equals(DayOfWeek.SUNDAY))
+                .count();
     }
 
 }

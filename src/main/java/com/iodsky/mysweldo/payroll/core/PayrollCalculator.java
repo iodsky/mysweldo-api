@@ -210,9 +210,41 @@ public class PayrollCalculator {
         return sssEr.add(philhealthEr).add(pagibigEr).setScale(2, RoundingMode.HALF_UP);
     }
 
-
     public BigDecimal calculateTaxableIncome(BigDecimal grossPay, BigDecimal statutoryDeductions) {
         return grossPay.subtract(statutoryDeductions).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateAbsenceDeduction(BigDecimal dailyRate, BigDecimal absenceDays) {
+        return dailyRate.multiply(absenceDays).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateTardinessDeduction(BigDecimal hourlyRate, Integer tardinessMinutes) {
+        if (tardinessMinutes == null || tardinessMinutes == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return hourlyRate
+                .multiply(BigDecimal.valueOf(tardinessMinutes))
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateUndertimeDeduction(BigDecimal hourlyRate, Integer undertimeMinutes) {
+        if (undertimeMinutes == null || undertimeMinutes == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return hourlyRate
+                .multiply(BigDecimal.valueOf(undertimeMinutes))
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateRegularPay(BigDecimal semiMonthlyRate, BigDecimal absenceDeduction, BigDecimal tardinessDeduction, BigDecimal undertimeDeduction) {
+        return semiMonthlyRate
+                .subtract(absenceDeduction)
+                .subtract(tardinessDeduction)
+                .subtract(undertimeDeduction)
+                .max(BigDecimal.ZERO)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     public BigDecimal calculateNetPay( BigDecimal grossPay, BigDecimal nonTaxableBenefits, BigDecimal statutoryDeductions, BigDecimal withholdingTax) {

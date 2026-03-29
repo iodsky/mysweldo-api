@@ -11,7 +11,6 @@ import com.iodsky.mysweldo.payroll.strategy.PayrollStrategyFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -69,7 +68,10 @@ public class PayrollBuilder {
                 .semiMonthlyRate(context.getSemiMonthlyRate())
                 .dailyRate(context.getDailyRate())
                 .hourlyRate(context.getHourlyRate())
-                .daysWorked(BigDecimal.valueOf(context.getAttendances().size()))
+                .daysWorked(context.getDaysWorked())
+                .absences(context.getAbsenceDays())
+                .tardinessMinutes(context.getTardinessMinutes())
+                .undertimeMinutes(context.getUndertimeMinutes())
                 .grossPay(context.getGrossPay())
                 .benefits(payrollBenefits)
                 .totalBenefits(context.getTotalBenefits())

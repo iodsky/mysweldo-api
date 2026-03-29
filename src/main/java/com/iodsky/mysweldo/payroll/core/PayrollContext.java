@@ -1,6 +1,5 @@
 package com.iodsky.mysweldo.payroll.core;
 
-import com.iodsky.mysweldo.attendance.Attendance;
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.employee.EmployeeBenefit;
 import lombok.Builder;
@@ -13,7 +12,6 @@ import java.util.List;
 @Builder
 public class PayrollContext {
     private Employee employee;
-    private List<Attendance> attendances;
     private List<EmployeeBenefit> employeeBenefits;
 
     private BigDecimal monthlyRate;
@@ -21,9 +19,18 @@ public class PayrollContext {
     private BigDecimal dailyRate;
     private BigDecimal hourlyRate;
 
+    private BigDecimal daysWorked;
+    private BigDecimal absenceDays;
+    private Integer tardinessMinutes;
+    private Integer undertimeMinutes;
+
     private BigDecimal totalHours;
     private BigDecimal overtimeHours;
     private BigDecimal regularHours;
+
+    private BigDecimal absenceDeduction;
+    private BigDecimal tardinessDeduction;
+    private BigDecimal undertimeDeduction;
 
     private BigDecimal regularPay;
     private BigDecimal overtimePay;
