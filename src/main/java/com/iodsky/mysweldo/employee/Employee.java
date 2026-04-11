@@ -14,7 +14,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "employee")
-@SQLRestriction("deleted_at IS NULL AND id != 10000")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @AllArgsConstructor

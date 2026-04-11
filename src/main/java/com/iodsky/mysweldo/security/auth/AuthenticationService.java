@@ -6,11 +6,13 @@ import com.iodsky.mysweldo.security.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
 
 @Service
 @RequiredArgsConstructor
@@ -18,25 +20,37 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
     private final JwtUtil jwtUtil;
+    private final UserDetailsService userDetailsService;
 
-    public String authenticate(LoginRequest loginRequest) {
-
+    public LoginResponse authenticate(LoginRequest request) {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            loginRequest.getEmail(),
-                            loginRequest.getPassword()
+                            request.getEmail(),
+                            request.getPassword()
                     )
             );
-        } catch (InternalAuthenticationServiceException e) {
-            if (e.getMessage().contains("404")) {
-                String message = e.getMessage().split("\"")[1].trim();
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, message);
-            }
+        } catch (InternalAuthenticationServiceException | BadCredentialsException ex) {
+            throw new BadCredentialsException("Invalid username or password");
         }
 
-        User user = userService.getUserByEmail(loginRequest.getEmail());
-        return jwtUtil.generateToken(user);
+        User user = userService.getUserByEmail(request.getEmail());
+        String userRole = user.getRole().getName();
+
+        if ("ADMIN".equals(request.getRole()) && "EMPLOYEE".equals(userRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid access for this account");
+        }
+
+        return new LoginResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getRole().getName(),
+                user.getEmployee().getId()
+        );
     }
 
+    public String generateToken(String email) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        return jwtUtil.generateToken(userDetails);
+    }
 }
