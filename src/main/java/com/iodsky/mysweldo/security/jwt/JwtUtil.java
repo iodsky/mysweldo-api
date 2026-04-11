@@ -24,7 +24,6 @@ public class JwtUtil {
     @Value("${security.jwt.expiration-time}")
     private Long expirationTime;
 
-
     public String generateToken(Map<String, Object> claims, UserDetails userDetails) {
         return Jwts
                 .builder()

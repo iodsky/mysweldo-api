@@ -38,4 +38,8 @@ security:
   jwt:
     secret-key: ${JWT_SECRET}
     expiration-time: ${JWT_EXPIRATION}
+    cookie:
+      secure: ${JWT_COOKIE_SECURE:false}
+      http-only: ${JWT_COOKIE_HTTP_ONLY:true}
+      same-site: ${JWT_COOKIE_SAME_SITE:Lax}
 

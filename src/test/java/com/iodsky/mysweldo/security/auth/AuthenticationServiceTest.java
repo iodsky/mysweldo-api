@@ -1,8 +1,11 @@
 package com.iodsky.mysweldo.security.auth;
 
+import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.security.jwt.JwtUtil;
+import com.iodsky.mysweldo.security.role.Role;
 import com.iodsky.mysweldo.security.user.User;
 import com.iodsky.mysweldo.security.user.UserService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,9 +15,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -35,69 +41,55 @@ class AuthenticationServiceTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private UserDetailsService userDetailsService;
+
+    private LoginRequest validLoginRequest;
+    private User validUser;
+    private Role employeeRole;
+    private Employee employee;
+
+    @BeforeEach
+    void setUp() {
+        employee = Employee.builder().id(10000L).build();
+        employeeRole = Role.builder().name("EMPLOYEE").build();
+
+        validLoginRequest = LoginRequest.builder()
+                .email("john@example.com")
+                .password("secret123")
+                .role("EMPLOYEE")
+                .build();
+
+        validUser = User.builder()
+                .id(UUID.randomUUID())
+                .employee(employee)
+                .email("john@example.com")
+                .role(employeeRole)
+                .build();
+    }
+
     @Nested
     class AuthenticateTests {
 
         @Test
-        void shouldReturnTokenWhenCredentialsAreValid() {
-            LoginRequest loginRequest = LoginRequest.builder()
-                    .email("john@example.com")
-                    .password("secret123")
-                    .build();
-
-            User user = User.builder()
-                    .email("john@example.com")
-                    .build();
-
+        void shouldReturnLoginResponseWhenCredentialsAreValid() {
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                     .thenReturn(null);
-            when(userService.getUserByEmail("john@example.com")).thenReturn(user);
-            when(jwtUtil.generateToken(user)).thenReturn("mocked.jwt.token");
+            when(userService.getUserByEmail("john@example.com")).thenReturn(validUser);
 
-            String token = authenticationService.authenticate(loginRequest);
+            LoginResponse response = authenticationService.authenticate(validLoginRequest);
 
-            assertNotNull(token);
-            assertEquals("mocked.jwt.token", token);
-        }
-
-        @Test
-        void shouldThrow404WhenUserNotFoundDuringAuthentication() {
-            LoginRequest loginRequest = LoginRequest.builder()
-                    .email("ghost@example.com")
-                    .password("secret123")
-                    .build();
-
-            String exceptionMessage = "404 NOT_FOUND \"User ghost@example.com not found\"";
-            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                    .thenThrow(new InternalAuthenticationServiceException(exceptionMessage));
-
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> authenticationService.authenticate(loginRequest)
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-            assertEquals("User ghost@example.com not found", ex.getReason());
-        }
-
-        @Test
-        void shouldPropagateExceptionWhenInternalErrorIsNot404() {
-            LoginRequest loginRequest = LoginRequest.builder()
-                    .email("john@example.com")
-                    .password("wrongpassword")
-                    .build();
-
-            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                    .thenThrow(new InternalAuthenticationServiceException("500 Internal Server Error"));
-
-            assertDoesNotThrow(() -> authenticationService.authenticate(loginRequest));
+            assertNotNull(response);
+            assertEquals("john@example.com", response.getEmail());
+            assertEquals("EMPLOYEE", response.getRole());
         }
 
         @Test
         void shouldPropagateBadCredentialsException() {
-            LoginRequest loginRequest = LoginRequest.builder()
+            LoginRequest invalidLoginRequest = LoginRequest.builder()
                     .email("john@example.com")
                     .password("wrongpassword")
+                    .role("EMPLOYEE")
                     .build();
 
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
@@ -105,29 +97,60 @@ class AuthenticationServiceTest {
 
             assertThrows(
                     BadCredentialsException.class,
-                    () -> authenticationService.authenticate(loginRequest)
+                    () -> authenticationService.authenticate(invalidLoginRequest)
             );
         }
 
         @Test
-        void shouldReturnTokenBelongingToAuthenticatedUser() {
-            LoginRequest loginRequest = LoginRequest.builder()
+        void shouldReturnResponseBelongingToAuthenticatedUser() {
+            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                    .thenReturn(null);
+            when(userService.getUserByEmail("john@example.com")).thenReturn(validUser);
+
+            LoginResponse response = authenticationService.authenticate(validLoginRequest);
+
+            assertEquals("john@example.com", response.getEmail());
+        }
+
+        @Test
+        void shouldThrowForbiddenWhenAdminAccessDeniedForEmployee() {
+            LoginRequest adminLoginRequest = LoginRequest.builder()
                     .email("john@example.com")
                     .password("secret123")
-                    .build();
-
-            User user = User.builder()
-                    .email("john@example.com")
+                    .role("ADMIN")
                     .build();
 
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                     .thenReturn(null);
-            when(userService.getUserByEmail("john@example.com")).thenReturn(user);
-            when(jwtUtil.generateToken(user)).thenReturn("user.specific.token");
+            when(userService.getUserByEmail("john@example.com")).thenReturn(validUser);
 
-            String token = authenticationService.authenticate(loginRequest);
+            ResponseStatusException exception = assertThrows(
+                    ResponseStatusException.class,
+                    () -> authenticationService.authenticate(adminLoginRequest)
+            );
 
-            assertEquals("user.specific.token", token);
+            assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        }
+    }
+
+    @Nested
+    class GenerateTokenTests {
+
+        @Test
+        void shouldGenerateTokenForValidEmail() {
+            String email = "john@example.com";
+            UserDetails userDetails = org.springframework.security.core.userdetails.User
+                    .withUsername(email)
+                    .password("encoded")
+                    .build();
+
+            when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
+            when(jwtUtil.generateToken(userDetails)).thenReturn("mocked.jwt.token");
+
+            String token = authenticationService.generateToken(email);
+
+            assertNotNull(token);
+            assertEquals("mocked.jwt.token", token);
         }
     }
 }
