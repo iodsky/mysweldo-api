@@ -29,7 +29,7 @@ public class EmployeeController {
     private final EmployeeMapper mapper;
 
     @PreAuthorize("hasAnyRole('HR', 'SUPERUSER')")
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Create a new employee",
