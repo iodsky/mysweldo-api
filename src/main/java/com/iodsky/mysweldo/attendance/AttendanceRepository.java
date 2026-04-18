@@ -17,8 +17,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
 
     Optional<Attendance> findByEmployee_IdAndDate(Long employeeId, LocalDate date);
 
-    Page<Attendance> findAllByDate(LocalDate date, Pageable pageable);
-
     Page<Attendance> findAllByDateBetween(LocalDate startDate, LocalDate endDate, Pageable pageable);
 
     Page<Attendance> findByEmployee_IdAndDateBetween(Long employeeId, LocalDate startDate, LocalDate endDate, Pageable pageable);
@@ -33,4 +31,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
     """)
     BigDecimal sumTotalHoursByEmployee_IdAndDateBetween(Long employeeId, LocalDate startDate, LocalDate endDate);
 
+    boolean existsByEmployee_IdAndTimeOutIsNull(Long employeeId);
+
+    Optional<Attendance> findFirstByEmployee_IdAndTimeOutIsNullOrderByDateDescTimeInDesc(Long employeeId);
 }

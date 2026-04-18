@@ -28,7 +28,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,6 +47,9 @@ class AttendanceServiceTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private AttendanceMapper attendanceMapper;
 
     private User hrUser;
     private User regularUser;
@@ -67,7 +72,11 @@ class AttendanceServiceTest {
                 .role(hrRole)
                 .build();
 
-        Employee otherEmployee = Employee.builder().id(2L).build();
+        Employee otherEmployee = Employee.builder()
+                .id(2L)
+                .startShift(LocalTime.of(9, 0))
+                .endShift(LocalTime.of(18, 0))
+                .build();
         regularUser = User.builder()
                 .id(UUID.randomUUID())
                 .employee(otherEmployee)
@@ -79,89 +88,117 @@ class AttendanceServiceTest {
     class CreateAttendanceTests {
 
         @Test
-        void shouldClockInAuthenticatedUserWhenDtoIsNull() {
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
-            when(repository.findByEmployee_IdAndDate(eq(1L), any(LocalDate.class))).thenReturn(Optional.empty());
-            when(employeeService.getEmployeeById(1L)).thenReturn(employee);
-            when(repository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
-
-            Attendance result = service.createAttendance(null);
-
-            assertThat(result.getEmployee()).isEqualTo(employee);
-            assertThat(result.getTimeOut()).isEqualTo(LocalTime.MIN);
-            assertThat(result.getTotalHours()).isEqualByComparingTo(BigDecimal.ZERO);
-            assertThat(result.getOvertime()).isEqualByComparingTo(BigDecimal.ZERO);
-        }
-
-        @Test
-        void shouldClockInAuthenticatedUserWhenDtoEmployeeIdIsNull() {
-            AttendanceDto dto = AttendanceDto.builder().build();
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
-            when(repository.findByEmployee_IdAndDate(eq(1L), any(LocalDate.class))).thenReturn(Optional.empty());
-            when(employeeService.getEmployeeById(1L)).thenReturn(employee);
-            when(repository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
-
-            Attendance result = service.createAttendance(dto);
-
-            assertThat(result.getEmployee()).isEqualTo(employee);
-        }
-
-        @Test
-        void shouldUseProvidedDateAndTimeInWhenSuppliedInDto() {
+        void shouldCreateAttendanceWithProvidedTimeInAndOut() {
             LocalDate targetDate = LocalDate.of(2025, 6, 10);
-            LocalTime targetTime = LocalTime.of(8, 30);
-            AttendanceDto dto = AttendanceDto.builder()
+            LocalTime timeIn = LocalTime.of(8, 30);
+            LocalTime timeOut = LocalTime.of(17, 30);
+            AttendanceRequest request = new AttendanceRequest();
+            request.setEmployeeId(1L);
+            request.setDate(targetDate);
+            request.setTimeIn(timeIn);
+            request.setTimeOut(timeOut);
+
+            Attendance attendance = Attendance.builder()
+                    .employee(employee)
                     .date(targetDate)
-                    .timeIn(targetTime)
+                    .timeIn(timeIn)
+                    .timeOut(timeOut)
+                    .totalHours(new BigDecimal("9.00"))
+                    .overtime(BigDecimal.ZERO)
                     .build();
 
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
-            when(repository.findByEmployee_IdAndDate(1L, targetDate)).thenReturn(Optional.empty());
+            AttendanceDto expectedDto = AttendanceDto.builder()
+                    .employeeId(1L)
+                    .date(targetDate)
+                    .timeIn(timeIn)
+                    .timeOut(timeOut)
+                    .totalHours(new BigDecimal("9.00"))
+                    .overtimeHours(BigDecimal.ZERO)
+                    .build();
+
             when(employeeService.getEmployeeById(1L)).thenReturn(employee);
-            when(repository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
+            when(repository.findByEmployee_IdAndDate(1L, targetDate)).thenReturn(Optional.empty());
+            when(repository.save(any(Attendance.class))).thenReturn(attendance);
+            when(attendanceMapper.toDto(attendance)).thenReturn(expectedDto);
 
-            Attendance result = service.createAttendance(dto);
+            AttendanceDto result = service.createAttendance(request);
 
+            assertThat(result).isEqualTo(expectedDto);
             assertThat(result.getDate()).isEqualTo(targetDate);
-            assertThat(result.getTimeIn()).isEqualTo(targetTime);
+            assertThat(result.getTimeIn()).isEqualTo(timeIn);
+            assertThat(result.getTimeOut()).isEqualTo(timeOut);
         }
 
         @Test
-        void shouldAllowHrToCreateAttendanceForAnotherEmployee() {
-            Employee target = Employee.builder().id(5L).build();
-            AttendanceDto dto = AttendanceDto.builder().employeeId(5L).build();
+        void shouldCalculateTotalHoursAndOvertimeWhenCreatingAttendance() {
+            LocalDate targetDate = LocalDate.of(2025, 6, 10);
+            AttendanceRequest request = new AttendanceRequest();
+            request.setEmployeeId(1L);
+            request.setDate(targetDate);
+            request.setTimeIn(LocalTime.of(9, 0));
+            request.setTimeOut(LocalTime.of(20, 0)); // 11 hours with 2 hours overtime
 
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
-            when(repository.findByEmployee_IdAndDate(eq(5L), any(LocalDate.class))).thenReturn(Optional.empty());
-            when(employeeService.getEmployeeById(5L)).thenReturn(target);
-            when(repository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
+            Attendance attendance = Attendance.builder()
+                    .employee(employee)
+                    .date(targetDate)
+                    .timeIn(LocalTime.of(9, 0))
+                    .timeOut(LocalTime.of(20, 0))
+                    .totalHours(new BigDecimal("11.00"))
+                    .overtime(new BigDecimal("2.00"))
+                    .build();
 
-            Attendance result = service.createAttendance(dto);
+            AttendanceDto expectedDto = AttendanceDto.builder()
+                    .employeeId(1L)
+                    .date(targetDate)
+                    .timeIn(LocalTime.of(9, 0))
+                    .timeOut(LocalTime.of(20, 0))
+                    .totalHours(new BigDecimal("11.00"))
+                    .overtimeHours(new BigDecimal("2.00"))
+                    .build();
 
-            assertThat(result.getEmployee()).isEqualTo(target);
+            when(employeeService.getEmployeeById(1L)).thenReturn(employee);
+            when(repository.findByEmployee_IdAndDate(1L, targetDate)).thenReturn(Optional.empty());
+            when(repository.save(any(Attendance.class))).thenReturn(attendance);
+            when(attendanceMapper.toDto(attendance)).thenReturn(expectedDto);
+
+            AttendanceDto result = service.createAttendance(request);
+
+            assertThat(result.getTotalHours()).isEqualByComparingTo(new BigDecimal("11.00"));
+            assertThat(result.getOvertimeHours()).isEqualByComparingTo(new BigDecimal("2.00"));
         }
 
         @Test
-        void shouldThrow403WhenNonHrUserTriesToCreateAttendanceForAnotherEmployee() {
-            AttendanceDto dto = AttendanceDto.builder().employeeId(99L).build();
-            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
+        void shouldThrow409WhenAttendanceRecordAlreadyExistsForDate() {
+            LocalDate targetDate = LocalDate.of(2025, 6, 10);
+            AttendanceRequest request = new AttendanceRequest();
+            request.setEmployeeId(1L);
+            request.setDate(targetDate);
 
-            assertThatThrownBy(() -> service.createAttendance(dto))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                    .isEqualTo(HttpStatus.FORBIDDEN);
-        }
+            when(employeeService.getEmployeeById(1L)).thenReturn(employee);
+            when(repository.findByEmployee_IdAndDate(1L, targetDate)).thenReturn(Optional.of(Attendance.builder().build()));
 
-        @Test
-        void shouldThrow409WhenAttendanceRecordAlreadyExistsForToday() {
-            Attendance existing = Attendance.builder().build();
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
-            when(repository.findByEmployee_IdAndDate(eq(1L), any(LocalDate.class))).thenReturn(Optional.of(existing));
-
-            assertThatThrownBy(() -> service.createAttendance(null))
+            assertThatThrownBy(() -> service.createAttendance(request))
                     .isInstanceOf(ResponseStatusException.class)
                     .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                     .isEqualTo(HttpStatus.CONFLICT);
+        }
+
+        @Test
+        void shouldThrow400WhenAttendanceDurationIsTooShort() {
+            LocalDate targetDate = LocalDate.of(2025, 6, 10);
+            AttendanceRequest request = new AttendanceRequest();
+            request.setEmployeeId(1L);
+            request.setDate(targetDate);
+            request.setTimeIn(LocalTime.of(9, 0));
+            request.setTimeOut(LocalTime.of(9, 2)); // Only 2 minutes
+
+            when(employeeService.getEmployeeById(1L)).thenReturn(employee);
+            when(repository.findByEmployee_IdAndDate(1L, targetDate)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.createAttendance(request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -209,146 +246,147 @@ class AttendanceServiceTest {
         }
 
         @Test
-        void shouldClockOutAuthenticatedEmployeeWhenDtoIsNull() {
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
-            when(repository.findById(attendanceId)).thenReturn(Optional.of(attendance));
-            when(repository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
-
-            Attendance result = service.updateAttendance(attendanceId, null);
-
-            assertThat(result.getTimeOut()).isNotNull();
-            assertThat(result.getTimeOut()).isNotEqualTo(LocalTime.MIN);
-        }
-
-        @Test
-        void shouldThrow404WhenAttendanceNotFound() {
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
-            when(repository.findById(attendanceId)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> service.updateAttendance(attendanceId, null))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                    .isEqualTo(HttpStatus.NOT_FOUND);
-        }
-
-        @Test
-        void shouldThrow403WhenNonHrUserTriesToUpdateAnotherEmployeesAttendance() {
-            Employee anotherEmployee = Employee.builder().id(99L).build();
-            Attendance otherAttendance = Attendance.builder()
-                    .id(attendanceId)
-                    .employee(anotherEmployee)
-                    .timeIn(LocalTime.of(9, 0))
-                    .timeOut(LocalTime.MIN)
-                    .build();
-
-            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
-            when(repository.findById(attendanceId)).thenReturn(Optional.of(otherAttendance));
-
-            assertThatThrownBy(() -> service.updateAttendance(attendanceId, null))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                    .isEqualTo(HttpStatus.FORBIDDEN);
-        }
-
-        @Test
-        void shouldThrow409WhenEmployeeAlreadyClockedOut() {
-            attendance.setTimeOut(LocalTime.of(18, 0));
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
-            when(repository.findById(attendanceId)).thenReturn(Optional.of(attendance));
-
-            assertThatThrownBy(() -> service.updateAttendance(attendanceId, null))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                    .isEqualTo(HttpStatus.CONFLICT);
-        }
-
-        @Test
-        void shouldThrow403WhenNonHrUserProvidesManualDto() {
-            Employee ownEmployee = Employee.builder().id(2L).build();
-            Attendance ownAttendance = Attendance.builder()
-                    .id(attendanceId)
-                    .employee(ownEmployee)
-                    .timeIn(LocalTime.of(9, 0))
-                    .timeOut(LocalTime.MIN)
-                    .build();
-
-            AttendanceDto dto = AttendanceDto.builder().timeOut(LocalTime.of(18, 0)).build();
-
-            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
-            when(repository.findById(attendanceId)).thenReturn(Optional.of(ownAttendance));
-
-            assertThatThrownBy(() -> service.updateAttendance(attendanceId, dto))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                    .isEqualTo(HttpStatus.FORBIDDEN);
-        }
-
-        @Test
-        void shouldAllowHrToUpdateTimeInTimeOutAndDate() {
+        void shouldUpdateAttendanceWithNewTimeInAndOut() {
             LocalTime newTimeIn = LocalTime.of(8, 0);
             LocalTime newTimeOut = LocalTime.of(17, 0);
             LocalDate newDate = LocalDate.of(2025, 6, 5);
-            AttendanceDto dto = AttendanceDto.builder()
+            AttendanceRequest request = new AttendanceRequest();
+            request.setDate(newDate);
+            request.setTimeIn(newTimeIn);
+            request.setTimeOut(newTimeOut);
+
+            Attendance updatedAttendance = Attendance.builder()
+                    .id(attendanceId)
+                    .employee(employee)
+                    .date(newDate)
                     .timeIn(newTimeIn)
                     .timeOut(newTimeOut)
-                    .date(newDate)
+                    .totalHours(new BigDecimal("9.00"))
+                    .overtime(BigDecimal.ZERO)
                     .build();
 
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+            AttendanceDto expectedDto = AttendanceDto.builder()
+                    .id(attendanceId)
+                    .employeeId(1L)
+                    .date(newDate)
+                    .timeIn(newTimeIn)
+                    .timeOut(newTimeOut)
+                    .totalHours(new BigDecimal("9.00"))
+                    .overtimeHours(BigDecimal.ZERO)
+                    .build();
+
             when(repository.findById(attendanceId)).thenReturn(Optional.of(attendance));
-            when(repository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
+            when(repository.save(any(Attendance.class))).thenReturn(updatedAttendance);
+            when(attendanceMapper.toDto(updatedAttendance)).thenReturn(expectedDto);
 
-            Attendance result = service.updateAttendance(attendanceId, dto);
+            AttendanceDto result = service.updateAttendance(attendanceId, request);
 
+            assertThat(result).isEqualTo(expectedDto);
             assertThat(result.getTimeIn()).isEqualTo(newTimeIn);
             assertThat(result.getTimeOut()).isEqualTo(newTimeOut);
             assertThat(result.getDate()).isEqualTo(newDate);
         }
 
         @Test
-        void shouldCalculateTotalHoursAndOvertimeAfterClockOut() {
-            attendance.getEmployee().setStartShift(LocalTime.of(9, 0));
-            attendance.getEmployee().setEndShift(LocalTime.of(18, 0));
+        void shouldCalculateTotalHoursAndOvertimeAfterUpdate() {
+            LocalTime newTimeIn = LocalTime.of(9, 0);
+            LocalTime newTimeOut = LocalTime.of(20, 0);
+            AttendanceRequest request = new AttendanceRequest();
+            request.setDate(LocalDate.now());
+            request.setTimeIn(newTimeIn);
+            request.setTimeOut(newTimeOut);
 
-            AttendanceDto dto = AttendanceDto.builder().timeOut(LocalTime.of(20, 0)).build();
+            Attendance updatedAttendance = Attendance.builder()
+                    .id(attendanceId)
+                    .employee(employee)
+                    .date(LocalDate.now())
+                    .timeIn(newTimeIn)
+                    .timeOut(newTimeOut)
+                    .totalHours(new BigDecimal("11.00"))
+                    .overtime(new BigDecimal("2.00"))
+                    .build();
 
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+            AttendanceDto expectedDto = AttendanceDto.builder()
+                    .id(attendanceId)
+                    .employeeId(1L)
+                    .date(LocalDate.now())
+                    .timeIn(newTimeIn)
+                    .timeOut(newTimeOut)
+                    .totalHours(new BigDecimal("11.00"))
+                    .overtimeHours(new BigDecimal("2.00"))
+                    .build();
+
             when(repository.findById(attendanceId)).thenReturn(Optional.of(attendance));
-            when(repository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
+            when(repository.save(any(Attendance.class))).thenReturn(updatedAttendance);
+            when(attendanceMapper.toDto(updatedAttendance)).thenReturn(expectedDto);
 
-            Attendance result = service.updateAttendance(attendanceId, dto);
+            AttendanceDto result = service.updateAttendance(attendanceId, request);
 
             assertThat(result.getTotalHours()).isEqualByComparingTo(new BigDecimal("11.00"));
-            assertThat(result.getOvertime()).isEqualByComparingTo(new BigDecimal("2.00"));
+            assertThat(result.getOvertimeHours()).isEqualByComparingTo(new BigDecimal("2.00"));
         }
 
         @Test
         void shouldSetOvertimeToZeroWhenWorkedHoursDoNotExceedRegularShift() {
-            attendance.getEmployee().setStartShift(LocalTime.of(9, 0));
-            attendance.getEmployee().setEndShift(LocalTime.of(18, 0));
+            LocalTime newTimeIn = LocalTime.of(9, 0);
+            LocalTime newTimeOut = LocalTime.of(16, 0);
+            AttendanceRequest request = new AttendanceRequest();
+            request.setDate(LocalDate.now());
+            request.setTimeIn(newTimeIn);
+            request.setTimeOut(newTimeOut);
 
-            AttendanceDto dto = AttendanceDto.builder().timeOut(LocalTime.of(16, 0)).build();
+            Attendance updatedAttendance = Attendance.builder()
+                    .id(attendanceId)
+                    .employee(employee)
+                    .date(LocalDate.now())
+                    .timeIn(newTimeIn)
+                    .timeOut(newTimeOut)
+                    .totalHours(new BigDecimal("7.00"))
+                    .overtime(BigDecimal.ZERO)
+                    .build();
 
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+            AttendanceDto expectedDto = AttendanceDto.builder()
+                    .id(attendanceId)
+                    .employeeId(1L)
+                    .date(LocalDate.now())
+                    .timeIn(newTimeIn)
+                    .timeOut(newTimeOut)
+                    .totalHours(new BigDecimal("7.00"))
+                    .overtimeHours(BigDecimal.ZERO)
+                    .build();
+
             when(repository.findById(attendanceId)).thenReturn(Optional.of(attendance));
-            when(repository.save(any(Attendance.class))).thenAnswer(i -> i.getArgument(0));
+            when(repository.save(any(Attendance.class))).thenReturn(updatedAttendance);
+            when(attendanceMapper.toDto(updatedAttendance)).thenReturn(expectedDto);
 
-            Attendance result = service.updateAttendance(attendanceId, dto);
+            AttendanceDto result = service.updateAttendance(attendanceId, request);
 
-            assertThat(result.getOvertime()).isEqualByComparingTo(BigDecimal.ZERO);
+            assertThat(result.getOvertimeHours()).isEqualByComparingTo(BigDecimal.ZERO);
         }
 
         @Test
-        void shouldThrow400WhenEmployeeShiftIsNotConfigured() {
-            attendance.getEmployee().setStartShift(null);
-            attendance.getEmployee().setEndShift(null);
+        void shouldThrow404WhenAttendanceNotFound() {
+            AttendanceRequest request = new AttendanceRequest();
+            when(repository.findById(attendanceId)).thenReturn(Optional.empty());
 
-            AttendanceDto dto = AttendanceDto.builder().timeOut(LocalTime.of(18, 0)).build();
+            assertThatThrownBy(() -> service.updateAttendance(attendanceId, request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
+        }
 
-            when(userService.getAuthenticatedUser()).thenReturn(hrUser);
+        @Test
+        void shouldThrow400WhenAttendanceDurationIsTooShort() {
+            LocalTime newTimeIn = LocalTime.of(9, 0);
+            LocalTime newTimeOut = LocalTime.of(9, 2); // Only 2 minutes
+            AttendanceRequest request = new AttendanceRequest();
+            request.setDate(LocalDate.now());
+            request.setTimeIn(newTimeIn);
+            request.setTimeOut(newTimeOut);
+
             when(repository.findById(attendanceId)).thenReturn(Optional.of(attendance));
 
-            assertThatThrownBy(() -> service.updateAttendance(attendanceId, dto))
+            assertThatThrownBy(() -> service.updateAttendance(attendanceId, request))
                     .isInstanceOf(ResponseStatusException.class)
                     .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                     .isEqualTo(HttpStatus.BAD_REQUEST);
@@ -359,26 +397,32 @@ class AttendanceServiceTest {
     class GetAllAttendancesTests {
 
         @Test
-        void shouldReturnPagedAttendancesWithDescendingCreatedAtSort() {
-            Page<Attendance> expectedPage = new PageImpl<>(List.of(Attendance.builder().build()));
+        void shouldReturnPagedAttendanceDtosWithDescendingCreatedAtSort() {
+            Attendance attendance = Attendance.builder().employee(employee).build();
+            AttendanceDto dto = AttendanceDto.builder().employeeId(1L).build();
+            Page<Attendance> attendancePage = new PageImpl<>(List.of(attendance));
+
             when(repository.findAllByDateBetween(any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
-                    .thenReturn(expectedPage);
+                    .thenReturn(attendancePage);
+            when(attendanceMapper.toDto(attendance)).thenReturn(dto);
 
-            Page<Attendance> result = service.getAllAttendances(0, 10, LocalDate.now().withDayOfMonth(1), LocalDate.now());
+            Page<AttendanceDto> result = service.getAllAttendances(0, 10, LocalDate.now().withDayOfMonth(1), LocalDate.now());
 
-            assertThat(result).isEqualTo(expectedPage);
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0)).isEqualTo(dto);
             verify(repository).findAllByDateBetween(any(LocalDate.class), any(LocalDate.class), any(Pageable.class));
         }
 
         @Test
         void shouldApplyDefaultDateRangeWhenNullDatesAreProvided() {
-            Page<Attendance> expectedPage = new PageImpl<>(List.of());
+            Page<Attendance> attendancePage = new PageImpl<>(List.of());
+
             when(repository.findAllByDateBetween(any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
-                    .thenReturn(expectedPage);
+                    .thenReturn(attendancePage);
 
-            Page<Attendance> result = service.getAllAttendances(0, 10, null, null);
+            Page<AttendanceDto> result = service.getAllAttendances(0, 10, null, null);
 
-            assertThat(result).isEqualTo(expectedPage);
+            assertThat(result.getContent()).isEmpty();
         }
     }
 
@@ -387,26 +431,35 @@ class AttendanceServiceTest {
 
         @Test
         void shouldReturnOwnAttendancesWhenEmployeeIdIsNull() {
-            Page<Attendance> expectedPage = new PageImpl<>(List.of());
+            Attendance attendance = Attendance.builder().employee(hrUser.getEmployee()).build();
+            AttendanceDto dto = AttendanceDto.builder().employeeId(1L).build();
+            Page<Attendance> attendancePage = new PageImpl<>(List.of(attendance));
+
             when(userService.getAuthenticatedUser()).thenReturn(hrUser);
             when(repository.findByEmployee_IdAndDateBetween(eq(1L), any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
-                    .thenReturn(expectedPage);
+                    .thenReturn(attendancePage);
+            when(attendanceMapper.toDto(attendance)).thenReturn(dto);
 
-            Page<Attendance> result = service.getEmployeeAttendances(0, 10, null, null, null);
+            Page<AttendanceDto> result = service.getEmployeeAttendances(0, 10, null, null, null);
 
-            assertThat(result).isEqualTo(expectedPage);
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0)).isEqualTo(dto);
         }
 
         @Test
         void shouldAllowHrToReadAnotherEmployeesAttendances() {
-            Page<Attendance> expectedPage = new PageImpl<>(List.of());
+            Attendance attendance = Attendance.builder().employee(employee).build();
+            AttendanceDto dto = AttendanceDto.builder().employeeId(5L).build();
+            Page<Attendance> attendancePage = new PageImpl<>(List.of(attendance));
+
             when(userService.getAuthenticatedUser()).thenReturn(hrUser);
             when(repository.findByEmployee_IdAndDateBetween(eq(5L), any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
-                    .thenReturn(expectedPage);
+                    .thenReturn(attendancePage);
+            when(attendanceMapper.toDto(attendance)).thenReturn(dto);
 
-            Page<Attendance> result = service.getEmployeeAttendances(0, 10, 5L, null, null);
+            Page<AttendanceDto> result = service.getEmployeeAttendances(0, 10, 5L, null, null);
 
-            assertThat(result).isEqualTo(expectedPage);
+            assertThat(result.getContent()).hasSize(1);
         }
 
         @Test
@@ -417,26 +470,41 @@ class AttendanceServiceTest {
                     .role(payrollRole)
                     .build();
 
-            Page<Attendance> expectedPage = new PageImpl<>(List.of());
+            Attendance attendance = Attendance.builder().employee(employee).build();
+            AttendanceDto dto = AttendanceDto.builder().employeeId(5L).build();
+            Page<Attendance> attendancePage = new PageImpl<>(List.of(attendance));
+
             when(userService.getAuthenticatedUser()).thenReturn(payrollUser);
             when(repository.findByEmployee_IdAndDateBetween(eq(5L), any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
-                    .thenReturn(expectedPage);
+                    .thenReturn(attendancePage);
+            when(attendanceMapper.toDto(attendance)).thenReturn(dto);
 
-            Page<Attendance> result = service.getEmployeeAttendances(0, 10, 5L, null, null);
+            Page<AttendanceDto> result = service.getEmployeeAttendances(0, 10, 5L, null, null);
 
-            assertThat(result).isEqualTo(expectedPage);
+            assertThat(result.getContent()).hasSize(1);
         }
 
         @Test
         void shouldAllowEmployeeToReadTheirOwnAttendances() {
-            Page<Attendance> expectedPage = new PageImpl<>(List.of());
-            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
+            Employee otherEmployee = Employee.builder().id(2L).build();
+            User employeeUser = User.builder()
+                    .id(UUID.randomUUID())
+                    .employee(otherEmployee)
+                    .role(new Role("EMPLOYEE"))
+                    .build();
+
+            Attendance attendance = Attendance.builder().employee(otherEmployee).build();
+            AttendanceDto dto = AttendanceDto.builder().employeeId(2L).build();
+            Page<Attendance> attendancePage = new PageImpl<>(List.of(attendance));
+
+            when(userService.getAuthenticatedUser()).thenReturn(employeeUser);
             when(repository.findByEmployee_IdAndDateBetween(eq(2L), any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
-                    .thenReturn(expectedPage);
+                    .thenReturn(attendancePage);
+            when(attendanceMapper.toDto(attendance)).thenReturn(dto);
 
-            Page<Attendance> result = service.getEmployeeAttendances(0, 10, 2L, null, null);
+            Page<AttendanceDto> result = service.getEmployeeAttendances(0, 10, 2L, null, null);
 
-            assertThat(result).isEqualTo(expectedPage);
+            assertThat(result.getContent()).hasSize(1);
         }
 
         @Test
@@ -481,5 +549,165 @@ class AttendanceServiceTest {
             assertThat(result).isEqualByComparingTo(expected);
         }
     }
+
+    @Nested
+    class ClockInAuthenticatedEmployeeTests {
+
+        @Test
+        void shouldClockInAuthenticatedEmployeeSuccessfully() {
+            Attendance attendance = Attendance.builder()
+                    .employee(regularUser.getEmployee())
+                    .date(LocalDate.now())
+                    .timeIn(LocalTime.now())
+                    .build();
+
+            AttendanceDto expectedDto = AttendanceDto.builder()
+                    .employeeId(2L)
+                    .date(LocalDate.now())
+                    .timeIn(attendance.getTimeIn())
+                    .build();
+
+            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
+            when(repository.existsByEmployee_IdAndTimeOutIsNull(2L)).thenReturn(false);
+            when(repository.save(any(Attendance.class))).thenReturn(attendance);
+            when(attendanceMapper.toDto(attendance)).thenReturn(expectedDto);
+
+            AttendanceDto result = service.clockIn();
+
+            assertThat(result).isEqualTo(expectedDto);
+            assertThat(result.getEmployeeId()).isEqualTo(2L);
+            assertThat(result.getDate()).isEqualTo(LocalDate.now());
+            verify(repository).save(any(Attendance.class));
+        }
+
+        @Test
+        void shouldThrow409WhenEmployeeAlreadyHasOpenAttendance() {
+            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
+            when(repository.existsByEmployee_IdAndTimeOutIsNull(2L)).thenReturn(true);
+
+            assertThatThrownBy(() -> service.clockIn())
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.CONFLICT);
+        }
+
+        @Test
+        void shouldUseCurrentDateAndTimeWhenClockingIn() {
+            Attendance attendance = Attendance.builder()
+                    .employee(regularUser.getEmployee())
+                    .date(LocalDate.now())
+                    .timeIn(LocalTime.now())
+                    .build();
+
+            AttendanceDto expectedDto = AttendanceDto.builder()
+                    .employeeId(2L)
+                    .date(LocalDate.now())
+                    .timeIn(attendance.getTimeIn())
+                    .build();
+
+            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
+            when(repository.existsByEmployee_IdAndTimeOutIsNull(2L)).thenReturn(false);
+            when(repository.save(any(Attendance.class))).thenReturn(attendance);
+            when(attendanceMapper.toDto(attendance)).thenReturn(expectedDto);
+
+            AttendanceDto result = service.clockIn();
+
+            verify(repository).save(argThat(att ->
+                att.getDate().isEqual(LocalDate.now()) &&
+                att.getEmployee().getId().equals(2L) &&
+                att.getTimeIn() != null
+            ));
+        }
+    }
+
+    @Nested
+    class ClockOutAuthenticatedEmployeeTests {
+
+        private Attendance openAttendance;
+
+        @BeforeEach
+        void setUp() {
+            openAttendance = Attendance.builder()
+                    .employee(regularUser.getEmployee())
+                    .date(LocalDate.now())
+                    .timeIn(LocalTime.of(9, 0))
+                    .build();
+        }
+
+        @Test
+        void shouldClockOutAuthenticatedEmployeeSuccessfully() {
+            AttendanceDto expectedDto = AttendanceDto.builder()
+                    .employeeId(2L)
+                    .date(LocalDate.now())
+                    .timeIn(LocalTime.of(9, 0))
+                    .timeOut(LocalTime.of(18, 0))
+                    .totalHours(new BigDecimal("9.00"))
+                    .overtimeHours(BigDecimal.ZERO)
+                    .build();
+
+            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
+            when(repository.findFirstByEmployee_IdAndTimeOutIsNullOrderByDateDescTimeInDesc(2L))
+                    .thenReturn(Optional.of(openAttendance));
+            when(repository.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(attendanceMapper.toDto(any(Attendance.class))).thenReturn(expectedDto);
+
+            AttendanceDto result = service.clockOut();
+
+            assertThat(result).isNotNull();
+            verify(repository).save(any(Attendance.class));
+            verify(attendanceMapper).toDto(any(Attendance.class));
+        }
+
+        @Test
+        void shouldCalculateOvertimeWhenWorkingBeyondRegularShift() {
+            openAttendance.setTimeIn(LocalTime.of(9, 0));
+
+            AttendanceDto expectedDto = AttendanceDto.builder()
+                    .employeeId(2L)
+                    .date(LocalDate.now())
+                    .timeIn(LocalTime.of(9, 0))
+                    .timeOut(LocalTime.of(20, 0))
+                    .totalHours(new BigDecimal("11.00"))
+                    .overtimeHours(new BigDecimal("2.00"))
+                    .build();
+
+            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
+            when(repository.findFirstByEmployee_IdAndTimeOutIsNullOrderByDateDescTimeInDesc(2L))
+                    .thenReturn(Optional.of(openAttendance));
+            when(repository.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(attendanceMapper.toDto(any(Attendance.class))).thenReturn(expectedDto);
+
+            AttendanceDto result = service.clockOut();
+
+            assertThat(result).isNotNull();
+            verify(repository).save(any(Attendance.class));
+        }
+
+        @Test
+        void shouldHandleMidnightCrossoverWhenClockingOut() {
+            openAttendance.setTimeIn(LocalTime.of(22, 0));
+
+            AttendanceDto expectedDto = AttendanceDto.builder()
+                    .employeeId(2L)
+                    .date(LocalDate.now())
+                    .timeIn(LocalTime.of(22, 0))
+                    .timeOut(LocalTime.of(2, 0))
+                    .totalHours(new BigDecimal("4.00"))
+                    .overtimeHours(BigDecimal.ZERO)
+                    .build();
+
+            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
+            when(repository.findFirstByEmployee_IdAndTimeOutIsNullOrderByDateDescTimeInDesc(2L))
+                    .thenReturn(Optional.of(openAttendance));
+            when(repository.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(attendanceMapper.toDto(any(Attendance.class))).thenReturn(expectedDto);
+
+            AttendanceDto result = service.clockOut();
+
+            assertThat(result).isNotNull();
+            verify(repository).save(any(Attendance.class));
+        }
+    }
 }
+
 

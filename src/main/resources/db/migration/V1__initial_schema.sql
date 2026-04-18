@@ -232,8 +232,7 @@ CREATE TABLE IF NOT EXISTS attendance (
     version BIGINT,
     CONSTRAINT fk_attendance_employee FOREIGN KEY (employee_id) REFERENCES employee(id),
     CONSTRAINT fk_attendance_created_by FOREIGN KEY (created_by) REFERENCES users(id),
-    CONSTRAINT fk_attendance_last_modified_by FOREIGN KEY (last_modified_by) REFERENCES users(id),
-    CONSTRAINT uk_attendance_employee_date UNIQUE (employee_id, date)
+    CONSTRAINT fk_attendance_last_modified_by FOREIGN KEY (last_modified_by) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS leave_credit (

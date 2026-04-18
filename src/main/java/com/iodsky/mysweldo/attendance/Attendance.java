@@ -14,12 +14,7 @@ import java.util.UUID;
 
 
 @Entity
-@Table(
-        name = "attendance",
-        uniqueConstraints = @UniqueConstraint(
-                columnNames = { "employee_id", "date" }
-        )
-)
+@Table(name = "attendance")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter

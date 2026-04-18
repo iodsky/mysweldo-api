@@ -1,23 +1,17 @@
 package com.iodsky.mysweldo.attendance;
 
 
-import lombok.Builder;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.UUID;
 
 @Data
-@Builder
-public class AttendanceDto {
+public class AttendanceRequest {
 
-    private UUID id;
     private Long employeeId;
     private LocalDate date;
     private LocalTime timeIn;
     private LocalTime timeOut;
-    private BigDecimal totalHours;
-    private BigDecimal overtimeHours;
+
 }
