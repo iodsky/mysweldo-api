@@ -180,10 +180,14 @@ public class AttendanceService {
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
         Pageable pageable = PageRequest.of(page, limit, sort);
 
-        DateRange dateRange = new DateRange(startDate, endDate);
-       Page<Attendance> attendances = repository.findAllByDateBetween(dateRange.startDate(), dateRange.endDate(), pageable);
-        return attendances.map(attendanceMapper::toDto);
+        if (startDate == null && endDate == null) {
+            Page<Attendance> attendances = repository.findAll(pageable);
+            return attendances.map(attendanceMapper::toDto);
+        }
 
+        DateRange dateRange = new DateRange(startDate, endDate);
+        Page<Attendance> attendances = repository.findAllByDateBetween(dateRange.startDate(), dateRange.endDate(), pageable);
+        return attendances.map(attendanceMapper::toDto);
     }
 
     public Page<AttendanceDto> getEmployeeAttendances(int page, int limit, Long employeeId, LocalDate startDate, LocalDate endDate) {
@@ -201,12 +205,23 @@ public class AttendanceService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have permission to access this resource");
         }
 
-        Pageable pageable = PageRequest.of(page, limit);
+        Sort sort = Sort.by(Sort.Direction.DESC, "date");
+        Pageable pageable = PageRequest.of(page, limit, sort);
+
+        // Case 1: No date filters - return all attendances
+        if (startDate == null && endDate == null) {
+            Page<Attendance> attendances = repository.findAllByEmployee_Id(employeeId, pageable);
+            return attendances.map(attendanceMapper::toDto);
+        }
+
+        // Case 2: Date filter provided - use DateRange to handle defaults
+        // - If only startDate: return attendances from startDate onwards
+        // - If only endDate: return attendances up to endDate
+        // - If both: return attendances within the range
         DateRange dateRange = new DateRange(startDate, endDate);
 
         Page<Attendance> attendances = repository.findByEmployee_IdAndDateBetween(employeeId, dateRange.startDate(), dateRange.endDate(), pageable);
         return attendances.map(attendanceMapper::toDto);
-
     }
 
     public List<Attendance> getEmployeeAttendances(Long employeeId, LocalDate startDate, LocalDate endDate) {
