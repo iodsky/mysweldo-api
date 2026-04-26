@@ -112,17 +112,14 @@ public class PayrollCalculator {
 
     public BigDecimal calculatePhilhealthDeduction(BigDecimal basicSalary, PhilhealthRate config) {
         if (basicSalary.compareTo(config.getMinSalaryFloor()) <= 0) {
-            BigDecimal employeeShare = config.getFixedContribution().divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
-            return employeeShare.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
+            return config.getFixedContribution().divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
         }
 
         BigDecimal cappedSalary = basicSalary.min(config.getMaxSalaryCap());
 
         BigDecimal monthlyPremium = cappedSalary.multiply(config.getPremiumRate());
 
-        BigDecimal employeeShare = monthlyPremium.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
-
-        return employeeShare.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
+        return monthlyPremium.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
     }
 
     public BigDecimal calculatePagibigDeduction(BigDecimal basicSalary, PagibigRate config) {
