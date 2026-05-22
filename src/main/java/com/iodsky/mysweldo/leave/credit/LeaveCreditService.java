@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.leave.credit;
 
+import com.iodsky.mysweldo.employee.EmployeeBasic;
 import com.iodsky.mysweldo.employee.EmployeeService;
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.leave.LeaveType;
@@ -7,13 +8,19 @@ import com.iodsky.mysweldo.security.user.User;
 import com.iodsky.mysweldo.security.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +33,36 @@ public class LeaveCreditService {
     private static final double DEFAULT_VACATION_CREDITS = 14.0;
     private static final double DEFAULT_SICK_CREDITS = 7.0;
     private static final double DEFAULT_BEREAVEMENT_CREDITS = 5.0;
+
+    public Page<EmployeeLeaveCreditDto> getAllLeaveCredits(int pageNo, int limit) {
+        Pageable pageable = PageRequest.of(pageNo, limit);
+        Page<EmployeeBasic> employeePage = employeeService.getEmployees(pageable);
+
+        List<Long> employeeIds = employeePage.getContent()
+                .stream().map(EmployeeBasic::getId).toList();
+
+        Map<Long, List<LeaveCredit>> creditsByEmployee = repository
+                .findAllByEmployee_IdIn(employeeIds)
+                .stream()
+                .collect(Collectors.groupingBy(lc -> lc.getEmployee().getId()));
+
+        List<EmployeeLeaveCreditDto> dtos = employeePage.getContent().stream()
+                .map(emp -> EmployeeLeaveCreditDto.builder()
+                        .employeeId(emp.getId())
+                        .firstName(emp.getFirstName())
+                        .lastName(emp.getLastName())
+                        .credits(creditsByEmployee.getOrDefault(emp.getId(), List.of())
+                                .stream()
+                                .map(lc -> CreditSummary.builder()
+                                        .type(lc.getType().toString())
+                                        .credits(lc.getCredits())
+                                        .build())
+                                .toList())
+                        .build())
+                .toList();
+
+        return new PageImpl<>(dtos, pageable, employeePage.getTotalElements());
+    }
 
     @Transactional
     public List<LeaveCredit> createLeaveCredits(LeaveCreditRequest dto) {

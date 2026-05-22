@@ -130,5 +130,9 @@ public class EmployeeService {
     public List<Long> getAllActiveEmployeeIds() {
         return employeeRepository.findAllActiveEmployeeIds();
     }
-    
+
+    public Page<EmployeeBasic> getEmployees(Pageable pageable) {
+        return employeeRepository.findAllBy(pageable);
+    }
+
 }

@@ -5,9 +5,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,20 +25,29 @@ public class LeaveCreditController {
     private final LeaveCreditMapper mapper;
 
     @PreAuthorize("hasAnyRole('HR', 'SUPERUSER')")
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping
+    @Operation(summary = "Get all employees' leave credits", description = "Retrieve leave credits for all employees. Requires HR role.")
+    public ApiResponse<List<EmployeeLeaveCreditDto>> getAllLeaveCredits(
+            @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
+            @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit
+    ) {
+        Page<EmployeeLeaveCreditDto> page = service.getAllLeaveCredits(pageNo, limit);
+        return ResponseFactory.success("Leave credits retrieved successfully", page.getContent(), PaginationMeta.of(page));
+    }
+
+    @PreAuthorize("hasAnyRole('HR', 'SUPERUSER')")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Creates employee leave credits",
-            description = "Set up initial leave credits for an employee. Requires HR role. Returns a list of created leave credits.",
-            operationId = "initializeEmployeeLeaveCredits"
-    )
+            description = "Set up initial leave credits for an employee. Requires HR role. Returns a list of created leave credits.")
     public ApiResponse<List<LeaveCreditDto>> createLeaveCredits(@Valid @RequestBody LeaveCreditRequest dto) {
         List<LeaveCreditDto> leaveCredits = service.createLeaveCredits(dto)
                 .stream().map(mapper::toDto).toList();
         return ResponseFactory.success("Leave credits created successfully", leaveCredits);
     }
 
-    @GetMapping
+    @GetMapping("/me")
     @Operation(summary = "Get my leave credits", description = "Retrieve leave credits for the authenticated employee")
     public ApiResponse<List<LeaveCreditDto>> getLeaveCredits() {
         List<LeaveCreditDto> credits = service.getLeaveCreditsByEmployeeId()

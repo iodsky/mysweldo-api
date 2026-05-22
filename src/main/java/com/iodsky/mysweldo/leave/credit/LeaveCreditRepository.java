@@ -18,4 +18,6 @@ public interface LeaveCreditRepository extends JpaRepository<LeaveCredit, UUID> 
 
     boolean existsByEmployee_IdAndEffectiveDate(Long employeeId,  LocalDate effectiveDate);
 
+    List<LeaveCredit> findAllByEmployee_IdIn(List<Long> employeeIds);
+
 }
