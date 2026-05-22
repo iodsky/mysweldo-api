@@ -20,7 +20,6 @@ public class LeaveRequestDto {
     @NotNull(message = "Leave type is required")
     private String leaveType;
 
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long employeeId;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

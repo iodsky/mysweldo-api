@@ -2,6 +2,8 @@ package com.iodsky.mysweldo.leave.request;
 
 import com.iodsky.mysweldo.common.DateRange;
 import com.iodsky.mysweldo.common.RequestStatus;
+import com.iodsky.mysweldo.employee.Employee;
+import com.iodsky.mysweldo.employee.EmployeeService;
 import com.iodsky.mysweldo.leave.LeaveType;
 import com.iodsky.mysweldo.leave.credit.LeaveCredit;
 import com.iodsky.mysweldo.leave.credit.LeaveCreditService;
@@ -31,14 +33,21 @@ public class LeaveRequestService {
     private final LeaveCreditService leaveCreditService;
     private final LeaveRequestMapper mapper;
     private final UserService userService;
+    private final EmployeeService employeeService;
 
     @Transactional
     public LeaveRequest createLeaveRequest(LeaveRequestDto dto) {
         User user = userService.getAuthenticatedUser();
-        Long employeeId = user.getEmployee().getId();
+
+        if (dto.getEmployeeId() != null && user.getRole().getName().equals("EMPLOYEE")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have the permissions to access this resource");
+        }
+
+        Long employeeId = dto.getEmployeeId() == null ?  user.getEmployee().getId() : dto.getEmployeeId();
+        Employee targetEmployee = dto.getEmployeeId() == null ?
+                user.getEmployee() : employeeService.getEmployeeById(dto.getEmployeeId());
 
         LeaveType type = resolveLeaveType(dto.getLeaveType());
-
         // validate dates
         validateDates(employeeId, dto);
 
@@ -55,7 +64,7 @@ public class LeaveRequestService {
         }
 
         LeaveRequest leave = LeaveRequest.builder()
-                .employee(user.getEmployee())
+                .employee(targetEmployee)
                 .leaveType(type)
                 .startDate(dto.getStartDate())
                 .endDate(dto.getEndDate())

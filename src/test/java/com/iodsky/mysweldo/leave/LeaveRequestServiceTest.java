@@ -245,6 +245,24 @@ class LeaveRequestServiceTest {
                     .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                     .isEqualTo(HttpStatus.BAD_REQUEST);
         }
+
+        @Test
+        void shouldThrow403WhenRegularUserCreatesLeaveRequestForAnotherUser() {
+            LeaveRequestDto dto = LeaveRequestDto.builder()
+                    .leaveType("VACATION")
+                    .startDate(MON)
+                    .endDate(FRI)
+                    .employeeId(1L)
+                    .build();
+
+            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
+
+            assertThatThrownBy(() -> service.createLeaveRequest(dto))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.FORBIDDEN);
+        }
+
     }
 
     // ─── getLeaveRequests ─────────────────────────────────────────────────────

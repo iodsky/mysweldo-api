@@ -36,7 +36,7 @@ public class LeaveRequestController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('HR', 'SUPERUSER')")
-    @Operation(summary = "Get leave requests", description = "Retrieve a paginated list of leave requests for the authenticated employee")
+    @Operation(summary = "Get leave requests", description = "Retrieve a paginated list of leave requests")
     public ApiResponse<List<LeaveRequestDto>> getLeaveRequests(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
