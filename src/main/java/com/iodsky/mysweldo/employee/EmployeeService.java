@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.util.*;
 
 @Service
@@ -28,6 +27,8 @@ public class EmployeeService {
     private final DepartmentService departmentService;
     private final PositionService positionService;
     private final BenefitService benefitService;
+
+    public static final List<EmploymentStatus> NON_ACTIVE_STATUSES = List.of(EmploymentStatus.RESIGNED, EmploymentStatus.TERMINATED);
 
     @Transactional
     public Employee createEmployee(EmployeeRequest request) {
@@ -65,7 +66,7 @@ public class EmployeeService {
         } else if (status != null) {
             result = employeeRepository.findAllByStatus(EmploymentStatus.valueOf(status.toUpperCase()), pageable);
         } else {
-            result = employeeRepository.findAllBy(pageable);
+            result = employeeRepository.findAllByStatusNotIn(NON_ACTIVE_STATUSES, pageable);
         }
 
         return result.map(employeeMapper::toBasicDto);
@@ -109,13 +110,13 @@ public class EmployeeService {
     @Transactional
     public void updateEmployeeStatus(Long id, EmploymentStatus finalStatus) {
         Employee employee = getEmployeeById(id);
-        if (employee.isDeleted()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Employee already deleted");
+        EmploymentStatus currentStatus = employee.getStatus();
+        if (currentStatus == EmploymentStatus.TERMINATED || currentStatus == EmploymentStatus.RESIGNED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Employee already " + currentStatus);
         }
 
         if (finalStatus != EmploymentStatus.TERMINATED && finalStatus != EmploymentStatus.RESIGNED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Final status must be TERMINATED or RESIGNED");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Final status must be TERMINATED or RESIGNED");
         }
 
         employeeRepository.findAllBySupervisor_Id(id).forEach(sub -> {
@@ -123,7 +124,6 @@ public class EmployeeService {
         });
 
         employee.setStatus(finalStatus);
-        employee.setDeletedAt(Instant.now());
         employeeRepository.save(employee);
     }
 
@@ -132,7 +132,7 @@ public class EmployeeService {
     }
 
     public Page<EmployeeBasic> getEmployees(Pageable pageable) {
-        return employeeRepository.findAllBy(pageable);
+        return employeeRepository.findAllByStatusNotIn(NON_ACTIVE_STATUSES, pageable);
     }
 
 }

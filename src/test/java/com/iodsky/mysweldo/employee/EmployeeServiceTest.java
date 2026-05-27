@@ -326,7 +326,7 @@ class EmployeeServiceTest {
 
             Page<EmployeeBasic> repoResult = new PageImpl<>(List.of(projection));
 
-            when(employeeRepository.findAllBy(any(Pageable.class)))
+            when(employeeRepository.findAllByStatusNotIn(anyList(), any(Pageable.class)))
                     .thenReturn(repoResult);
 
             Page<EmployeeBasicDto> result =
@@ -334,7 +334,7 @@ class EmployeeServiceTest {
 
             assertThat(result.getContent()).hasSize(1);
 
-            verify(employeeRepository).findAllBy(any(Pageable.class));
+            verify(employeeRepository).findAllByStatusNotIn(anyList(), any(Pageable.class));
         }
 
         @Test
@@ -590,7 +590,7 @@ class EmployeeServiceTest {
     }
 
     @Nested
-    class DeleteEmployeeByIdTests {
+    class UpdateEmployeeStatusTests {
 
         @Test
         void shouldTerminateEmployeeAndUnlinkSubordinatesWhenStatusIsTerminated() {
@@ -604,7 +604,7 @@ class EmployeeServiceTest {
             service.updateEmployeeStatus(1L, EmploymentStatus.TERMINATED);
 
             assertThat(employee.getStatus()).isEqualTo(EmploymentStatus.TERMINATED);
-            assertThat(employee.getDeletedAt()).isNotNull();
+            assertThat(employee.getDeletedAt()).isNull();
             assertThat(subordinate.getSupervisor()).isNull();
             verify(employeeRepository).save(employee);
         }
@@ -619,24 +619,38 @@ class EmployeeServiceTest {
             service.updateEmployeeStatus(1L, EmploymentStatus.RESIGNED);
 
             assertThat(employee.getStatus()).isEqualTo(EmploymentStatus.RESIGNED);
-            assertThat(employee.getDeletedAt()).isNotNull();
             verify(employeeRepository).save(employee);
         }
 
         @Test
-        void shouldThrow400WhenEmployeeIsAlreadyDeleted() {
+        void shouldThrow400WhenEmployeeIsAlreadyTerminated() {
             Employee employee = Employee.builder().id(1L).build();
-            employee.setDeletedAt(java.time.Instant.now());
+            employee.setStatus(EmploymentStatus.TERMINATED);
 
             when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
 
-            // Act & Assert
             assertThatThrownBy(() -> service.updateEmployeeStatus(1L, EmploymentStatus.TERMINATED))
                     .isInstanceOf(ResponseStatusException.class)
                     .satisfies(ex -> {
                         ResponseStatusException rse = (ResponseStatusException) ex;
                         assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-                        assertThat(rse.getReason()).isEqualTo("Employee already deleted");
+                    });
+
+            verify(employeeRepository, never()).save(any());
+        }
+
+        @Test
+        void shouldThrow400WhenEmployeeIsAlreadyResigned() {
+            Employee employee = Employee.builder().id(1L).build();
+            employee.setStatus(EmploymentStatus.RESIGNED);
+
+            when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
+
+            assertThatThrownBy(() -> service.updateEmployeeStatus(1L, EmploymentStatus.TERMINATED))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
                     });
 
             verify(employeeRepository, never()).save(any());

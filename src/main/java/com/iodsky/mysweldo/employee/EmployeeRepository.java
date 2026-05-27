@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -18,7 +19,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     Page<EmployeeBasic> findAllBySupervisor_Id(@Param("supervisorId") Long supervisorId, Pageable pageable);
 
-    Page<EmployeeBasic> findAllBy(Pageable pageable);
+    Page<EmployeeBasic> findAllByStatusNotIn(Collection<EmploymentStatus> statuses, Pageable pageable);
 
     @Query("""
         SELECT e.id
