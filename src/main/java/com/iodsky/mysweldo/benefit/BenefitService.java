@@ -20,10 +20,7 @@ public class BenefitService {
     @Transactional
     public Benefit createBenefit(BenefitRequest request) {
         if (repository.existsById(request.getCode())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Benefit already exists with ID: " + request.getCode()
-            );
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Benefit already exists with ID: " + request.getCode());
         }
 
         if (request.isTaxable() && request.getNonTaxableLimit() != null) {
@@ -33,6 +30,8 @@ public class BenefitService {
         Benefit benefit = Benefit.builder()
                 .code(request.getCode())
                 .description(request.getDescription())
+                .taxable(request.isTaxable())
+                .nonTaxableLimit(request.getNonTaxableLimit())
                 .build();
 
         return repository.save(benefit);
@@ -49,10 +48,7 @@ public class BenefitService {
     public Benefit getBenefitByCode(String code) {
         return repository.findById(code)
                 .filter(benefit -> benefit.getDeletedAt() == null)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Benefit not found with code: " + code
-                ));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Benefit not found with code: " + code));
     }
 
     @Transactional
