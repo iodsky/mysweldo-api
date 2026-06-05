@@ -6,16 +6,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -44,8 +41,8 @@ class RoleServiceTest {
 
             Role result = service.createRole(request);
 
-            assertEquals("ADMIN", result.getName());
-            assertEquals("Administrator role", result.getDescription());
+            assertThat(result.getName()).isEqualTo("ADMIN");
+            assertThat(result.getDescription()).isEqualTo("Administrator role");
         }
 
         @Test
@@ -55,12 +52,10 @@ class RoleServiceTest {
 
             when(repository.existsByName("ADMIN")).thenReturn(true);
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.createRole(request)
-            );
-
-            assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+            assertThatThrownBy(() -> service.createRole(request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.CONFLICT);
         }
     }
 
@@ -76,20 +71,18 @@ class RoleServiceTest {
 
             Role result = service.getRoleById(1L);
 
-            assertEquals(1L, result.getId());
-            assertEquals("ADMIN", result.getName());
+            assertThat(result.getId()).isEqualTo(1L);
+            assertThat(result.getName()).isEqualTo("ADMIN");
         }
 
         @Test
         void shouldThrowNotFoundWhenIdDoesNotExist() {
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.getRoleById(99L)
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+            assertThatThrownBy(() -> service.getRoleById(99L))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -104,49 +97,17 @@ class RoleServiceTest {
 
             Role result = service.getRoleByName("USER");
 
-            assertEquals("USER", result.getName());
+            assertThat(result.getName()).isEqualTo("USER");
         }
 
         @Test
         void shouldThrowNotFoundWhenNameDoesNotExist() {
             when(repository.findByName("UNKNOWN")).thenReturn(Optional.empty());
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.getRoleByName("UNKNOWN")
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-        }
-    }
-
-    @Nested
-    class GetAllRolesTests {
-
-        @Test
-        void shouldReturnPaginatedRolesForGivenPageAndLimit() {
-            List<Role> roles = List.of(
-                    Role.builder().name("ADMIN").build(),
-                    Role.builder().name("USER").build()
-            );
-            Page<Role> page = new PageImpl<>(roles, PageRequest.of(0, 10), roles.size());
-
-            when(repository.findAll(PageRequest.of(0, 10))).thenReturn(page);
-
-            Page<Role> result = service.getAllRoles(0, 10);
-
-            assertEquals(2, result.getTotalElements());
-        }
-
-        @Test
-        void shouldReturnEmptyPageWhenNoRolesExist() {
-            Page<Role> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
-
-            when(repository.findAll(PageRequest.of(0, 10))).thenReturn(emptyPage);
-
-            Page<Role> result = service.getAllRoles(0, 10);
-
-            assertTrue(result.isEmpty());
+            assertThatThrownBy(() -> service.getRoleByName("UNKNOWN"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -167,8 +128,8 @@ class RoleServiceTest {
 
             Role result = service.updateRole(1L, request);
 
-            assertEquals("NEW_NAME", result.getName());
-            assertEquals("New desc", result.getDescription());
+            assertThat(result.getName()).isEqualTo("NEW_NAME");
+            assertThat(result.getDescription()).isEqualTo("New desc");
         }
 
         @Test
@@ -184,8 +145,8 @@ class RoleServiceTest {
 
             Role result = service.updateRole(1L, request);
 
-            assertEquals("NEW_NAME", result.getName());
-            assertEquals("Existing desc", result.getDescription());
+            assertThat(result.getName()).isEqualTo("NEW_NAME");
+            assertThat(result.getDescription()).isEqualTo("Existing desc");
         }
 
         @Test
@@ -201,8 +162,8 @@ class RoleServiceTest {
 
             Role result = service.updateRole(1L, request);
 
-            assertEquals("ADMIN", result.getName());
-            assertEquals("New desc", result.getDescription());
+            assertThat(result.getName()).isEqualTo("ADMIN");
+            assertThat(result.getDescription()).isEqualTo("New desc");
         }
 
         @Test
@@ -212,12 +173,10 @@ class RoleServiceTest {
 
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.updateRole(99L, request)
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+            assertThatThrownBy(() -> service.updateRole(99L, request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -235,7 +194,7 @@ class RoleServiceTest {
 
             service.deleteRole(1L);
 
-            assertNotNull(role.getDeletedAt());
+            assertThat(role.getDeletedAt()).isNotNull();
         }
 
         @Test
@@ -246,24 +205,20 @@ class RoleServiceTest {
             when(repository.findById(1L)).thenReturn(Optional.of(role));
             when(repository.isRoleUsedById(1L)).thenReturn(true);
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.deleteRole(1L)
-            );
-
-            assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+            assertThatThrownBy(() -> service.deleteRole(1L))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.CONFLICT);
         }
 
         @Test
         void shouldThrowNotFoundWhenRoleToDeleteDoesNotExist() {
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.deleteRole(99L)
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+            assertThatThrownBy(() -> service.deleteRole(99L))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 }

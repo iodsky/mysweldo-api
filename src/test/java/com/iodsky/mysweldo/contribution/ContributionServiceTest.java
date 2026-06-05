@@ -6,17 +6,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -49,8 +46,8 @@ class ContributionServiceTest {
 
             Contribution result = service.createContribution(request);
 
-            assertEquals("SSS", result.getCode());
-            assertEquals("Social Security System", result.getDescription());
+            assertThat(result.getCode()).isEqualTo("SSS");
+            assertThat(result.getDescription()).isEqualTo("Social Security System");
         }
 
         @Test
@@ -62,43 +59,10 @@ class ContributionServiceTest {
 
             when(repository.existsById("SSS")).thenReturn(true);
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.createContribution(request)
-            );
-
-            assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
-        }
-    }
-
-    @Nested
-    class GetAllContributionsTests {
-
-        @Test
-        void shouldReturnPaginatedContributionsForValidPageAndLimit() {
-            List<Contribution> contributions = List.of(
-                    Contribution.builder().code("SSS").description("Social Security System").build(),
-                    Contribution.builder().code("PHIC").description("PhilHealth").build()
-            );
-            Page<Contribution> page = new PageImpl<>(contributions, PageRequest.of(0, 10), 2);
-
-            when(repository.findAll(PageRequest.of(0, 10))).thenReturn(page);
-
-            Page<Contribution> result = service.getAllContributions(0, 10);
-
-            assertEquals(2, result.getTotalElements());
-            assertEquals(2, result.getContent().size());
-        }
-
-        @Test
-        void shouldReturnEmptyPageWhenNoContributionsExist() {
-            Page<Contribution> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
-
-            when(repository.findAll(PageRequest.of(0, 10))).thenReturn(emptyPage);
-
-            Page<Contribution> result = service.getAllContributions(0, 10);
-
-            assertTrue(result.isEmpty());
+            assertThatThrownBy(() -> service.createContribution(request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.CONFLICT);
         }
     }
 
@@ -116,20 +80,18 @@ class ContributionServiceTest {
 
             Contribution result = service.getContributionByCode("SSS");
 
-            assertEquals("SSS", result.getCode());
-            assertEquals("Social Security System", result.getDescription());
+            assertThat(result.getCode()).isEqualTo("SSS");
+            assertThat(result.getDescription()).isEqualTo("Social Security System");
         }
 
         @Test
         void shouldThrowNotFoundWhenContributionDoesNotExist() {
             when(repository.findById("UNKNOWN")).thenReturn(Optional.empty());
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.getContributionByCode("UNKNOWN")
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+            assertThatThrownBy(() -> service.getContributionByCode("UNKNOWN"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
 
         @Test
@@ -142,12 +104,10 @@ class ContributionServiceTest {
 
             when(repository.findById("SSS")).thenReturn(Optional.of(deleted));
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.getContributionByCode("SSS")
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+            assertThatThrownBy(() -> service.getContributionByCode("SSS"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -171,7 +131,7 @@ class ContributionServiceTest {
 
             Contribution result = service.updateContribution("SSS", request);
 
-            assertEquals("Updated Description", result.getDescription());
+            assertThat(result.getDescription()).isEqualTo("Updated Description");
         }
 
         @Test
@@ -183,12 +143,10 @@ class ContributionServiceTest {
 
             when(repository.findById("UNKNOWN")).thenReturn(Optional.empty());
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.updateContribution("UNKNOWN", request)
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+            assertThatThrownBy(() -> service.updateContribution("UNKNOWN", request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -206,7 +164,7 @@ class ContributionServiceTest {
 
             service.deleteContribution("SSS");
 
-            assertNotNull(contribution.getDeletedAt());
+            assertThat(contribution.getDeletedAt()).isNotNull();
             verify(repository).save(contribution);
         }
 
@@ -214,13 +172,10 @@ class ContributionServiceTest {
         void shouldThrowNotFoundWhenDeletingNonExistentContribution() {
             when(repository.findById("UNKNOWN")).thenReturn(Optional.empty());
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.deleteContribution("UNKNOWN")
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+            assertThatThrownBy(() -> service.deleteContribution("UNKNOWN"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 }
-

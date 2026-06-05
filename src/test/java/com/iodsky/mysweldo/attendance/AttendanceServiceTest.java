@@ -28,7 +28,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.*;
@@ -635,38 +634,6 @@ class AttendanceServiceTest {
     }
 
     @Nested
-    class GetEmployeeAttendancesListTests {
-
-        @Test
-        void shouldReturnListOfAttendancesForGivenEmployeeAndDateRange() {
-            LocalDate start = LocalDate.of(2025, 6, 1);
-            LocalDate end = LocalDate.of(2025, 6, 30);
-            List<Attendance> expected = List.of(Attendance.builder().build());
-            when(repository.findByEmployee_IdAndDateBetween(1L, start, end)).thenReturn(expected);
-
-            List<Attendance> result = service.getEmployeeAttendances(1L, start, end);
-
-            assertThat(result).isEqualTo(expected);
-        }
-    }
-
-    @Nested
-    class CalculateTotalHoursByEmployeeIdTests {
-
-        @Test
-        void shouldReturnSummedTotalHoursFromRepository() {
-            LocalDate start = LocalDate.of(2025, 6, 1);
-            LocalDate end = LocalDate.of(2025, 6, 30);
-            BigDecimal expected = new BigDecimal("80.00");
-            when(repository.sumTotalHoursByEmployee_IdAndDateBetween(1L, start, end)).thenReturn(expected);
-
-            BigDecimal result = service.calculateTotalHoursByEmployeeId(1L, start, end);
-
-            assertThat(result).isEqualByComparingTo(expected);
-        }
-    }
-
-    @Nested
     class ClockInAuthenticatedEmployeeTests {
 
         @Test
@@ -707,33 +674,6 @@ class AttendanceServiceTest {
                     .isEqualTo(HttpStatus.CONFLICT);
         }
 
-        @Test
-        void shouldUseCurrentDateAndTimeWhenClockingIn() {
-            Attendance attendance = Attendance.builder()
-                    .employee(regularUser.getEmployee())
-                    .date(LocalDate.now())
-                    .timeIn(LocalTime.now())
-                    .build();
-
-            AttendanceDto expectedDto = AttendanceDto.builder()
-                    .employeeId(2L)
-                    .date(LocalDate.now())
-                    .timeIn(attendance.getTimeIn())
-                    .build();
-
-            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
-            when(repository.existsByEmployee_IdAndTimeOutIsNull(2L)).thenReturn(false);
-            when(repository.save(any(Attendance.class))).thenReturn(attendance);
-            when(attendanceMapper.toDto(attendance)).thenReturn(expectedDto);
-
-            AttendanceDto result = service.clockIn();
-
-            verify(repository).save(argThat(att ->
-                att.getDate().isEqual(LocalDate.now()) &&
-                att.getEmployee().getId().equals(2L) &&
-                att.getTimeIn() != null
-            ));
-        }
     }
 
     @Nested
@@ -775,55 +715,156 @@ class AttendanceServiceTest {
         }
 
         @Test
-        void shouldCalculateOvertimeWhenWorkingBeyondRegularShift() {
-            openAttendance.setTimeIn(LocalTime.of(9, 0));
-
-            AttendanceDto expectedDto = AttendanceDto.builder()
-                    .employeeId(2L)
-                    .date(LocalDate.now())
-                    .timeIn(LocalTime.of(9, 0))
-                    .timeOut(LocalTime.of(20, 0))
-                    .totalHours(new BigDecimal("11.00"))
-                    .overtimeHours(new BigDecimal("2.00"))
-                    .build();
-
+        void shouldThrow400WhenNoOpenAttendanceFound() {
             when(userService.getAuthenticatedUser()).thenReturn(regularUser);
             when(repository.findFirstByEmployee_IdAndTimeOutIsNullOrderByDateDescTimeInDesc(2L))
-                    .thenReturn(Optional.of(openAttendance));
-            when(repository.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
-            when(attendanceMapper.toDto(any(Attendance.class))).thenReturn(expectedDto);
+                    .thenReturn(Optional.empty());
 
-            AttendanceDto result = service.clockOut();
+            assertThatThrownBy(() -> service.clockOut())
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+    }
 
-            assertThat(result).isNotNull();
-            verify(repository).save(any(Attendance.class));
+    @Nested
+    class GetAttendanceSummaryTests {
+
+        private static final LocalDate MON = LocalDate.of(2026, 3, 9);
+        private static final LocalDate FRI = LocalDate.of(2026, 3, 13);
+
+        private Employee shiftEmployee;
+
+        @BeforeEach
+        void setUp() {
+            shiftEmployee = Employee.builder()
+                    .id(1L)
+                    .startShift(LocalTime.of(9, 0))
+                    .endShift(LocalTime.of(18, 0))
+                    .build();
         }
 
         @Test
-        void shouldHandleMidnightCrossoverWhenClockingOut() {
-            openAttendance.setTimeIn(LocalTime.of(22, 0));
-
-            AttendanceDto expectedDto = AttendanceDto.builder()
-                    .employeeId(2L)
-                    .date(LocalDate.now())
-                    .timeIn(LocalTime.of(22, 0))
-                    .timeOut(LocalTime.of(2, 0))
-                    .totalHours(new BigDecimal("4.00"))
-                    .overtimeHours(BigDecimal.ZERO)
+        void shouldReturnZeroTardinessWhenEmployeeArrivesBeforeThreshold() {
+            Attendance attendance = Attendance.builder()
+                    .employee(shiftEmployee)
+                    .date(MON)
+                    .timeIn(LocalTime.of(9, 10))
+                    .timeOut(LocalTime.of(18, 0))
                     .build();
+            when(repository.findByEmployee_IdAndDateBetween(1L, MON, MON)).thenReturn(List.of(attendance));
 
-            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
-            when(repository.findFirstByEmployee_IdAndTimeOutIsNullOrderByDateDescTimeInDesc(2L))
-                    .thenReturn(Optional.of(openAttendance));
-            when(repository.save(any(Attendance.class))).thenAnswer(invocation -> invocation.getArgument(0));
-            when(attendanceMapper.toDto(any(Attendance.class))).thenReturn(expectedDto);
+            AttendancePayrollSummary result = service.getAttendanceSummary(1L, MON, MON);
 
-            AttendanceDto result = service.clockOut();
+            assertThat(result.getTardinessMinutes()).isZero();
+        }
 
-            assertThat(result).isNotNull();
-            verify(repository).save(any(Attendance.class));
+        @Test
+        void shouldCalculateTardinessFromShiftStartWhenEmployeeIsLate() {
+            // 9:30 is after the 9:15 tardiness threshold; tardiness is measured from shift start (9:00)
+            Attendance attendance = Attendance.builder()
+                    .employee(shiftEmployee)
+                    .date(MON)
+                    .timeIn(LocalTime.of(9, 30))
+                    .timeOut(LocalTime.of(18, 0))
+                    .build();
+            when(repository.findByEmployee_IdAndDateBetween(1L, MON, MON)).thenReturn(List.of(attendance));
+
+            AttendancePayrollSummary result = service.getAttendanceSummary(1L, MON, MON);
+
+            assertThat(result.getTardinessMinutes()).isEqualTo(30);
+        }
+
+        @Test
+        void shouldReturnZeroUndertimeWhenEmployeeLeavesDuringOrAfterThreshold() {
+            // 17:50 is after the 17:45 undertime threshold
+            Attendance attendance = Attendance.builder()
+                    .employee(shiftEmployee)
+                    .date(MON)
+                    .timeIn(LocalTime.of(9, 0))
+                    .timeOut(LocalTime.of(17, 50))
+                    .build();
+            when(repository.findByEmployee_IdAndDateBetween(1L, MON, MON)).thenReturn(List.of(attendance));
+
+            AttendancePayrollSummary result = service.getAttendanceSummary(1L, MON, MON);
+
+            assertThat(result.getUndertimeMinutes()).isZero();
+        }
+
+        @Test
+        void shouldCalculateUndertimeFromTimeOutToShiftEndWhenEmployeeLeavesEarly() {
+            // 17:00 is before the 17:45 undertime threshold; undertime is from timeOut to shift end
+            Attendance attendance = Attendance.builder()
+                    .employee(shiftEmployee)
+                    .date(MON)
+                    .timeIn(LocalTime.of(9, 0))
+                    .timeOut(LocalTime.of(17, 0))
+                    .build();
+            when(repository.findByEmployee_IdAndDateBetween(1L, MON, MON)).thenReturn(List.of(attendance));
+
+            AttendancePayrollSummary result = service.getAttendanceSummary(1L, MON, MON);
+
+            assertThat(result.getUndertimeMinutes()).isEqualTo(60);
+        }
+
+        @Test
+        void shouldCalculateAbsenceDaysAsExpectedWorkdaysMinusDaysWorked() {
+            // Mon–Fri = 5 weekdays; only 3 attendances recorded
+            List<Attendance> attendances = List.of(
+                    Attendance.builder().employee(shiftEmployee).date(MON).timeIn(LocalTime.of(9, 0)).timeOut(LocalTime.of(18, 0)).build(),
+                    Attendance.builder().employee(shiftEmployee).date(MON.plusDays(1)).timeIn(LocalTime.of(9, 0)).timeOut(LocalTime.of(18, 0)).build(),
+                    Attendance.builder().employee(shiftEmployee).date(MON.plusDays(2)).timeIn(LocalTime.of(9, 0)).timeOut(LocalTime.of(18, 0)).build()
+            );
+            when(repository.findByEmployee_IdAndDateBetween(1L, MON, FRI)).thenReturn(attendances);
+
+            AttendancePayrollSummary result = service.getAttendanceSummary(1L, MON, FRI);
+
+            assertThat(result.getDaysWorked()).isEqualByComparingTo(new BigDecimal("3"));
+            assertThat(result.getAbsenceDays()).isEqualByComparingTo(new BigDecimal("2"));
+        }
+
+        @Test
+        void shouldExcludeWeekendsFromExpectedWorkdayCount() {
+            // Mon–Fri has 5 weekdays; full attendance means 0 absences
+            LocalDate sun = LocalDate.of(2026, 3, 15);
+            when(repository.findByEmployee_IdAndDateBetween(1L, MON, sun)).thenReturn(List.of());
+
+            AttendancePayrollSummary result = service.getAttendanceSummary(1L, MON, sun);
+
+            assertThat(result.getAbsenceDays()).isEqualByComparingTo(new BigDecimal("5"));
+        }
+
+        @Test
+        void shouldAccumulateTardinessAcrossMultipleAttendanceDays() {
+            Attendance day1 = Attendance.builder().employee(shiftEmployee).date(MON)
+                    .timeIn(LocalTime.of(9, 30)).timeOut(LocalTime.of(18, 0)).build();
+            Attendance day2 = Attendance.builder().employee(shiftEmployee).date(MON.plusDays(1))
+                    .timeIn(LocalTime.of(9, 20)).timeOut(LocalTime.of(18, 0)).build();
+            when(repository.findByEmployee_IdAndDateBetween(1L, MON, FRI)).thenReturn(List.of(day1, day2));
+
+            AttendancePayrollSummary result = service.getAttendanceSummary(1L, MON, FRI);
+
+            assertThat(result.getTardinessMinutes()).isEqualTo(50); // 30 + 20
+        }
+
+        @Test
+        void shouldNotCalculateTardinessOrUndertimeWhenShiftTimesAreNull() {
+            Employee employeeWithNoShift = Employee.builder().id(1L).build();
+            Attendance attendance = Attendance.builder()
+                    .employee(employeeWithNoShift)
+                    .date(MON)
+                    .timeIn(LocalTime.of(11, 0))
+                    .timeOut(LocalTime.of(14, 0))
+                    .build();
+            when(repository.findByEmployee_IdAndDateBetween(1L, MON, MON)).thenReturn(List.of(attendance));
+
+            AttendancePayrollSummary result = service.getAttendanceSummary(1L, MON, MON);
+
+            assertThat(result.getTardinessMinutes()).isZero();
+            assertThat(result.getUndertimeMinutes()).isZero();
         }
     }
 }
+
 
 

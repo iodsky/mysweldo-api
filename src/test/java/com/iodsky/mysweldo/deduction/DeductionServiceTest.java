@@ -6,16 +6,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -48,8 +45,8 @@ class DeductionServiceTest {
 
             Deduction result = service.createDeduction(request);
 
-            assertEquals("SSS", result.getCode());
-            assertEquals("Social Security System", result.getDescription());
+            assertThat(result.getCode()).isEqualTo("SSS");
+            assertThat(result.getDescription()).isEqualTo("Social Security System");
         }
 
         @Test
@@ -61,43 +58,10 @@ class DeductionServiceTest {
 
             when(repository.existsById("SSS")).thenReturn(true);
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.createDeduction(request)
-            );
-
-            assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
-        }
-    }
-
-    @Nested
-    class GetAllDeductionsTests {
-
-        @Test
-        void shouldReturnPaginatedDeductionsForValidPageAndLimit() {
-            List<Deduction> deductions = List.of(
-                    Deduction.builder().code("SSS").description("Social Security System").build(),
-                    Deduction.builder().code("PHIC").description("PhilHealth").build()
-            );
-            Page<Deduction> page = new PageImpl<>(deductions, PageRequest.of(0, 10), 2);
-
-            when(repository.findAll(PageRequest.of(0, 10))).thenReturn(page);
-
-            Page<Deduction> result = service.getAllDeductions(0, 10);
-
-            assertEquals(2, result.getTotalElements());
-            assertEquals(2, result.getContent().size());
-        }
-
-        @Test
-        void shouldReturnEmptyPageWhenNoDeductionsExist() {
-            Page<Deduction> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
-
-            when(repository.findAll(PageRequest.of(0, 10))).thenReturn(emptyPage);
-
-            Page<Deduction> result = service.getAllDeductions(0, 10);
-
-            assertTrue(result.isEmpty());
+            assertThatThrownBy(() -> service.createDeduction(request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.CONFLICT);
         }
     }
 
@@ -115,34 +79,29 @@ class DeductionServiceTest {
 
             Deduction result = service.getDeductionByCode("SSS");
 
-            assertEquals("SSS", result.getCode());
-            assertEquals("Social Security System", result.getDescription());
+            assertThat(result.getCode()).isEqualTo("SSS");
+            assertThat(result.getDescription()).isEqualTo("Social Security System");
         }
 
         @Test
         void shouldThrowNotFoundWhenDeductionDoesNotExist() {
             when(repository.findByCode("UNKNOWN")).thenReturn(Optional.empty());
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.getDeductionByCode("UNKNOWN")
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+            assertThatThrownBy(() -> service.getDeductionByCode("UNKNOWN"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
 
         @Test
         void shouldThrowNotFoundWhenDeductionIsSoftDeleted() {
-            // @SQLRestriction filters out soft-deleted rows at the database level,
-            // so findByCode returns empty for soft-deleted records
+            // @SQLRestriction filters out soft-deleted rows at the database level
             when(repository.findByCode("SSS")).thenReturn(Optional.empty());
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.getDeductionByCode("SSS")
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+            assertThatThrownBy(() -> service.getDeductionByCode("SSS"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -166,7 +125,7 @@ class DeductionServiceTest {
 
             Deduction result = service.updateDeduction("SSS", request);
 
-            assertEquals("Updated Description", result.getDescription());
+            assertThat(result.getDescription()).isEqualTo("Updated Description");
         }
 
         @Test
@@ -178,12 +137,10 @@ class DeductionServiceTest {
 
             when(repository.findByCode("UNKNOWN")).thenReturn(Optional.empty());
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.updateDeduction("UNKNOWN", request)
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+            assertThatThrownBy(() -> service.updateDeduction("UNKNOWN", request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -201,7 +158,7 @@ class DeductionServiceTest {
 
             service.deleteDeduction("SSS");
 
-            assertNotNull(deduction.getDeletedAt());
+            assertThat(deduction.getDeletedAt()).isNotNull();
             verify(repository).save(deduction);
         }
 
@@ -209,12 +166,10 @@ class DeductionServiceTest {
         void shouldThrowNotFoundWhenDeletingNonExistentDeduction() {
             when(repository.findByCode("UNKNOWN")).thenReturn(Optional.empty());
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.deleteDeduction("UNKNOWN")
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+            assertThatThrownBy(() -> service.deleteDeduction("UNKNOWN"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 }

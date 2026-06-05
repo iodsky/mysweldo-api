@@ -66,8 +66,7 @@ class LeaveRequestServiceTest {
 
     // Weekends
     private static final LocalDate SAT = LocalDate.of(2026, 3, 14);
-    private static final LocalDate SUN = LocalDate.of(2026, 3, 15);
-
+    
     @BeforeEach
     void setUp() {
         Role hrRole = new Role("HR");
@@ -764,11 +763,6 @@ class LeaveRequestServiceTest {
 
         @Test
         void shouldExcludeSaturdayAndSundayFromDayCount() {
-            // Mon–Sun (7 calendar days) → 5 weekdays
-            LocalDate sunday = LocalDate.of(2026, 3, 15); // would be end, but is weekend
-            // Use Mon–Thu = 4 weekdays to verify weekend exclusion across a span that includes weekend
-            LocalDate thursday = LocalDate.of(2026, 3, 12);
-
             // Mon(9)–next Mon(16) = 8 calendar days → 6 weekdays (Mon 9, Tue 10, Wed 11, Thu 12, Fri 13, Mon 16)
             LocalDate nextMonday = LocalDate.of(2026, 3, 16);
             when(userService.getAuthenticatedUser()).thenReturn(hrUser);

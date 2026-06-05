@@ -18,12 +18,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -80,11 +80,6 @@ class AuthenticationServiceTest {
 
         @Test
         void shouldReturnLoginResponseWhenCredentialsAreValid() {
-            UserDetails userDetails = org.springframework.security.core.userdetails.User
-                    .withUsername("john@example.com")
-                    .password("encoded")
-                    .build();
-
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                     .thenReturn(null);
             when(userService.getUserByEmail("john@example.com")).thenReturn(validUser);
@@ -94,10 +89,10 @@ class AuthenticationServiceTest {
 
             AuthSession response = authenticationService.authenticate(validLoginRequest);
 
-            assertNotNull(response);
-            assertEquals("john@example.com", response.getUser().getEmail());
-            assertEquals("EMPLOYEE", response.getUser().getRole());
-            assertEquals("mocked.access.token", response.getToken());
+            assertThat(response).isNotNull();
+            assertThat(response.getUser().getEmail()).isEqualTo("john@example.com");
+            assertThat(response.getUser().getRole()).isEqualTo("EMPLOYEE");
+            assertThat(response.getToken()).isEqualTo("mocked.access.token");
         }
 
         @Test
@@ -111,24 +106,8 @@ class AuthenticationServiceTest {
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                     .thenThrow(new BadCredentialsException("Bad credentials"));
 
-            assertThrows(
-                    BadCredentialsException.class,
-                    () -> authenticationService.authenticate(invalidLoginRequest)
-            );
-        }
-
-        @Test
-        void shouldReturnResponseBelongingToAuthenticatedUser() {
-            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                    .thenReturn(null);
-            when(userService.getUserByEmail("john@example.com")).thenReturn(validUser);
-            when(jwtService.generateAccessToken(any(), any()))
-                    .thenReturn("mocked.access.token");
-            when(userMapper.toDto(validUser)).thenReturn(validUserDto);
-
-            AuthSession response = authenticationService.authenticate(validLoginRequest);
-
-            assertEquals("john@example.com", response.getUser().getEmail());
+            assertThatThrownBy(() -> authenticationService.authenticate(invalidLoginRequest))
+                    .isInstanceOf(BadCredentialsException.class);
         }
 
         @Test
@@ -143,12 +122,10 @@ class AuthenticationServiceTest {
                     .thenReturn(null);
             when(userService.getUserByEmail("john@example.com")).thenReturn(validUser);
 
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> authenticationService.authenticate(adminLoginRequest)
-            );
-
-            assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+            assertThatThrownBy(() -> authenticationService.authenticate(adminLoginRequest))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.FORBIDDEN);
         }
     }
 }

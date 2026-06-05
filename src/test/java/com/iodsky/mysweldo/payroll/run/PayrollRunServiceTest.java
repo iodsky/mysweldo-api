@@ -8,8 +8,6 @@ import com.iodsky.mysweldo.deduction.Deduction;
 import com.iodsky.mysweldo.deduction.DeductionService;
 import com.iodsky.mysweldo.employee.EmployeeService;
 import com.iodsky.mysweldo.payroll.core.*;
-import com.iodsky.mysweldo.payroll.strategy.PayrollComputationStrategy;
-import com.iodsky.mysweldo.payroll.strategy.PayrollStrategyFactory;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +28,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -71,12 +71,6 @@ class PayrollRunServiceTest {
     @Mock
     private BenefitService benefitService;
 
-    @Mock
-    private PayrollStrategyFactory strategyFactory;
-
-    @Mock
-    private PayrollComputationStrategy payrollComputationStrategy;
-
     private PayrollRun draftRun(UUID id) {
         return PayrollRun.builder()
                 .id(id)
@@ -104,7 +98,7 @@ class PayrollRunServiceTest {
 
             PayrollRunDto result = service.createPayrollRun(request);
 
-            assertEquals(PayrollRunStatus.DRAFT, result.getStatus());
+            assertThat(result.getStatus()).isEqualTo(PayrollRunStatus.DRAFT);
             verify(repository).save(any(PayrollRun.class));
         }
 
@@ -118,7 +112,7 @@ class PayrollRunServiceTest {
 
             when(mapper.toDto(any(PayrollRun.class))).thenReturn(PayrollRunDto.builder().build());
 
-            assertDoesNotThrow(() -> service.createPayrollRun(request));
+            assertThatNoException().isThrownBy(() -> service.createPayrollRun(request));
         }
 
         @Test
@@ -128,12 +122,10 @@ class PayrollRunServiceTest {
             request.setPeriodEndDate(LocalDate.of(2025, 3, 1));
             request.setType(PayrollRunType.REGULAR);
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.createPayrollRun(request)
-            );
-
-            assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+            assertThatThrownBy(() -> service.createPayrollRun(request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -158,8 +150,6 @@ class PayrollRunServiceTest {
                     .totalBenefits(BigDecimal.ZERO).totalDeductions(BigDecimal.ZERO)
                     .netPay(BigDecimal.valueOf(18000)).build();
 
-            PayrollRunDto expectedDto = PayrollRunDto.builder().id(runId).build();
-
             when(repository.findById(runId)).thenReturn(Optional.of(run));
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(eq(runId), anyLong())).thenReturn(false);
             when(attendanceService.hasAttendance(eq(1L), any(), any())).thenReturn(true);
@@ -168,12 +158,12 @@ class PayrollRunServiceTest {
             when(payrollBuilder.buildPayroll(eq(1L), eq(run), any())).thenReturn(item1);
             when(payrollBuilder.buildPayroll(eq(2L), eq(run), any())).thenReturn(item2);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(List.of(item1, item2));
-            when(mapper.toDto(run)).thenReturn(expectedDto);
+            when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().id(runId).build());
 
             GeneratePayrollResponse response = service.generatePayroll(runId, request);
 
-            assertEquals(runId, response.getPayrollRun().getId());
-            assertTrue(response.getSkippedEmployeeIds() == null || response.getSkippedEmployeeIds().isEmpty());
+            assertThat(response.getPayrollRun().getId()).isEqualTo(runId);
+            assertThat(response.getSkippedEmployeeIds()).isNullOrEmpty();
         }
 
         @Test
@@ -183,13 +173,12 @@ class PayrollRunServiceTest {
             GeneratePayrollRequest request = new GeneratePayrollRequest();
             request.setEmployeeIds(null);
 
-            List<Long> activeIds = List.of(10L);
             PayrollItem item = PayrollItem.builder().grossPay(BigDecimal.TEN)
                     .totalBenefits(BigDecimal.ZERO).totalDeductions(BigDecimal.ZERO)
                     .netPay(BigDecimal.TEN).build();
 
             when(repository.findById(runId)).thenReturn(Optional.of(run));
-            when(employeeService.getAllActiveEmployeeIds()).thenReturn(activeIds);
+            when(employeeService.getAllActiveEmployeeIds()).thenReturn(List.of(10L));
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 10L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(10L), any(), any())).thenReturn(true);
             when(calculator.loadConfiguration(any())).thenReturn(configuration());
@@ -197,7 +186,7 @@ class PayrollRunServiceTest {
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(List.of(item));
             when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().build());
 
-            assertDoesNotThrow(() -> service.generatePayroll(runId, request));
+            assertThatNoException().isThrownBy(() -> service.generatePayroll(runId, request));
             verify(employeeService).getAllActiveEmployeeIds();
         }
 
@@ -208,20 +197,21 @@ class PayrollRunServiceTest {
             GeneratePayrollRequest request = new GeneratePayrollRequest();
             request.setEmployeeIds(Collections.emptyList());
 
-            List<Long> activeIds = List.of(10L);
             PayrollItem item = PayrollItem.builder().grossPay(BigDecimal.TEN)
                     .totalBenefits(BigDecimal.ZERO).totalDeductions(BigDecimal.ZERO)
                     .netPay(BigDecimal.TEN).build();
 
             when(repository.findById(runId)).thenReturn(Optional.of(run));
-            when(employeeService.getAllActiveEmployeeIds()).thenReturn(activeIds);
+            when(employeeService.getAllActiveEmployeeIds()).thenReturn(List.of(10L));
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 10L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(10L), any(), any())).thenReturn(true);
             when(calculator.loadConfiguration(any())).thenReturn(configuration());
+            when(payrollBuilder.buildPayroll(eq(10L), eq(run), any())).thenReturn(item);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(List.of(item));
             when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().build());
 
-            assertDoesNotThrow(() -> service.generatePayroll(runId, request));
+            assertThatNoException().isThrownBy(() -> service.generatePayroll(runId, request));
+            verify(employeeService).getAllActiveEmployeeIds();
         }
 
         @Test
@@ -246,8 +236,8 @@ class PayrollRunServiceTest {
 
             GeneratePayrollResponse response = service.generatePayroll(runId, request);
 
-            assertTrue(response.getSkippedEmployeeIds().contains(1L));
-            assertFalse(response.getSkippedEmployeeIds().contains(2L));
+            assertThat(response.getSkippedEmployeeIds()).contains(1L);
+            assertThat(response.getSkippedEmployeeIds()).doesNotContain(2L);
         }
 
         @Test
@@ -266,7 +256,7 @@ class PayrollRunServiceTest {
 
             GeneratePayrollResponse response = service.generatePayroll(runId, request);
 
-            assertTrue(response.getSkippedEmployeeIds().contains(1L));
+            assertThat(response.getSkippedEmployeeIds()).contains(1L);
         }
 
         @Test
@@ -276,10 +266,7 @@ class PayrollRunServiceTest {
             GeneratePayrollRequest request = new GeneratePayrollRequest();
             request.setEmployeeIds(List.of(1L));
 
-            EmployerContribution ec = EmployerContribution.builder()
-                    .amount(BigDecimal.valueOf(1500))
-                    .build();
-
+            EmployerContribution ec = EmployerContribution.builder().amount(BigDecimal.valueOf(1500)).build();
             PayrollItem item = PayrollItem.builder()
                     .grossPay(BigDecimal.valueOf(30000))
                     .totalBenefits(BigDecimal.valueOf(1000))
@@ -298,11 +285,11 @@ class PayrollRunServiceTest {
 
             service.generatePayroll(runId, request);
 
-            assertEquals(BigDecimal.valueOf(30000), run.getTotalGrossPay());
-            assertEquals(BigDecimal.valueOf(1000), run.getTotalBenefits());
-            assertEquals(BigDecimal.valueOf(2000), run.getTotalDeductions());
-            assertEquals(BigDecimal.valueOf(29000), run.getTotalNetPay());
-            assertEquals(BigDecimal.valueOf(1500), run.getTotalEmployerCost());
+            assertThat(run.getTotalGrossPay()).isEqualByComparingTo(BigDecimal.valueOf(30000));
+            assertThat(run.getTotalBenefits()).isEqualByComparingTo(BigDecimal.valueOf(1000));
+            assertThat(run.getTotalDeductions()).isEqualByComparingTo(BigDecimal.valueOf(2000));
+            assertThat(run.getTotalNetPay()).isEqualByComparingTo(BigDecimal.valueOf(29000));
+            assertThat(run.getTotalEmployerCost()).isEqualByComparingTo(BigDecimal.valueOf(1500));
         }
 
         @Test
@@ -310,12 +297,10 @@ class PayrollRunServiceTest {
             UUID runId = UUID.randomUUID();
             when(repository.findById(runId)).thenReturn(Optional.empty());
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.generatePayroll(runId, new GeneratePayrollRequest())
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            assertThatThrownBy(() -> service.generatePayroll(runId, new GeneratePayrollRequest()))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
 
         @Test
@@ -329,12 +314,10 @@ class PayrollRunServiceTest {
 
             when(repository.findById(runId)).thenReturn(Optional.of(run));
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.generatePayroll(runId, request)
-            );
-
-            assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+            assertThatThrownBy(() -> service.generatePayroll(runId, request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
         }
 
         @Test
@@ -347,12 +330,97 @@ class PayrollRunServiceTest {
             when(repository.findById(runId)).thenReturn(Optional.of(run));
             when(employeeService.getAllActiveEmployeeIds()).thenReturn(Collections.emptyList());
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.generatePayroll(runId, request)
-            );
+            assertThatThrownBy(() -> service.generatePayroll(runId, request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+    }
 
-            assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    @Nested
+    class UpdatePayrollRunStatusTests {
+
+        @Test
+        void shouldTransitionFromDraftToApproved() {
+            UUID id = UUID.randomUUID();
+            PayrollRun run = draftRun(id);
+            when(repository.findById(id)).thenReturn(Optional.of(run));
+            when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().status(PayrollRunStatus.APPROVED).build());
+
+            PayrollRunDto result = service.updatePayrollRunStatus(id, PayrollRunStatus.APPROVED);
+
+            assertThat(run.getStatus()).isEqualTo(PayrollRunStatus.APPROVED);
+            verify(repository).save(run);
+            assertThat(result.getStatus()).isEqualTo(PayrollRunStatus.APPROVED);
+        }
+
+        @Test
+        void shouldTransitionFromApprovedToProcessed() {
+            UUID id = UUID.randomUUID();
+            PayrollRun run = draftRun(id);
+            run.setStatus(PayrollRunStatus.APPROVED);
+            when(repository.findById(id)).thenReturn(Optional.of(run));
+            when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().status(PayrollRunStatus.PROCESSED).build());
+
+            service.updatePayrollRunStatus(id, PayrollRunStatus.PROCESSED);
+
+            assertThat(run.getStatus()).isEqualTo(PayrollRunStatus.PROCESSED);
+            verify(repository).save(run);
+        }
+
+        @Test
+        void shouldThrowBadRequestWhenTransitioningFromDraftToProcessed() {
+            UUID id = UUID.randomUUID();
+            PayrollRun run = draftRun(id);
+            when(repository.findById(id)).thenReturn(Optional.of(run));
+
+            assertThatThrownBy(() -> service.updatePayrollRunStatus(id, PayrollRunStatus.PROCESSED))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        void shouldThrowBadRequestWhenTransitioningFromApprovedToDraft() {
+            UUID id = UUID.randomUUID();
+            PayrollRun run = draftRun(id);
+            run.setStatus(PayrollRunStatus.APPROVED);
+            when(repository.findById(id)).thenReturn(Optional.of(run));
+
+            assertThatThrownBy(() -> service.updatePayrollRunStatus(id, PayrollRunStatus.DRAFT))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        void shouldThrowBadRequestWhenPayrollRunIsAlreadyProcessed() {
+            UUID id = UUID.randomUUID();
+            PayrollRun run = draftRun(id);
+            run.setStatus(PayrollRunStatus.PROCESSED);
+            when(repository.findById(id)).thenReturn(Optional.of(run));
+
+            assertThatThrownBy(() -> service.updatePayrollRunStatus(id, PayrollRunStatus.APPROVED))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        void shouldThrowNotFoundWhenPayrollRunDoesNotExist() {
+            UUID id = UUID.randomUUID();
+            when(repository.findById(id)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.updatePayrollRunStatus(id, PayrollRunStatus.APPROVED))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -367,7 +435,7 @@ class PayrollRunServiceTest {
 
             Page<PayrollRunDto> result = service.getAllPayrollRuns(null, null, null, null, 0, 10);
 
-            assertEquals(1, result.getTotalElements());
+            assertThat(result.getTotalElements()).isEqualTo(1);
         }
 
         @Test
@@ -382,7 +450,7 @@ class PayrollRunServiceTest {
 
             Page<PayrollRunDto> result = service.getAllPayrollRuns(start, end, null, null, 0, 10);
 
-            assertEquals(1, result.getTotalElements());
+            assertThat(result.getTotalElements()).isEqualTo(1);
         }
 
         @Test
@@ -395,7 +463,7 @@ class PayrollRunServiceTest {
 
             Page<PayrollRunDto> result = service.getAllPayrollRuns(null, null, PayrollRunType.REGULAR, PayrollRunStatus.DRAFT, 0, 10);
 
-            assertEquals(1, result.getTotalElements());
+            assertThat(result.getTotalElements()).isEqualTo(1);
         }
 
         @Test
@@ -407,7 +475,7 @@ class PayrollRunServiceTest {
 
             Page<PayrollRunDto> result = service.getAllPayrollRuns(null, null, PayrollRunType.REGULAR, null, 0, 10);
 
-            assertEquals(1, result.getTotalElements());
+            assertThat(result.getTotalElements()).isEqualTo(1);
         }
 
         @Test
@@ -419,7 +487,7 @@ class PayrollRunServiceTest {
 
             Page<PayrollRunDto> result = service.getAllPayrollRuns(null, null, null, PayrollRunStatus.DRAFT, 0, 10);
 
-            assertEquals(1, result.getTotalElements());
+            assertThat(result.getTotalElements()).isEqualTo(1);
         }
 
         @Test
@@ -429,7 +497,7 @@ class PayrollRunServiceTest {
 
             Page<PayrollRunDto> result = service.getAllPayrollRuns(null, null, null, PayrollRunStatus.PROCESSED, 0, 10);
 
-            assertTrue(result.isEmpty());
+            assertThat(result.isEmpty()).isTrue();
         }
     }
 
@@ -447,7 +515,7 @@ class PayrollRunServiceTest {
 
             PayrollRunDto result = service.getPayrollRunById(id);
 
-            assertEquals(id, result.getId());
+            assertThat(result.getId()).isEqualTo(id);
         }
 
         @Test
@@ -455,12 +523,10 @@ class PayrollRunServiceTest {
             UUID id = UUID.randomUUID();
             when(repository.findById(id)).thenReturn(Optional.empty());
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.getPayrollRunById(id)
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            assertThatThrownBy(() -> service.getPayrollRunById(id))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -479,18 +545,7 @@ class PayrollRunServiceTest {
 
             Page<PayrollItemDto> result = service.getPayrollItems(runId, 0, 10);
 
-            assertEquals(1, result.getTotalElements());
-        }
-
-        @Test
-        void shouldReturnEmptyPageWhenNoItemsExistForRun() {
-            UUID runId = UUID.randomUUID();
-            when(payrollItemRepository.findAllByPayrollRun_Id(eq(runId), any(Pageable.class)))
-                    .thenReturn(Page.empty());
-
-            Page<PayrollItemDto> result = service.getPayrollItems(runId, 0, 10);
-
-            assertTrue(result.isEmpty());
+            assertThat(result.getTotalElements()).isEqualTo(1);
         }
     }
 
@@ -509,7 +564,7 @@ class PayrollRunServiceTest {
 
             PayrollItemDto result = service.getPayrollItem(runId, itemId);
 
-            assertEquals(itemId, result.getId());
+            assertThat(result.getId()).isEqualTo(itemId);
         }
 
         @Test
@@ -518,12 +573,63 @@ class PayrollRunServiceTest {
             UUID itemId = UUID.randomUUID();
             when(payrollItemRepository.findByPayrollRun_IdAndId(runId, itemId)).thenReturn(Optional.empty());
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.getPayrollItem(runId, itemId)
-            );
+            assertThatThrownBy(() -> service.getPayrollItem(runId, itemId))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
+        }
+    }
 
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    @Nested
+    class DeletePayrollItemTests {
+
+        @Test
+        void shouldDeleteItemAndRecomputeRunTotalsWhenRunIsDraft() {
+            UUID runId = UUID.randomUUID();
+            UUID itemId = UUID.randomUUID();
+            PayrollRun run = draftRun(runId);
+            PayrollItem item = PayrollItem.builder().id(itemId).build();
+
+            when(repository.findById(runId)).thenReturn(Optional.of(run));
+            when(payrollItemRepository.findByPayrollRun_IdAndId(runId, itemId)).thenReturn(Optional.of(item));
+            when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(Collections.emptyList());
+
+            service.deletePayrollItem(runId, itemId);
+
+            verify(payrollItemRepository).delete(item);
+            verify(repository).save(run);
+        }
+
+        @Test
+        void shouldThrowBadRequestWhenRunIsNotDraft() {
+            UUID runId = UUID.randomUUID();
+            PayrollRun run = draftRun(runId);
+            run.setStatus(PayrollRunStatus.APPROVED);
+            when(repository.findById(runId)).thenReturn(Optional.of(run));
+
+            assertThatThrownBy(() -> service.deletePayrollItem(runId, UUID.randomUUID()))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
+
+            verify(payrollItemRepository, never()).delete(any());
+        }
+
+        @Test
+        void shouldThrowNotFoundWhenItemDoesNotExistInRun() {
+            UUID runId = UUID.randomUUID();
+            UUID itemId = UUID.randomUUID();
+            PayrollRun run = draftRun(runId);
+
+            when(repository.findById(runId)).thenReturn(Optional.of(run));
+            when(payrollItemRepository.findByPayrollRun_IdAndId(runId, itemId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.deletePayrollItem(runId, itemId))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
+
+            verify(payrollItemRepository, never()).delete(any());
         }
     }
 
@@ -558,16 +664,14 @@ class PayrollRunServiceTest {
             UpdatePayrollDeductionRequest request = new UpdatePayrollDeductionRequest();
             request.setDeductions(List.of(entry));
 
-            PayrollItemDto dto = PayrollItemDto.builder().build();
-
             when(repository.findById(runId)).thenReturn(Optional.of(run));
             when(payrollItemRepository.findByPayrollRun_IdAndId(runId, itemId)).thenReturn(Optional.of(item));
             when(payrollItemRepository.save(item)).thenReturn(item);
-            when(payrollItemMapper.toDto(item)).thenReturn(dto);
+            when(payrollItemMapper.toDto(item)).thenReturn(PayrollItemDto.builder().build());
 
             service.updatePayrollDeductions(runId, itemId, request);
 
-            assertEquals(BigDecimal.valueOf(800), item.getDeductions().getFirst().getAmount());
+            assertThat(item.getDeductions().getFirst().getAmount()).isEqualByComparingTo(BigDecimal.valueOf(800));
         }
 
         @Test
@@ -585,7 +689,6 @@ class PayrollRunServiceTest {
                     .build();
 
             Deduction deduction = Deduction.builder().code("PAGIBIG").build();
-
             LineItemEntry entry = new LineItemEntry();
             entry.setCode("PAGIBIG");
             entry.setAmount(BigDecimal.valueOf(200));
@@ -601,8 +704,8 @@ class PayrollRunServiceTest {
 
             service.updatePayrollDeductions(runId, itemId, request);
 
-            assertEquals(1, item.getDeductions().size());
-            assertEquals("PAGIBIG", item.getDeductions().getFirst().getDeduction().getCode());
+            assertThat(item.getDeductions()).hasSize(1);
+            assertThat(item.getDeductions().getFirst().getDeduction().getCode()).isEqualTo("PAGIBIG");
         }
 
         @Test
@@ -628,8 +731,8 @@ class PayrollRunServiceTest {
 
             service.updatePayrollDeductions(runId, itemId, request);
 
-            assertEquals(BigDecimal.valueOf(1000), item.getTotalDeductions());
-            assertEquals(BigDecimal.valueOf(19000), item.getNetPay());
+            assertThat(item.getTotalDeductions()).isEqualByComparingTo(BigDecimal.valueOf(1000));
+            assertThat(item.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(19000));
         }
 
         @Test
@@ -637,12 +740,10 @@ class PayrollRunServiceTest {
             UUID runId = UUID.randomUUID();
             when(repository.findById(runId)).thenReturn(Optional.empty());
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.updatePayrollDeductions(runId, UUID.randomUUID(), new UpdatePayrollDeductionRequest())
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            assertThatThrownBy(() -> service.updatePayrollDeductions(runId, UUID.randomUUID(), new UpdatePayrollDeductionRequest()))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
 
         @Test
@@ -654,12 +755,10 @@ class PayrollRunServiceTest {
             when(repository.findById(runId)).thenReturn(Optional.of(run));
             when(payrollItemRepository.findByPayrollRun_IdAndId(runId, itemId)).thenReturn(Optional.empty());
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.updatePayrollDeductions(runId, itemId, new UpdatePayrollDeductionRequest())
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            assertThatThrownBy(() -> service.updatePayrollDeductions(runId, itemId, new UpdatePayrollDeductionRequest()))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
 
         @Test
@@ -670,12 +769,10 @@ class PayrollRunServiceTest {
 
             when(repository.findById(runId)).thenReturn(Optional.of(run));
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.updatePayrollDeductions(runId, UUID.randomUUID(), new UpdatePayrollDeductionRequest())
-            );
-
-            assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+            assertThatThrownBy(() -> service.updatePayrollDeductions(runId, UUID.randomUUID(), new UpdatePayrollDeductionRequest()))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -713,7 +810,7 @@ class PayrollRunServiceTest {
 
             service.updatePayrollBenefits(runId, itemId, request);
 
-            assertEquals(BigDecimal.valueOf(1000), item.getBenefits().get(0).getAmount());
+            assertThat(item.getBenefits().get(0).getAmount()).isEqualByComparingTo(BigDecimal.valueOf(1000));
         }
 
         @Test
@@ -732,7 +829,6 @@ class PayrollRunServiceTest {
                     .build();
 
             Benefit benefit = Benefit.builder().code("TRANSPORT").build();
-
             LineItemEntry entry = new LineItemEntry();
             entry.setCode("TRANSPORT");
             entry.setAmount(BigDecimal.valueOf(300));
@@ -748,8 +844,8 @@ class PayrollRunServiceTest {
 
             service.updatePayrollBenefits(runId, itemId, request);
 
-            assertEquals(1, item.getBenefits().size());
-            assertEquals("TRANSPORT", item.getBenefits().get(0).getBenefit().getCode());
+            assertThat(item.getBenefits()).hasSize(1);
+            assertThat(item.getBenefits().get(0).getBenefit().getCode()).isEqualTo("TRANSPORT");
         }
 
         @Test
@@ -783,8 +879,8 @@ class PayrollRunServiceTest {
 
             service.updatePayrollBenefits(runId, itemId, request);
 
-            assertEquals(BigDecimal.valueOf(1500), item.getTotalBenefits());
-            assertEquals(BigDecimal.valueOf(21500), item.getNetPay());
+            assertThat(item.getTotalBenefits()).isEqualByComparingTo(BigDecimal.valueOf(1500));
+            assertThat(item.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(21500));
         }
 
         @Test
@@ -792,12 +888,10 @@ class PayrollRunServiceTest {
             UUID runId = UUID.randomUUID();
             when(repository.findById(runId)).thenReturn(Optional.empty());
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.updatePayrollBenefits(runId, UUID.randomUUID(), new UpdatePayrollBenefitRequest())
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            assertThatThrownBy(() -> service.updatePayrollBenefits(runId, UUID.randomUUID(), new UpdatePayrollBenefitRequest()))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
 
         @Test
@@ -809,12 +903,10 @@ class PayrollRunServiceTest {
             when(repository.findById(runId)).thenReturn(Optional.of(run));
             when(payrollItemRepository.findByPayrollRun_IdAndId(runId, itemId)).thenReturn(Optional.empty());
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.updatePayrollBenefits(runId, itemId, new UpdatePayrollBenefitRequest())
-            );
-
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            assertThatThrownBy(() -> service.updatePayrollBenefits(runId, itemId, new UpdatePayrollBenefitRequest()))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
         }
 
         @Test
@@ -825,14 +917,10 @@ class PayrollRunServiceTest {
 
             when(repository.findById(runId)).thenReturn(Optional.of(run));
 
-            ResponseStatusException ex = assertThrows(
-                    ResponseStatusException.class,
-                    () -> service.updatePayrollBenefits(runId, UUID.randomUUID(), new UpdatePayrollBenefitRequest())
-            );
-
-            assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+            assertThatThrownBy(() -> service.updatePayrollBenefits(runId, UUID.randomUUID(), new UpdatePayrollBenefitRequest()))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
         }
     }
-
 }
-
