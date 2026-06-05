@@ -1,6 +1,5 @@
 package com.iodsky.mysweldo.payroll.core;
 
-import com.iodsky.mysweldo.employee.PayType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
