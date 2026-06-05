@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @OpenAPIDefinition(
         info = @Info(
-                title = "Sweldox HRIS API",
+                title = "MySweldo HRIS API",
                 description = "RESTful API for employee, attendance, leave, and payroll management"
         ),
         security = @SecurityRequirement(name = "bearerAuth")
