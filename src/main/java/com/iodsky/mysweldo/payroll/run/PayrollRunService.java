@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Stream;
@@ -42,7 +43,6 @@ public class PayrollRunService {
 
     public PayrollRunDto createPayrollRun(PayrollRunRequest request) {
 
-        // validate period start and end date
         if (request.getPeriodEndDate().isBefore(request.getPeriodStartDate())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid period date");
         }
@@ -61,72 +61,49 @@ public class PayrollRunService {
     }
 
     public GeneratePayrollResponse generatePayroll(UUID id, GeneratePayrollRequest request) {
-        // 1. FETCH & VALIDATE PAYROLL RUN
         PayrollRun run = findPayrollRun(id);
 
         if (!run.getStatus().equals(PayrollRunStatus.DRAFT)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " already processed");
         }
 
-        // 2. RESOLVE EMPLOYEE IDs
-        //    - if request.employeeIds is null or empty
-        //      → fetch all active employee ids via employeeService.getAllActiveEmployeeIds()
         List<Long> employeeIds = request.getEmployeeIds();
         if (employeeIds == null || employeeIds.isEmpty()) {
             employeeIds = employeeService.getAllActiveEmployeeIds();
         }
-        //    - otherwise use request.employeeIds as-is
-        //      (client selects from a pre-fetched active employee list, no further validation needed)
-        //    - throw 400 if the resolved list is still empty (no active employees in the system)
+ 
         if (employeeIds.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No active employees found");
         }
 
-        // 3. PRELOAD PAYROLL CONFIGURATION (rate tables, tax brackets)
-        //    This snapshot is reused across all employees to avoid repeated database queries
         PayrollConfiguration configuration = calculator.loadConfiguration(run.getPeriodEndDate());
 
-        // 4. FOR EACH employeeId, compute payroll using the appropriate strategy:
-        //    - PayrollBuilder now uses PayrollStrategyFactory to resolve the correct
-        //      PayrollComputationStrategy based on the payroll frequency
-        //    - This design allows for extensibility (e.g., DAILY, HOURLY payroll types)
         List<PayrollItem> payrollItems = new ArrayList<>();
         List<Long> skippedIds = new ArrayList<>();
         for (Long employeeId: employeeIds) {
-            //    a. SKIP DUPLICATES
-            //       - if payroll already exists for this employee in this run
             if (payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(run.getId(), employeeId)) {
                 log.warn("Payroll exists for employee: {} run: {}", employeeId, run.getId());
                 skippedIds.add(employeeId);
                 continue;
             }
 
-            //    b. SKIP employees with no attendance in the period
             if (!attendanceService.hasAttendance(employeeId, run.getPeriodStartDate(), run.getPeriodEndDate())) {
                 log.warn("No attendance records for employee: {} in period: {} - {}", employeeId, run.getPeriodStartDate(), run.getPeriodEndDate());
                 skippedIds.add(employeeId);
                 continue;
             }
 
-            //    c. BUILD PAYROLL ITEM
-            //       PayrollBuilder delegates to PayrollComputationStrategy (via factory)
-            //       Strategy orchestrates data fetching, calculations, and context building
             PayrollItem payrollItem = payrollBuilder.buildPayroll(employeeId, run, configuration);
 
-            //    d. COLLECT into a List<PayrollItem>
             payrollItems.add(payrollItem);
         }
 
-        // 5. BATCH SAVE ALL ITEMS
         payrollItemRepository.saveAll(payrollItems);
 
-        // 6. AGGREGATE TOTALS BACK ONTO THE RUN
         computeRunTotals(run);
 
-        // 7. PERSIST AGGREGATED TOTALS — status stays DRAFT
         repository.save(run);
 
-        // 8. RETURN
         return GeneratePayrollResponse.builder()
                 .payrollRun(mapper.toDto(run))
                 .skippedEmployeeIds(skippedIds)
@@ -175,18 +152,14 @@ public class PayrollRunService {
     }
 
     public PayrollItemDto updatePayrollDeductions(UUID id, UUID itemId, UpdatePayrollDeductionRequest request) {
-        // 1. FETCH & VALIDATE PAYROLL RUN
         PayrollRun run = findPayrollRun(id);
 
         if (!run.getStatus().equals(PayrollRunStatus.DRAFT)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " has been already " + run.getStatus());
         }
 
-        // 2. FETCH PAYROLL ITEM
         PayrollItem item = findPayrollItem(id, itemId);
 
-        // 3. APPLY DEDUCTION OVERRIDES / ADDITIONS
-        //    For each LineItemEntry in request.getDeductions():
         for (LineItemEntry entry : request.getDeductions()) {
             //      - Look up an existing PayrollDeduction in item.getDeductions() where deduction.getCode() == entry.getCode()
             Optional<PayrollDeduction> existing = item.getDeductions().stream()
@@ -196,7 +169,6 @@ public class PayrollRunService {
             if (existing.isPresent()) {
                 existing.get().setAmount(entry.getAmount());
             } else {
-                //      - If not found → create a new PayrollDeduction, look up the Deduction entity by code, link to item, and add to item.getDeductions()
                 Deduction deduction = deductionService.getDeductionByCode(entry.getCode());
 
                 PayrollDeduction newDeduction = PayrollDeduction.builder()
@@ -269,7 +241,6 @@ public class PayrollRunService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payroll run " + id + " has already been processed");
         }
 
-        // Enforce valid transitions: DRAFT → APPROVED → PROCESSED
         boolean validTransition = switch (run.getStatus()) {
             case DRAFT -> status == PayrollRunStatus.APPROVED;
             case APPROVED -> status == PayrollRunStatus.PROCESSED;
@@ -298,7 +269,8 @@ public class PayrollRunService {
 
         PayrollItem item = findPayrollItem(id, itemId);
 
-        payrollItemRepository.delete(item);
+        item.setDeletedAt(Instant.now());
+        payrollItemRepository.save(item);
 
         computeRunTotals(run);
         repository.save(run);

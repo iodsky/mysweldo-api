@@ -9,8 +9,11 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import org.hibernate.annotations.SQLRestriction;
+
 @Entity
 @Table(name = "payroll_benefit")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @AllArgsConstructor

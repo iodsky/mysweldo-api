@@ -596,7 +596,6 @@ class PayrollRunServiceTest {
 
             service.deletePayrollItem(runId, itemId);
 
-            verify(payrollItemRepository).delete(item);
             verify(repository).save(run);
         }
 
