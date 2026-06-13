@@ -4,6 +4,7 @@ import com.iodsky.mysweldo.pagIbig.PagibigRate;
 import com.iodsky.mysweldo.philhealth.PhilhealthRate;
 import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.sss.SssRate;
+import com.iodsky.mysweldo.tax.TaxBracket;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -147,5 +148,37 @@ class PayrollCalculatorTest {
                 BigDecimal.valueOf(20000), pagibigRate(), PayrollFrequency.MONTHLY);
 
         assertThat(result).isEqualByComparingTo("200.00");
+    }
+
+    // withholding tax uses a two-bracket setup to make SEMI_MONTHLY vs MONTHLY differences observable
+    private List<TaxBracket> twoBrackets() {
+        return List.of(
+                TaxBracket.builder()
+                        .minIncome(BigDecimal.ZERO).maxIncome(BigDecimal.valueOf(10000))
+                        .baseTax(BigDecimal.ZERO).marginalRate(new BigDecimal("0.10"))
+                        .threshold(BigDecimal.ZERO).build(),
+                TaxBracket.builder()
+                        .minIncome(new BigDecimal("10000.01")).maxIncome(null)
+                        .baseTax(BigDecimal.valueOf(1000)).marginalRate(new BigDecimal("0.20"))
+                        .threshold(BigDecimal.valueOf(10000)).build()
+        );
+    }
+
+    @Test
+    void calculateWithholdingTax_semiMonthly_doublesIncomeForBracketLookup() {
+        // income 8000 * 2 = 16000 → bracket 2: 1000 + (16000-10000)*0.20 = 1000+1200=2200 → /2 = 1100
+        BigDecimal result = calculator.calculateWithholdingTax(
+                BigDecimal.valueOf(8000), twoBrackets(), PayrollFrequency.SEMI_MONTHLY);
+
+        assertThat(result).isEqualByComparingTo("1100.00");
+    }
+
+    @Test
+    void calculateWithholdingTax_monthly_appliesIncomeDirectlyToBracket() {
+        // same income 8000 * 1 = 8000 → bracket 1: 8000*0.10=800 → /1 = 800
+        BigDecimal result = calculator.calculateWithholdingTax(
+                BigDecimal.valueOf(8000), twoBrackets(), PayrollFrequency.MONTHLY);
+
+        assertThat(result).isEqualByComparingTo("800.00");
     }
 }

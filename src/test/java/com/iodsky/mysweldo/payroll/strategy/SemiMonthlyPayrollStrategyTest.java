@@ -254,6 +254,37 @@ class SemiMonthlyPayrollStrategyTest {
     }
 
     @Test
+    void compute_monthlyRun_usesFullMonthlyRateAsBase() {
+        PayrollRun monthlyRun = PayrollRun.builder()
+                .period(PayrollPeriod.of(
+                        LocalDate.of(2026, 6, 1),
+                        LocalDate.of(2026, 6, 30),
+                        PayrollFrequency.MONTHLY))
+                .build();
+        stubAttendance(10, 1, 30, 15, 80, 2);
+
+        PayrollContext context = strategy.compute(employee(PayType.MONTHLY, 20000), monthlyRun, configuration);
+
+        assertThat(context.getPayType()).isEqualTo(PayType.MONTHLY);
+        assertThat(context.getMonthlyRate()).isEqualByComparingTo("20000");
+        // period base = full monthly rate (÷1), not semi-monthly (÷2)
+        assertThat(context.getSemiMonthlyRate()).isEqualByComparingTo("20000.00");
+        assertThat(context.getDailyRate()).isEqualByComparingTo("919.54");
+        assertThat(context.getAbsenceDeduction()).isEqualByComparingTo("919.54");
+        assertThat(context.getTardinessDeduction()).isEqualByComparingTo("57.47");
+        assertThat(context.getRegularPay()).isEqualByComparingTo("18994.25");
+        assertThat(context.getOvertimePay()).isEqualByComparingTo("287.35");
+        assertThat(context.getGrossPay()).isEqualByComparingTo("19281.60");
+        // statutory: full monthly amounts (÷1 instead of ÷2)
+        assertThat(context.getSss()).isEqualByComparingTo("450.00");
+        assertThat(context.getPhilhealth()).isEqualByComparingTo("500.00");
+        assertThat(context.getPagibig()).isEqualByComparingTo("200.00");
+        // tax: income used directly for bracket (×1), not doubled
+        assertThat(context.getWithholdingTax()).isEqualByComparingTo("1813.16");
+        assertThat(context.getNetPay()).isEqualByComparingTo("16318.44");
+    }
+
+    @Test
     void compute_policyReturnsFalse_zerosAllStatutoryFields() {
         when(statutorySchedulePolicy.shouldCollectStatutory(anyLong(), any())).thenReturn(false);
         stubAttendance(10, 0, 0, 0, 80, 0);

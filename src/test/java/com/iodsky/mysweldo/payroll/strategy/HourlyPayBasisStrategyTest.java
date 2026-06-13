@@ -2,6 +2,7 @@ package com.iodsky.mysweldo.payroll.strategy;
 
 import com.iodsky.mysweldo.attendance.AttendancePayrollSummary;
 import com.iodsky.mysweldo.payroll.core.PayrollCalculator;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -25,7 +26,7 @@ class HourlyPayBasisStrategyTest {
     @Test
     void compute_paysRegularHoursWorked() {
         PayBasisResult result = strategy.compute(
-                BigDecimal.valueOf(150), attendance(10, 0, 0, 0), BigDecimal.valueOf(80));
+                BigDecimal.valueOf(150), attendance(10, 0, 0, 0), BigDecimal.valueOf(80), PayrollFrequency.SEMI_MONTHLY);
 
         assertThat(result.regularPay()).isEqualByComparingTo("12000.00");
         assertThat(result.dailyRate()).isEqualByComparingTo("1200.00");
@@ -37,7 +38,7 @@ class HourlyPayBasisStrategyTest {
     @Test
     void compute_neverAppliesAttendanceDeductions() {
         PayBasisResult result = strategy.compute(
-                BigDecimal.valueOf(150), attendance(8, 2, 45, 30), BigDecimal.valueOf(60));
+                BigDecimal.valueOf(150), attendance(8, 2, 45, 30), BigDecimal.valueOf(60), PayrollFrequency.SEMI_MONTHLY);
 
         assertThat(result.absenceDeduction()).isEqualByComparingTo("0");
         assertThat(result.tardinessDeduction()).isEqualByComparingTo("0");
@@ -48,7 +49,7 @@ class HourlyPayBasisStrategyTest {
     @Test
     void compute_zeroRegularHoursYieldsZeroPay() {
         PayBasisResult result = strategy.compute(
-                BigDecimal.valueOf(150), attendance(0, 0, 0, 0), BigDecimal.ZERO);
+                BigDecimal.valueOf(150), attendance(0, 0, 0, 0), BigDecimal.ZERO, PayrollFrequency.SEMI_MONTHLY);
 
         assertThat(result.regularPay()).isEqualByComparingTo("0.00");
     }

@@ -77,16 +77,18 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
                 .min(standardHours)
                 .max(BigDecimal.ZERO);
 
+        PayrollFrequency frequency = payrollRun.getPeriod().getFrequency();
+
         PayType payType = employee.getSalary().getPayType();
         PayBasisStrategy payBasisStrategy = payBasisStrategyFactory.getStrategy(payType);
         PayBasisResult basis = payBasisStrategy.compute(
                 employee.getSalary().getRate(),
                 attendanceSummary,
-                regularHours
+                regularHours,
+                frequency
         );
 
         BigDecimal monthlyEquivalent = basis.monthlyEquivalent();
-        PayrollFrequency frequency = payrollRun.getPeriod().getFrequency();
 
         BigDecimal overtimePay = payrollCalculator.calculateOvertimePay(basis.hourlyRate(), approvedOvertimeHours);
 
@@ -118,7 +120,7 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
 
         BigDecimal taxableIncome = payrollCalculator.calculateTaxableIncome(grossPay, totalStatutoryDeductions);
 
-        BigDecimal withholdingTax = payrollCalculator.calculateWithholdingTax(taxableIncome, config.getIncomeTaxBrackets());
+        BigDecimal withholdingTax = payrollCalculator.calculateWithholdingTax(taxableIncome, config.getIncomeTaxBrackets(), frequency);
 
         BigDecimal totalDeductions = payrollCalculator.calculateTotalDeductions(withholdingTax, totalStatutoryDeductions);
 

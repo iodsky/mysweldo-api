@@ -16,24 +16,10 @@ import org.springframework.stereotype.Component;
 public class PayrollStrategyFactory {
 
     private final SemiMonthlyPayrollStrategy semiMonthlyPayrollStrategy;
-    // Future strategies can be injected here as needed
-    // private final MonthlyPayrollStrategy monthlyPayrollStrategy;
-    // private final WeeklyPayrollStrategy weeklyPayrollStrategy;
-    // private final BiWeeklyPayrollStrategy biWeeklyPayrollStrategy;
 
-    /**
-     * Resolves the appropriate PayrollComputationStrategy for the given payroll frequency.
-     *
-     * @param frequency The payroll frequency
-     * @return The corresponding PayrollComputationStrategy
-     * @throws PayrollRunException if no strategy is found for the given frequency
-     */
     public PayrollComputationStrategy getStrategy(PayrollFrequency frequency) {
         return switch (frequency) {
-            case SEMI_MONTHLY -> semiMonthlyPayrollStrategy;
-            case MONTHLY, WEEKLY, BI_WEEKLY -> throw new PayrollRunException(
-                    "Payroll frequency " + frequency + " is not yet supported"
-            );
+            case SEMI_MONTHLY, MONTHLY, WEEKLY, BI_WEEKLY -> semiMonthlyPayrollStrategy;
         };
     }
 }

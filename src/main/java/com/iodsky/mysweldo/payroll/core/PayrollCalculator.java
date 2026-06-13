@@ -73,6 +73,10 @@ public class PayrollCalculator {
         return monthlyRate.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
     }
 
+    public BigDecimal calculatePeriodRate(BigDecimal monthlyRate, PayrollFrequency frequency) {
+        return monthlyRate.divide(monthlyConversionFactor(frequency), 2, RoundingMode.HALF_UP);
+    }
+
     public BigDecimal calculateDailyRate(BigDecimal monthlyRate) {
         return monthlyRate.divide(AVERAGE_WORKING_DAYS_PER_MONTH, 2, RoundingMode.HALF_UP);
     }
@@ -169,9 +173,9 @@ public class PayrollCalculator {
         return sss.add(philhealth).add(pagibig).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculateWithholdingTax(BigDecimal semiMonthlyTaxableIncome, List<TaxBracket> taxBrackets) {
-
-        BigDecimal monthlyTaxableIncome = semiMonthlyTaxableIncome.multiply(SEMI_MONTHLY_PERIODS_PER_MONTH);
+    public BigDecimal calculateWithholdingTax(BigDecimal periodicTaxableIncome, List<TaxBracket> taxBrackets, PayrollFrequency frequency) {
+        BigDecimal factor = monthlyConversionFactor(frequency);
+        BigDecimal monthlyTaxableIncome = periodicTaxableIncome.multiply(factor).setScale(2, RoundingMode.HALF_UP);
 
         TaxBracket bracket = taxBrackets.stream()
                 .filter(b -> monthlyTaxableIncome.compareTo(b.getMinIncome()) >= 0
@@ -182,21 +186,23 @@ public class PayrollCalculator {
                         "Income tax bracket not found for monthly income: " + monthlyTaxableIncome
                 ));
 
-        return calculateWithholdingTaxFromBracket(
-                monthlyTaxableIncome,
-                bracket
-        );
-    }
-
-    private BigDecimal calculateWithholdingTaxFromBracket(BigDecimal monthlyEquivalent,  TaxBracket bracket) {
-        BigDecimal excessAmount = monthlyEquivalent
-                        .subtract(bracket.getThreshold())
-                        .max(BigDecimal.ZERO);
+        BigDecimal excessAmount = monthlyTaxableIncome
+                .subtract(bracket.getThreshold())
+                .max(BigDecimal.ZERO);
 
         BigDecimal monthlyTax = bracket.getBaseTax()
-                        .add(excessAmount.multiply(bracket.getMarginalRate()));
+                .add(excessAmount.multiply(bracket.getMarginalRate()));
 
-        return monthlyTax.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
+        return monthlyTax.divide(factor, 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal monthlyConversionFactor(PayrollFrequency frequency) {
+        return switch (frequency) {
+            case SEMI_MONTHLY -> BigDecimal.valueOf(2);
+            case MONTHLY -> BigDecimal.ONE;
+            case WEEKLY -> BigDecimal.valueOf(52).divide(BigDecimal.valueOf(12), 10, RoundingMode.HALF_UP);
+            case BI_WEEKLY -> BigDecimal.valueOf(26).divide(BigDecimal.valueOf(12), 10, RoundingMode.HALF_UP);
+        };
     }
 
     public BigDecimal calculateTotalDeductions(BigDecimal withholdingTax, BigDecimal totalStatutoryDeductions) {

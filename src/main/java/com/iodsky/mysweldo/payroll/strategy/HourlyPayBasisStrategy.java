@@ -2,6 +2,7 @@ package com.iodsky.mysweldo.payroll.strategy;
 
 import com.iodsky.mysweldo.attendance.AttendancePayrollSummary;
 import com.iodsky.mysweldo.payroll.core.PayrollCalculator;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -22,10 +23,10 @@ public class HourlyPayBasisStrategy implements PayBasisStrategy {
     private final PayrollCalculator payrollCalculator;
 
     @Override
-    public PayBasisResult compute(BigDecimal rate, AttendancePayrollSummary attendance, BigDecimal regularHours) {
+    public PayBasisResult compute(BigDecimal rate, AttendancePayrollSummary attendance, BigDecimal regularHours, PayrollFrequency frequency) {
         BigDecimal dailyRate = payrollCalculator.calculateDailyRateFromHourlyRate(rate);
         BigDecimal monthlyEquivalent = payrollCalculator.calculateMonthlyEquivalentFromDailyRate(dailyRate);
-        BigDecimal semiMonthlyRate = payrollCalculator.calculateSemiMonthlyRate(monthlyEquivalent);
+        BigDecimal semiMonthlyRate = payrollCalculator.calculatePeriodRate(monthlyEquivalent, frequency);
 
         BigDecimal regularPay = payrollCalculator.calculateHourlyBasisPay(rate, regularHours);
 

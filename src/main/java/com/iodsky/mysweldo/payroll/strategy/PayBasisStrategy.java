@@ -1,6 +1,7 @@
 package com.iodsky.mysweldo.payroll.strategy;
 
 import com.iodsky.mysweldo.attendance.AttendancePayrollSummary;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 
 import java.math.BigDecimal;
 
@@ -18,7 +19,8 @@ public interface PayBasisStrategy {
      * @param regularHours non-overtime hours worked, already capped at
      *                     daysWorked × 8 and floored at zero; only the HOURLY
      *                     basis uses it
+     * @param frequency    payroll frequency, used to derive the period base rate
      * @return the computed rates, deductions, and period base pay
      */
-    PayBasisResult compute(BigDecimal rate, AttendancePayrollSummary attendance, BigDecimal regularHours);
+    PayBasisResult compute(BigDecimal rate, AttendancePayrollSummary attendance, BigDecimal regularHours, PayrollFrequency frequency);
 }

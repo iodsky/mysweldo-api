@@ -2,6 +2,7 @@ package com.iodsky.mysweldo.payroll.strategy;
 
 import com.iodsky.mysweldo.attendance.AttendancePayrollSummary;
 import com.iodsky.mysweldo.payroll.core.PayrollCalculator;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -23,9 +24,9 @@ class MonthlyPayBasisStrategyTest {
     }
 
     @Test
-    void compute_derivesRateLadderFromMonthlyRate() {
+    void compute_semiMonthly_derivesHalfMonthlyRateAsBase() {
         PayBasisResult result = strategy.compute(
-                BigDecimal.valueOf(20000), attendance(10, 0, 0, 0), BigDecimal.valueOf(80));
+                BigDecimal.valueOf(20000), attendance(10, 0, 0, 0), BigDecimal.valueOf(80), PayrollFrequency.SEMI_MONTHLY);
 
         assertThat(result.monthlyEquivalent()).isEqualByComparingTo("20000");
         assertThat(result.semiMonthlyRate()).isEqualByComparingTo("10000.00");
@@ -35,9 +36,19 @@ class MonthlyPayBasisStrategyTest {
     }
 
     @Test
-    void compute_appliesAbsenceTardinessAndUndertimeDeductions() {
+    void compute_monthly_usesFullMonthlyRateAsBase() {
         PayBasisResult result = strategy.compute(
-                BigDecimal.valueOf(20000), attendance(9, 1, 30, 15), BigDecimal.valueOf(72));
+                BigDecimal.valueOf(20000), attendance(10, 0, 0, 0), BigDecimal.valueOf(80), PayrollFrequency.MONTHLY);
+
+        assertThat(result.monthlyEquivalent()).isEqualByComparingTo("20000");
+        assertThat(result.semiMonthlyRate()).isEqualByComparingTo("20000.00");
+        assertThat(result.regularPay()).isEqualByComparingTo("20000.00");
+    }
+
+    @Test
+    void compute_semiMonthly_appliesAbsenceTardinessAndUndertimeDeductions() {
+        PayBasisResult result = strategy.compute(
+                BigDecimal.valueOf(20000), attendance(9, 1, 30, 15), BigDecimal.valueOf(72), PayrollFrequency.SEMI_MONTHLY);
 
         assertThat(result.absenceDeduction()).isEqualByComparingTo("919.54");
         assertThat(result.tardinessDeduction()).isEqualByComparingTo("57.47");
@@ -49,7 +60,7 @@ class MonthlyPayBasisStrategyTest {
     @Test
     void compute_clampsRegularPayAtZeroForExtremeAbsences() {
         PayBasisResult result = strategy.compute(
-                BigDecimal.valueOf(20000), attendance(0, 30, 0, 0), BigDecimal.ZERO);
+                BigDecimal.valueOf(20000), attendance(0, 30, 0, 0), BigDecimal.ZERO, PayrollFrequency.SEMI_MONTHLY);
 
         assertThat(result.regularPay()).isEqualByComparingTo("0.00");
     }
