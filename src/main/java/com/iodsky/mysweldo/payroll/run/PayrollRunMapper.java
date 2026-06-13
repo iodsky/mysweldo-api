@@ -10,8 +10,9 @@ public class PayrollRunMapper {
 
         return PayrollRunDto.builder()
                 .id(entity.getId())
-                .periodStartDate(entity.getPeriodStartDate())
-                .periodEndDate(entity.getPeriodEndDate())
+                .periodStartDate(entity.getPeriod().getStartDate())
+                .periodEndDate(entity.getPeriod().getEndDate())
+                .payrollFrequency(entity.getPeriod().getFrequency())
                 .type(entity.getType())
                 .status(entity.getStatus())
                 .totalGrossPay(entity.getTotalGrossPay())

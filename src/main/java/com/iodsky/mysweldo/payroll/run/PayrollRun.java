@@ -6,7 +6,6 @@ import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -23,17 +22,11 @@ public class PayrollRun extends BaseModel {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "period_start_date")
-    private LocalDate periodStartDate;
-
-    @Column(name = "period_end_date")
-    private LocalDate periodEndDate;
+    @Embedded
+    private PayrollPeriod period;
 
     @Enumerated(EnumType.STRING)
     private PayrollRunType type;
-
-    @Enumerated(EnumType.STRING)
-    private PayrollFrequency payrollFrequency;
 
     @Enumerated(EnumType.STRING)
     private PayrollRunStatus status;

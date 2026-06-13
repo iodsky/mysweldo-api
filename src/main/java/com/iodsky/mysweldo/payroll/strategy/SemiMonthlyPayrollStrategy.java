@@ -45,8 +45,8 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
     public PayrollContext compute(Employee employee, PayrollRun payrollRun, PayrollConfiguration config) {
         AttendancePayrollSummary attendanceSummary = attendanceService.getAttendanceSummary(
                 employee.getId(),
-                payrollRun.getPeriodStartDate(),
-                payrollRun.getPeriodEndDate()
+                payrollRun.getPeriod().getStartDate(),
+                payrollRun.getPeriod().getEndDate()
         );
 
         List<EmployeeBenefit> benefits = employee.getBenefits();
@@ -59,14 +59,14 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
 
         BigDecimal totalHours = attendanceService.calculateTotalHoursByEmployeeId(
                 employee.getId(),
-                payrollRun.getPeriodStartDate(),
-                payrollRun.getPeriodEndDate()
+                payrollRun.getPeriod().getStartDate(),
+                payrollRun.getPeriod().getEndDate()
         );
 
         BigDecimal approvedOvertimeHours = overtimeRequestService.calculateApprovedOvertimeHours(
                 employee.getId(),
-                payrollRun.getPeriodStartDate(),
-                payrollRun.getPeriodEndDate()
+                payrollRun.getPeriod().getStartDate(),
+                payrollRun.getPeriod().getEndDate()
         );
 
         BigDecimal standardHours = attendanceSummary.getDaysWorked().multiply(BigDecimal.valueOf(8));

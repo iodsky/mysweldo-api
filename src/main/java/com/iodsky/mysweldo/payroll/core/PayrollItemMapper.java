@@ -22,8 +22,8 @@ public class PayrollItemMapper {
                 .employeeId(employee.getId())
                 .employeeName(employeeName)
                 .designation(employee.getPosition().getTitle())
-                .periodStartDate(payrollRun.getPeriodStartDate())
-                .periodEndDate(payrollRun.getPeriodEndDate())
+                .periodStartDate(payrollRun.getPeriod().getStartDate())
+                .periodEndDate(payrollRun.getPeriod().getEndDate())
 
                 // Work & time
                 .daysWorked(payroll.getDaysWorked())

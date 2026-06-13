@@ -46,7 +46,7 @@ public class PayrollBuilder {
      */
     public PayrollItem buildPayroll(Long employeeId, PayrollRun run, PayrollConfiguration config) {
         Employee employee = employeeService.getEmployeeById(employeeId);
-        PayrollComputationStrategy strategy = strategyFactory.getStrategy(run.getPayrollFrequency());
+        PayrollComputationStrategy strategy = strategyFactory.getStrategy(run.getPeriod().getFrequency());
         PayrollContext context = strategy.compute(employee, run, config);
         return buildPayrollFromContext(context, run);
     }

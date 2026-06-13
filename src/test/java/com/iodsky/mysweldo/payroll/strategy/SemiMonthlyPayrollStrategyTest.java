@@ -10,6 +10,8 @@ import com.iodsky.mysweldo.pagIbig.PagibigRate;
 import com.iodsky.mysweldo.payroll.core.PayrollCalculator;
 import com.iodsky.mysweldo.payroll.core.PayrollConfiguration;
 import com.iodsky.mysweldo.payroll.core.PayrollContext;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
+import com.iodsky.mysweldo.payroll.run.PayrollPeriod;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;
 import com.iodsky.mysweldo.payroll.run.PayrollRunException;
 import com.iodsky.mysweldo.philhealth.PhilhealthRate;
@@ -56,8 +58,10 @@ class SemiMonthlyPayrollStrategyTest {
                 attendanceService, overtimeRequestService, calculator, basisFactory);
 
         payrollRun = PayrollRun.builder()
-                .periodStartDate(LocalDate.of(2026, 6, 1))
-                .periodEndDate(LocalDate.of(2026, 6, 15))
+                .period(PayrollPeriod.of(
+                        LocalDate.of(2026, 6, 1),
+                        LocalDate.of(2026, 6, 15),
+                        PayrollFrequency.SEMI_MONTHLY))
                 .build();
 
         configuration = PayrollConfiguration.builder()

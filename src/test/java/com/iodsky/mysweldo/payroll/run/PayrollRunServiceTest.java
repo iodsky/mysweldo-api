@@ -75,10 +75,11 @@ class PayrollRunServiceTest {
         return PayrollRun.builder()
                 .id(id)
                 .status(PayrollRunStatus.DRAFT)
-                .periodStartDate(LocalDate.of(2025, 3, 1))
-                .periodEndDate(LocalDate.of(2025, 3, 31))
+                .period(PayrollPeriod.of(
+                        LocalDate.of(2025, 3, 1),
+                        LocalDate.of(2025, 3, 15),
+                        PayrollFrequency.SEMI_MONTHLY))
                 .type(PayrollRunType.REGULAR)
-                .payrollFrequency(PayrollFrequency.SEMI_MONTHLY)
                 .build();
     }
 
@@ -89,7 +90,8 @@ class PayrollRunServiceTest {
         void shouldCreatePayrollRunInDraftStatusWhenPeriodIsValid() {
             PayrollRunRequest request = new PayrollRunRequest();
             request.setPeriodStartDate(LocalDate.of(2025, 3, 1));
-            request.setPeriodEndDate(LocalDate.of(2025, 3, 31));
+            request.setPeriodEndDate(LocalDate.of(2025, 3, 15));
+            request.setPayrollFrequency(PayrollFrequency.SEMI_MONTHLY);
             request.setType(PayrollRunType.REGULAR);
             request.setNotes("March payroll");
 
@@ -103,23 +105,25 @@ class PayrollRunServiceTest {
         }
 
         @Test
-        void shouldCreatePayrollRunWhenStartDateEqualsEndDate() {
-            PayrollRunRequest request = new PayrollRunRequest();
-            LocalDate sameDay = LocalDate.of(2025, 3, 15);
-            request.setPeriodStartDate(sameDay);
-            request.setPeriodEndDate(sameDay);
-            request.setType(PayrollRunType.REGULAR);
-
-            when(mapper.toDto(any(PayrollRun.class))).thenReturn(PayrollRunDto.builder().build());
-
-            assertThatNoException().isThrownBy(() -> service.createPayrollRun(request));
-        }
-
-        @Test
         void shouldThrowBadRequestWhenPeriodEndDateIsBeforeStartDate() {
             PayrollRunRequest request = new PayrollRunRequest();
             request.setPeriodStartDate(LocalDate.of(2025, 3, 31));
             request.setPeriodEndDate(LocalDate.of(2025, 3, 1));
+            request.setPayrollFrequency(PayrollFrequency.SEMI_MONTHLY);
+            request.setType(PayrollRunType.REGULAR);
+
+            assertThatThrownBy(() -> service.createPayrollRun(request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+
+        @Test
+        void shouldThrowBadRequestWhenPeriodDurationDoesNotMatchFrequency() {
+            PayrollRunRequest request = new PayrollRunRequest();
+            request.setPeriodStartDate(LocalDate.of(2025, 3, 1));
+            request.setPeriodEndDate(LocalDate.of(2025, 3, 31));
+            request.setPayrollFrequency(PayrollFrequency.SEMI_MONTHLY);
             request.setType(PayrollRunType.REGULAR);
 
             assertThatThrownBy(() -> service.createPayrollRun(request))
@@ -444,7 +448,7 @@ class PayrollRunServiceTest {
             LocalDate end = LocalDate.of(2025, 3, 31);
             Page<PayrollRun> page = new PageImpl<>(List.of(draftRun(UUID.randomUUID())));
 
-            when(repository.getAllByPeriodStartDateGreaterThanEqualAndPeriodEndDateLessThanEqual(
+            when(repository.getAllByPeriod_StartDateGreaterThanEqualAndPeriod_EndDateLessThanEqual(
                     eq(start), eq(end), any(Pageable.class))).thenReturn(page);
             when(mapper.toDto(any(PayrollRun.class))).thenReturn(PayrollRunDto.builder().build());
 

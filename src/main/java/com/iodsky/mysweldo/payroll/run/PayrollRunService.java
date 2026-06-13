@@ -42,16 +42,20 @@ public class PayrollRunService {
     private final BenefitService benefitService;
 
     public PayrollRunDto createPayrollRun(PayrollRunRequest request) {
-
-        if (request.getPeriodEndDate().isBefore(request.getPeriodStartDate())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid period date");
+        PayrollPeriod period;
+        try {
+            period = PayrollPeriod.of(
+                    request.getPeriodStartDate(),
+                    request.getPeriodEndDate(),
+                    request.getPayrollFrequency()
+            );
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
 
         PayrollRun payrollRun = PayrollRun.builder()
-                .periodStartDate(request.getPeriodStartDate())
-                .periodEndDate(request.getPeriodEndDate())
+                .period(period)
                 .type(request.getType())
-                .payrollFrequency(request.getPayrollFrequency())
                 .status(PayrollRunStatus.DRAFT)
                 .notes(request.getNotes())
                 .build();
@@ -76,7 +80,7 @@ public class PayrollRunService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No active employees found");
         }
 
-        PayrollConfiguration configuration = calculator.loadConfiguration(run.getPeriodEndDate());
+        PayrollConfiguration configuration = calculator.loadConfiguration(run.getPeriod().getEndDate());
 
         List<PayrollItem> payrollItems = new ArrayList<>();
         List<Long> skippedIds = new ArrayList<>();
@@ -87,8 +91,8 @@ public class PayrollRunService {
                 continue;
             }
 
-            if (!attendanceService.hasAttendance(employeeId, run.getPeriodStartDate(), run.getPeriodEndDate())) {
-                log.warn("No attendance records for employee: {} in period: {} - {}", employeeId, run.getPeriodStartDate(), run.getPeriodEndDate());
+            if (!attendanceService.hasAttendance(employeeId, run.getPeriod().getStartDate(), run.getPeriod().getEndDate())) {
+                log.warn("No attendance records for employee: {} in period: {} - {}", employeeId, run.getPeriod().getStartDate(), run.getPeriod().getEndDate());
                 skippedIds.add(employeeId);
                 continue;
             }
@@ -118,7 +122,7 @@ public class PayrollRunService {
 
         if (periodStartDate != null && periodEndDate != null) {
             DateRange range = new DateRange(periodStartDate, periodEndDate);
-            result = repository.getAllByPeriodStartDateGreaterThanEqualAndPeriodEndDateLessThanEqual(range.startDate(), range.endDate(), pageable);
+            result = repository.getAllByPeriod_StartDateGreaterThanEqualAndPeriod_EndDateLessThanEqual(range.startDate(), range.endDate(), pageable);
         } else if (type != null && status != null) {
             result = repository.getAllByTypeAndStatus(type, status, pageable);
         } else if (type != null) {

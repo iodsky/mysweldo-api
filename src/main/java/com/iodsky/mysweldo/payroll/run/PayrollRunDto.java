@@ -16,6 +16,7 @@ public class PayrollRunDto {
     private UUID id;
     private LocalDate periodStartDate;
     private LocalDate periodEndDate;
+    private PayrollFrequency payrollFrequency;
     private PayrollRunType type;
     private PayrollRunStatus status;
     private BigDecimal totalGrossPay;
