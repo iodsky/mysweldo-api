@@ -5,10 +5,13 @@ import com.iodsky.mysweldo.deduction.DeductionService;
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.employee.EmployeeService;
 import com.iodsky.mysweldo.employee.EmployeeBenefit;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
+import com.iodsky.mysweldo.payroll.run.PayrollRunException;
 import com.iodsky.mysweldo.payroll.strategy.PayrollComputationStrategy;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;
 import com.iodsky.mysweldo.payroll.strategy.PayrollStrategyFactory;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -29,6 +32,7 @@ import java.util.List;
  */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class PayrollBuilder {
 
     private final EmployeeService employeeService;
@@ -46,7 +50,22 @@ public class PayrollBuilder {
      */
     public PayrollItem buildPayroll(Long employeeId, PayrollRun run, PayrollConfiguration config) {
         Employee employee = employeeService.getEmployeeById(employeeId);
-        PayrollComputationStrategy strategy = strategyFactory.getStrategy(run.getPeriod().getFrequency());
+
+        PayrollFrequency runFrequency = run.getPeriod().getFrequency();
+        PayrollFrequency employeeFrequency = employee.getSalary() != null
+                ? employee.getSalary().getPayrollFrequency()
+                : null;
+
+        if (employeeFrequency == null) {
+            log.warn("Employee {} has no payroll frequency set; assuming run frequency {}", employeeId, runFrequency);
+        } else if (employeeFrequency != runFrequency) {
+            throw new PayrollRunException(
+                    "Employee " + employeeId + " payroll frequency " + employeeFrequency
+                    + " does not match run frequency " + runFrequency
+            );
+        }
+
+        PayrollComputationStrategy strategy = strategyFactory.getStrategy(runFrequency);
         PayrollContext context = strategy.compute(employee, run, config);
         return buildPayrollFromContext(context, run);
     }
