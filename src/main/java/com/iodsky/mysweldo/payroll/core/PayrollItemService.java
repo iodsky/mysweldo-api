@@ -29,7 +29,7 @@ public class PayrollItemService {
             LocalDate startDate = period.atDay(1);
             LocalDate endDate = period.atEndOfMonth();
 
-            return payrollRepository.findAllByEmployee_IdAndPayrollRun_PeriodStartDateLessThanEqualAndPayrollRun_PeriodEndDateGreaterThanEqual(
+            return payrollRepository.findAllByEmployee_IdAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
                     id,
                     endDate,
                     startDate,

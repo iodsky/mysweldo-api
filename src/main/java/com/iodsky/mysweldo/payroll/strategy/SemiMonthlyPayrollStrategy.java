@@ -8,6 +8,8 @@ import com.iodsky.mysweldo.employee.PayType;
 import com.iodsky.mysweldo.payroll.core.PayrollCalculator;
 import com.iodsky.mysweldo.payroll.core.PayrollConfiguration;
 import com.iodsky.mysweldo.payroll.core.PayrollContext;
+import com.iodsky.mysweldo.payroll.core.StatutorySchedulePolicy;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;
 import com.iodsky.mysweldo.payroll.run.PayrollRunException;
 import com.iodsky.mysweldo.overtime.OvertimeRequestService;
@@ -32,6 +34,7 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
     private final OvertimeRequestService overtimeRequestService;
     private final PayrollCalculator payrollCalculator;
     private final PayBasisStrategyFactory payBasisStrategyFactory;
+    private final StatutorySchedulePolicy statutorySchedulePolicy;
 
     /**
      * Computes payroll for a SEMI_MONTHLY employee within a given payroll run.
@@ -83,6 +86,7 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
         );
 
         BigDecimal monthlyEquivalent = basis.monthlyEquivalent();
+        PayrollFrequency frequency = payrollRun.getPeriod().getFrequency();
 
         BigDecimal overtimePay = payrollCalculator.calculateOvertimePay(basis.hourlyRate(), approvedOvertimeHours);
 
@@ -92,14 +96,24 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
 
         BigDecimal grossPay = payrollCalculator.calculateGrossPay(basis.regularPay(), overtimePay, taxableBenefits);
 
-        BigDecimal sss = payrollCalculator.calculateSssDeduction(monthlyEquivalent, config.getSssRateTable());
-        BigDecimal philhealth = payrollCalculator.calculatePhilhealthDeduction(monthlyEquivalent, config.getPhilhealthRateTable());
-        BigDecimal pagibig = payrollCalculator.calculatePagibigDeduction(monthlyEquivalent, config.getPagibigRateTable());
-        BigDecimal totalStatutoryDeductions = payrollCalculator.calculateTotalStatutoryDeductions(sss, philhealth, pagibig);
+        BigDecimal sss = payrollCalculator.calculateSssDeduction(monthlyEquivalent, config.getSssRateTable(), frequency);
+        BigDecimal philhealth = payrollCalculator.calculatePhilhealthDeduction(monthlyEquivalent, config.getPhilhealthRateTable(), frequency);
+        BigDecimal pagibig = payrollCalculator.calculatePagibigDeduction(monthlyEquivalent, config.getPagibigRateTable(), frequency);
 
-        BigDecimal sssEr = payrollCalculator.calculateSssEmployerContribution(monthlyEquivalent, config.getSssRateTable());
-        BigDecimal philhealthEr = payrollCalculator.calculatePhilhealthEmployerContribution(monthlyEquivalent, config.getPhilhealthRateTable());
-        BigDecimal pagibigEr = payrollCalculator.calculatePagibigEmployerContribution(monthlyEquivalent, config.getPagibigRateTable());
+        BigDecimal sssEr = payrollCalculator.calculateSssEmployerContribution(monthlyEquivalent, config.getSssRateTable(), frequency);
+        BigDecimal philhealthEr = payrollCalculator.calculatePhilhealthEmployerContribution(monthlyEquivalent, config.getPhilhealthRateTable(), frequency);
+        BigDecimal pagibigEr = payrollCalculator.calculatePagibigEmployerContribution(monthlyEquivalent, config.getPagibigRateTable(), frequency);
+
+        if (!statutorySchedulePolicy.shouldCollectStatutory(employee.getId(), payrollRun)) {
+            sss = BigDecimal.ZERO;
+            philhealth = BigDecimal.ZERO;
+            pagibig = BigDecimal.ZERO;
+            sssEr = BigDecimal.ZERO;
+            philhealthEr = BigDecimal.ZERO;
+            pagibigEr = BigDecimal.ZERO;
+        }
+
+        BigDecimal totalStatutoryDeductions = payrollCalculator.calculateTotalStatutoryDeductions(sss, philhealth, pagibig);
         BigDecimal totalEmployerContributions = payrollCalculator.calculateTotalEmployerContributions(sssEr, philhealthEr, pagibigEr);
 
         BigDecimal taxableIncome = payrollCalculator.calculateTaxableIncome(grossPay, totalStatutoryDeductions);

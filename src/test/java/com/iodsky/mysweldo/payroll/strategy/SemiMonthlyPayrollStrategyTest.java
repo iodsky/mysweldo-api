@@ -10,6 +10,7 @@ import com.iodsky.mysweldo.pagIbig.PagibigRate;
 import com.iodsky.mysweldo.payroll.core.PayrollCalculator;
 import com.iodsky.mysweldo.payroll.core.PayrollConfiguration;
 import com.iodsky.mysweldo.payroll.core.PayrollContext;
+import com.iodsky.mysweldo.payroll.core.StatutorySchedulePolicy;
 import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.payroll.run.PayrollPeriod;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;
@@ -31,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +43,9 @@ class SemiMonthlyPayrollStrategyTest {
 
     @Mock
     private OvertimeRequestService overtimeRequestService;
+
+    @Mock
+    private StatutorySchedulePolicy statutorySchedulePolicy;
 
     private SemiMonthlyPayrollStrategy strategy;
     private PayrollRun payrollRun;
@@ -55,7 +60,9 @@ class SemiMonthlyPayrollStrategyTest {
                 new HourlyPayBasisStrategy(calculator)
         );
         strategy = new SemiMonthlyPayrollStrategy(
-                attendanceService, overtimeRequestService, calculator, basisFactory);
+                attendanceService, overtimeRequestService, calculator, basisFactory, statutorySchedulePolicy);
+
+        lenient().when(statutorySchedulePolicy.shouldCollectStatutory(anyLong(), any())).thenReturn(true);
 
         payrollRun = PayrollRun.builder()
                 .period(PayrollPeriod.of(
@@ -244,5 +251,23 @@ class SemiMonthlyPayrollStrategyTest {
         assertThatThrownBy(() -> strategy.compute(employee, payrollRun, configuration))
                 .isInstanceOf(PayrollRunException.class)
                 .hasMessageContaining("No salary record found");
+    }
+
+    @Test
+    void compute_policyReturnsFalse_zerosAllStatutoryFields() {
+        when(statutorySchedulePolicy.shouldCollectStatutory(anyLong(), any())).thenReturn(false);
+        stubAttendance(10, 0, 0, 0, 80, 0);
+
+        PayrollContext context = strategy.compute(employee(PayType.MONTHLY, 20000), payrollRun, configuration);
+
+        assertThat(context.getSss()).isEqualByComparingTo("0");
+        assertThat(context.getPhilhealth()).isEqualByComparingTo("0");
+        assertThat(context.getPagibig()).isEqualByComparingTo("0");
+        assertThat(context.getSssEr()).isEqualByComparingTo("0");
+        assertThat(context.getPhilhealthEr()).isEqualByComparingTo("0");
+        assertThat(context.getPagibigEr()).isEqualByComparingTo("0");
+        // withholding tax still applies — netPay = grossPay - withholdingTax (no statutory deductions)
+        assertThat(context.getNetPay()).isEqualByComparingTo(
+                context.getGrossPay().subtract(context.getWithholdingTax()));
     }
 }

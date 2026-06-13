@@ -71,7 +71,7 @@ class PayrollItemServiceTest {
 
             Page<PayrollItem> expectedPage = new PageImpl<>(List.of(PayrollItem.builder().build()));
             when(userService.getAuthenticatedUser()).thenReturn(payrollUser);
-            when(payrollRepository.findAllByEmployee_IdAndPayrollRun_PeriodStartDateLessThanEqualAndPayrollRun_PeriodEndDateGreaterThanEqual(
+            when(payrollRepository.findAllByEmployee_IdAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
                     eq(1L), eq(expectedEnd), eq(expectedStart), any(Pageable.class)))
                     .thenReturn(expectedPage);
 
@@ -87,13 +87,13 @@ class PayrollItemServiceTest {
             LocalDate expectedEnd = LocalDate.of(2025, 2, 28);
 
             when(userService.getAuthenticatedUser()).thenReturn(payrollUser);
-            when(payrollRepository.findAllByEmployee_IdAndPayrollRun_PeriodStartDateLessThanEqualAndPayrollRun_PeriodEndDateGreaterThanEqual(
+            when(payrollRepository.findAllByEmployee_IdAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
                     eq(1L), eq(expectedEnd), eq(expectedStart), any(Pageable.class)))
                     .thenReturn(new PageImpl<>(List.of()));
 
             service.getAllEmployeePayroll(0, 10, february);
 
-            verify(payrollRepository).findAllByEmployee_IdAndPayrollRun_PeriodStartDateLessThanEqualAndPayrollRun_PeriodEndDateGreaterThanEqual(
+            verify(payrollRepository).findAllByEmployee_IdAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
                     eq(1L), eq(expectedEnd), eq(expectedStart), any(Pageable.class));
         }
     }

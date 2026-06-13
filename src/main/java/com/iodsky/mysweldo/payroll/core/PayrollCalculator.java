@@ -7,6 +7,7 @@ import com.iodsky.mysweldo.philhealth.PhilhealthRate;
 import com.iodsky.mysweldo.philhealth.PhilhealthRateRepository;
 import com.iodsky.mysweldo.sss.SssRate;
 import com.iodsky.mysweldo.sss.SssRateRepository;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.payroll.run.PayrollRunException;
 import com.iodsky.mysweldo.tax.TaxBracket;
 import com.iodsky.mysweldo.tax.TaxBracketRepository;
@@ -126,25 +127,25 @@ public class PayrollCalculator {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculatePhilhealthDeduction(BigDecimal basicSalary, PhilhealthRate config) {
+    public BigDecimal calculatePhilhealthDeduction(BigDecimal basicSalary, PhilhealthRate config, PayrollFrequency frequency) {
         if (basicSalary.compareTo(config.getMinSalaryFloor()) <= 0) {
-            // Fixed contribution is equally shared: divide by 2 for employee share, then by 2 for semi-monthly
+            // Fixed contribution is equally shared: divide by 2 for employee share, then by period divisor
             return config.getFixedContribution()
                     .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP)
-                    .divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
+                    .divide(periodicDivisor(frequency), 2, RoundingMode.HALF_UP);
         }
 
         BigDecimal cappedSalary = basicSalary.min(config.getMaxSalaryCap());
 
         BigDecimal monthlyPremium = cappedSalary.multiply(config.getPremiumRate());
 
-        // Premium is equally shared: divide by 2 for employee share, then by 2 for semi-monthly
+        // Premium is equally shared: divide by 2 for employee share, then by period divisor
         return monthlyPremium
                 .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP)
-                .divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
+                .divide(periodicDivisor(frequency), 2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculatePagibigDeduction(BigDecimal basicSalary, PagibigRate config) {
+    public BigDecimal calculatePagibigDeduction(BigDecimal basicSalary, PagibigRate config, PayrollFrequency frequency) {
         BigDecimal monthlySalary = basicSalary.min(config.getMaxSalaryCap());
         BigDecimal rate;
 
@@ -155,18 +156,13 @@ public class PayrollCalculator {
         }
 
         BigDecimal monthlyContribution = monthlySalary.multiply(rate);
-        return monthlyContribution.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
+        return monthlyContribution.divide(periodicDivisor(frequency), 2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculateSssDeduction(BigDecimal basicSalary, SssRate sssRateTable) {
-        // Find the appropriate salary bracket
+    public BigDecimal calculateSssDeduction(BigDecimal basicSalary, SssRate sssRateTable, PayrollFrequency frequency) {
         SssRate.SalaryBracket bracket = sssRateTable.findBracket(basicSalary);
-
-        // Calculate the monthly contribution based on MSC
         BigDecimal monthlyContribution = bracket.getMsc().multiply(sssRateTable.getEmployeeRate());
-
-        // Divide by 2 for semi-monthly payroll
-        return monthlyContribution.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
+        return monthlyContribution.divide(periodicDivisor(frequency), 2, RoundingMode.HALF_UP);
     }
 
     public BigDecimal calculateTotalStatutoryDeductions(BigDecimal sss, BigDecimal philhealth, BigDecimal pagibig) {
@@ -207,23 +203,29 @@ public class PayrollCalculator {
         return withholdingTax.add(totalStatutoryDeductions).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculateSssEmployerContribution(BigDecimal basicSalary, SssRate config) {
+    public BigDecimal calculateSssEmployerContribution(BigDecimal basicSalary, SssRate config, PayrollFrequency frequency) {
         SssRate.SalaryBracket bracket = config.findBracket(basicSalary);
         BigDecimal monthlyContribution = bracket.getMsc().multiply(config.getEmployerRate());
-        return monthlyContribution.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
+        return monthlyContribution.divide(periodicDivisor(frequency), 2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal calculatePhilhealthEmployerContribution(BigDecimal basicSalary, PhilhealthRate config) {
+    public BigDecimal calculatePhilhealthEmployerContribution(BigDecimal basicSalary, PhilhealthRate config, PayrollFrequency frequency) {
         // PhilHealth premium is equally shared between employer and employee
         // Employer contribution equals employee deduction
-        return calculatePhilhealthDeduction(basicSalary, config);
+        return calculatePhilhealthDeduction(basicSalary, config, frequency);
     }
 
-    public BigDecimal calculatePagibigEmployerContribution(BigDecimal basicSalary, PagibigRate config) {
+    public BigDecimal calculatePagibigEmployerContribution(BigDecimal basicSalary, PagibigRate config, PayrollFrequency frequency) {
         // Employer always uses the flat employer_rate regardless of income tier
         BigDecimal monthlySalary = basicSalary.min(config.getMaxSalaryCap());
         BigDecimal monthlyContribution = monthlySalary.multiply(config.getEmployerRate());
-        return monthlyContribution.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
+        return monthlyContribution.divide(periodicDivisor(frequency), 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal periodicDivisor(PayrollFrequency frequency) {
+        return frequency == PayrollFrequency.SEMI_MONTHLY
+                ? SEMI_MONTHLY_PERIODS_PER_MONTH
+                : BigDecimal.ONE;
     }
 
     public BigDecimal calculateTotalEmployerContributions(BigDecimal sssEr, BigDecimal philhealthEr, BigDecimal pagibigEr) {
