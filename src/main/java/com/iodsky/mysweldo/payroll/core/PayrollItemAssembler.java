@@ -9,7 +9,6 @@ import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.payroll.run.PayrollRunException;
 import com.iodsky.mysweldo.payroll.strategy.PayrollComputationStrategy;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;
-import com.iodsky.mysweldo.payroll.strategy.PayrollStrategyFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -20,35 +19,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * PayrollBuilder is the orchestrator that coordinates the payroll computation process.
- *
- * Responsibilities:
- * 1. Fetch employee data
- * 2. Delegate calculations to an appropriate PayrollComputationStrategy
- * 3. Construct PayrollContext from computed values
- * 4. Build final PayrollItem entity with all related entities
- *
- * This design separates application logic (data orchestration) from business logic (calculations).
+ * Orchestrates payroll computation for a single employee:
+ * validates frequency, delegates to a PayrollComputationStrategy,
+ * and assembles the resulting PayrollItem entity.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class PayrollBuilder {
+public class PayrollItemAssembler {
 
     private final EmployeeService employeeService;
     private final DeductionService deductionService;
     private final ContributionService contributionService;
-    private final PayrollStrategyFactory strategyFactory;
+    private final PayrollComputationStrategy strategy;
 
-    /**
-     * Builds a complete PayrollItem for an employee within a payroll run.
-     *
-     * @param employeeId ID of the employee
-     * @param run The payroll run
-     * @param config Payroll configuration (rates, tax brackets)
-     * @return A complete PayrollItem with all deductions, benefits, and contributions
-     */
-    public PayrollItem buildPayroll(Long employeeId, PayrollRun run, PayrollConfiguration config) {
+    public PayrollItem buildPayroll(Long employeeId, PayrollRun run, StatutoryRateSnapshot rates) {
         Employee employee = employeeService.getEmployeeById(employeeId);
 
         PayrollFrequency runFrequency = run.getPeriod().getFrequency();
@@ -65,46 +50,38 @@ public class PayrollBuilder {
             );
         }
 
-        PayrollComputationStrategy strategy = strategyFactory.getStrategy(runFrequency);
-        PayrollContext context = strategy.compute(employee, run, config);
-        return buildPayrollFromContext(context, run);
+        PayrollComputationResult result = strategy.compute(employee, run, rates);
+        return assemblePayrollItem(result, run);
     }
 
-    /**
-     * Transforms a PayrollContext into a persistable PayrollItem entity.
-     *
-     * @param context The computation snapshot containing all calculated values
-     * @param payrollRun The associated payroll run
-     * @return A complete PayrollItem with all related entities
-     */
-    private PayrollItem buildPayrollFromContext(PayrollContext context, PayrollRun payrollRun) {
-        List<PayrollDeduction> deductions = buildDeductions(context);
-        List<PayrollBenefit> payrollBenefits = buildPayrollBenefits(context.getEmployeeBenefits());
-        List<EmployerContribution> employerContributions = buildEmployerContributions(context);
+    private PayrollItem assemblePayrollItem(PayrollComputationResult result, PayrollRun payrollRun) {
+        List<PayrollDeduction> deductions = buildDeductions(result);
+        List<PayrollBenefit> payrollBenefits = buildPayrollBenefits(result.getEmployeeBenefits());
+        List<EmployerContribution> employerContributions = buildEmployerContributions(result);
 
-        int overtimeMinutes = context.getOvertimeHours().multiply(BigDecimal.valueOf(60)).setScale(2, RoundingMode.HALF_UP).intValue();
+        int overtimeMinutes = result.getOvertimeHours().multiply(BigDecimal.valueOf(60)).setScale(2, RoundingMode.HALF_UP).intValue();
 
         PayrollItem payroll = PayrollItem.builder()
                 .payrollRun(payrollRun)
-                .employee(context.getEmployee())
-                .payType(context.getPayType())
-                .monthlyRate(context.getMonthlyRate())
-                .semiMonthlyRate(context.getSemiMonthlyRate())
-                .dailyRate(context.getDailyRate())
-                .hourlyRate(context.getHourlyRate())
-                .daysWorked(context.getDaysWorked())
-                .absences(context.getAbsenceDays())
-                .tardinessMinutes(context.getTardinessMinutes())
-                .undertimeMinutes(context.getUndertimeMinutes())
+                .employee(result.getEmployee())
+                .payType(result.getPayType())
+                .monthlyRate(result.getMonthlyRate())
+                .semiMonthlyRate(result.getSemiMonthlyRate())
+                .dailyRate(result.getDailyRate())
+                .hourlyRate(result.getHourlyRate())
+                .daysWorked(result.getDaysWorked())
+                .absences(result.getAbsenceDays())
+                .tardinessMinutes(result.getTardinessMinutes())
+                .undertimeMinutes(result.getUndertimeMinutes())
                 .overtimeMinutes(overtimeMinutes)
-                .overtimePay(context.getOvertimePay())
-                .grossPay(context.getGrossPay())
+                .overtimePay(result.getOvertimePay())
+                .grossPay(result.getGrossPay())
                 .benefits(payrollBenefits)
-                .totalBenefits(context.getTotalBenefits())
+                .totalBenefits(result.getTotalBenefits())
                 .deductions(deductions)
-                .totalDeductions(context.getTotalDeductions())
+                .totalDeductions(result.getTotalDeductions())
                 .employerContributions(employerContributions)
-                .netPay(context.getNetPay())
+                .netPay(result.getNetPay())
                 .build();
 
         deductions.forEach(d -> d.setPayrollItem(payroll));
@@ -114,27 +91,27 @@ public class PayrollBuilder {
         return payroll;
     }
 
-    private List<PayrollDeduction> buildDeductions(PayrollContext context) {
+    private List<PayrollDeduction> buildDeductions(PayrollComputationResult result) {
         List<PayrollDeduction> deductions = new ArrayList<>();
 
         deductions.add(PayrollDeduction.builder()
                 .deduction(deductionService.getDeductionByCode("SSS"))
-                .amount(context.getSss())
+                .amount(result.getSss())
                 .build());
 
         deductions.add(PayrollDeduction.builder()
                 .deduction(deductionService.getDeductionByCode("PHIC"))
-                .amount(context.getPhilhealth())
+                .amount(result.getPhilhealth())
                 .build());
 
         deductions.add(PayrollDeduction.builder()
                 .deduction(deductionService.getDeductionByCode("HDMF"))
-                .amount(context.getPagibig())
+                .amount(result.getPagibig())
                 .build());
 
         deductions.add(PayrollDeduction.builder()
                 .deduction(deductionService.getDeductionByCode("TAX"))
-                .amount(context.getWithholdingTax())
+                .amount(result.getWithholdingTax())
                 .build());
 
         return deductions;
@@ -149,22 +126,22 @@ public class PayrollBuilder {
                 .toList();
     }
 
-    private List<EmployerContribution> buildEmployerContributions(PayrollContext context) {
+    private List<EmployerContribution> buildEmployerContributions(PayrollComputationResult result) {
         List<EmployerContribution> contributions = new ArrayList<>();
 
         contributions.add(EmployerContribution.builder()
                 .contribution(contributionService.getContributionByCode("SSS_ER"))
-                .amount(context.getSssEr())
+                .amount(result.getSssEr())
                 .build());
 
         contributions.add(EmployerContribution.builder()
                 .contribution(contributionService.getContributionByCode("PHIC_ER"))
-                .amount(context.getPhilhealthEr())
+                .amount(result.getPhilhealthEr())
                 .build());
 
         contributions.add(EmployerContribution.builder()
                 .contribution(contributionService.getContributionByCode("HDMF_ER"))
-                .amount(context.getPagibigEr())
+                .amount(result.getPagibigEr())
                 .build());
 
         return contributions;

@@ -8,8 +8,8 @@ import com.iodsky.mysweldo.employee.Salary;
 import com.iodsky.mysweldo.overtime.OvertimeRequestService;
 import com.iodsky.mysweldo.pagIbig.PagibigRate;
 import com.iodsky.mysweldo.payroll.core.PayrollCalculator;
-import com.iodsky.mysweldo.payroll.core.PayrollConfiguration;
-import com.iodsky.mysweldo.payroll.core.PayrollContext;
+import com.iodsky.mysweldo.payroll.core.PayrollComputationResult;
+import com.iodsky.mysweldo.payroll.core.StatutoryRateSnapshot;
 import com.iodsky.mysweldo.payroll.core.StatutorySchedulePolicy;
 import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.payroll.run.PayrollPeriod;
@@ -36,7 +36,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class SemiMonthlyPayrollStrategyTest {
+class StandardPayrollComputationStrategyTest {
 
     @Mock
     private AttendanceService attendanceService;
@@ -47,19 +47,19 @@ class SemiMonthlyPayrollStrategyTest {
     @Mock
     private StatutorySchedulePolicy statutorySchedulePolicy;
 
-    private SemiMonthlyPayrollStrategy strategy;
+    private StandardPayrollComputationStrategy strategy;
     private PayrollRun payrollRun;
-    private PayrollConfiguration configuration;
+    private StatutoryRateSnapshot rates;
 
     @BeforeEach
     void setUp() {
-        PayrollCalculator calculator = new PayrollCalculator(null, null, null, null);
+        PayrollCalculator calculator = new PayrollCalculator();
         PayBasisStrategyFactory basisFactory = new PayBasisStrategyFactory(
                 new MonthlyPayBasisStrategy(calculator),
                 new DailyPayBasisStrategy(calculator),
                 new HourlyPayBasisStrategy(calculator)
         );
-        strategy = new SemiMonthlyPayrollStrategy(
+        strategy = new StandardPayrollComputationStrategy(
                 attendanceService, overtimeRequestService, calculator, basisFactory, statutorySchedulePolicy);
 
         lenient().when(statutorySchedulePolicy.shouldCollectStatutory(anyLong(), any())).thenReturn(true);
@@ -71,7 +71,7 @@ class SemiMonthlyPayrollStrategyTest {
                         PayrollFrequency.SEMI_MONTHLY))
                 .build();
 
-        configuration = PayrollConfiguration.builder()
+        rates = StatutoryRateSnapshot.builder()
                 .sssRateTable(SssRate.builder()
                         .employeeRate(new BigDecimal("0.045"))
                         .employerRate(new BigDecimal("0.095"))
@@ -133,108 +133,108 @@ class SemiMonthlyPayrollStrategyTest {
     void compute_monthlyGoldenPath_matchesPreBasisRefactorNumbers() {
         stubAttendance(10, 1, 30, 15, 80, 2);
 
-        PayrollContext context = strategy.compute(employee(PayType.MONTHLY, 20000), payrollRun, configuration);
+        PayrollComputationResult result = strategy.compute(employee(PayType.MONTHLY, 20000), payrollRun, rates);
 
-        assertThat(context.getPayType()).isEqualTo(PayType.MONTHLY);
-        assertThat(context.getMonthlyRate()).isEqualByComparingTo("20000");
-        assertThat(context.getSemiMonthlyRate()).isEqualByComparingTo("10000.00");
-        assertThat(context.getDailyRate()).isEqualByComparingTo("919.54");
-        assertThat(context.getHourlyRate()).isEqualByComparingTo("114.94");
-        assertThat(context.getAbsenceDeduction()).isEqualByComparingTo("919.54");
-        assertThat(context.getTardinessDeduction()).isEqualByComparingTo("57.47");
-        assertThat(context.getUndertimeDeduction()).isEqualByComparingTo("28.74");
-        assertThat(context.getRegularPay()).isEqualByComparingTo("8994.25");
+        assertThat(result.getPayType()).isEqualTo(PayType.MONTHLY);
+        assertThat(result.getMonthlyRate()).isEqualByComparingTo("20000");
+        assertThat(result.getSemiMonthlyRate()).isEqualByComparingTo("10000.00");
+        assertThat(result.getDailyRate()).isEqualByComparingTo("919.54");
+        assertThat(result.getHourlyRate()).isEqualByComparingTo("114.94");
+        assertThat(result.getAbsenceDeduction()).isEqualByComparingTo("919.54");
+        assertThat(result.getTardinessDeduction()).isEqualByComparingTo("57.47");
+        assertThat(result.getUndertimeDeduction()).isEqualByComparingTo("28.74");
+        assertThat(result.getRegularPay()).isEqualByComparingTo("8994.25");
         // 114.94 * 2 * 1.25
-        assertThat(context.getOvertimePay()).isEqualByComparingTo("287.35");
-        assertThat(context.getGrossPay()).isEqualByComparingTo("9281.60");
+        assertThat(result.getOvertimePay()).isEqualByComparingTo("287.35");
+        assertThat(result.getGrossPay()).isEqualByComparingTo("9281.60");
         // SSS: MSC 10000 * 0.045 / 2; PhilHealth: 20000 * 0.05 / 2 / 2; Pag-IBIG: 10000 * 0.02 / 2
-        assertThat(context.getSss()).isEqualByComparingTo("225.00");
-        assertThat(context.getPhilhealth()).isEqualByComparingTo("250.00");
-        assertThat(context.getPagibig()).isEqualByComparingTo("100.00");
-        assertThat(context.getTaxableIncome()).isEqualByComparingTo("8706.60");
+        assertThat(result.getSss()).isEqualByComparingTo("225.00");
+        assertThat(result.getPhilhealth()).isEqualByComparingTo("250.00");
+        assertThat(result.getPagibig()).isEqualByComparingTo("100.00");
+        assertThat(result.getTaxableIncome()).isEqualByComparingTo("8706.60");
         // (8706.60 * 2) * 0.10 / 2
-        assertThat(context.getWithholdingTax()).isEqualByComparingTo("870.66");
-        assertThat(context.getNetPay()).isEqualByComparingTo("7835.94");
+        assertThat(result.getWithholdingTax()).isEqualByComparingTo("870.66");
+        assertThat(result.getNetPay()).isEqualByComparingTo("7835.94");
     }
 
     @Test
     void compute_dailyEmployee_paysDaysWorkedAndUsesMonthlyEquivalentForStatutory() {
         stubAttendance(10, 3, 30, 0, 80, 2);
 
-        PayrollContext context = strategy.compute(employee(PayType.DAILY, 800), payrollRun, configuration);
+        PayrollComputationResult result = strategy.compute(employee(PayType.DAILY, 800), payrollRun, rates);
 
-        assertThat(context.getPayType()).isEqualTo(PayType.DAILY);
+        assertThat(result.getPayType()).isEqualTo(PayType.DAILY);
         // 800 * 21.75, not 800 treated as a monthly rate
-        assertThat(context.getMonthlyRate()).isEqualByComparingTo("17400.00");
-        assertThat(context.getDailyRate()).isEqualByComparingTo("800");
-        assertThat(context.getHourlyRate()).isEqualByComparingTo("100.00");
+        assertThat(result.getMonthlyRate()).isEqualByComparingTo("17400.00");
+        assertThat(result.getDailyRate()).isEqualByComparingTo("800");
+        assertThat(result.getHourlyRate()).isEqualByComparingTo("100.00");
         // 800 * 10 - 50.00 tardiness; absences not deducted
-        assertThat(context.getAbsenceDeduction()).isEqualByComparingTo("0");
-        assertThat(context.getTardinessDeduction()).isEqualByComparingTo("50.00");
-        assertThat(context.getRegularPay()).isEqualByComparingTo("7950.00");
+        assertThat(result.getAbsenceDeduction()).isEqualByComparingTo("0");
+        assertThat(result.getTardinessDeduction()).isEqualByComparingTo("50.00");
+        assertThat(result.getRegularPay()).isEqualByComparingTo("7950.00");
         // 100 * 2 * 1.25
-        assertThat(context.getOvertimePay()).isEqualByComparingTo("250.00");
+        assertThat(result.getOvertimePay()).isEqualByComparingTo("250.00");
         // statutory computed from 17400: SSS MSC 10000, PhilHealth 17400 * 0.05 / 4
-        assertThat(context.getSss()).isEqualByComparingTo("225.00");
-        assertThat(context.getPhilhealth()).isEqualByComparingTo("217.50");
-        assertThat(context.getPagibig()).isEqualByComparingTo("100.00");
+        assertThat(result.getSss()).isEqualByComparingTo("225.00");
+        assertThat(result.getPhilhealth()).isEqualByComparingTo("217.50");
+        assertThat(result.getPagibig()).isEqualByComparingTo("100.00");
     }
 
     @Test
     void compute_hourlyEmployee_paysRegularHoursAndUsesMonthlyEquivalentForStatutory() {
         stubAttendance(10, 2, 45, 10, 88, 8);
 
-        PayrollContext context = strategy.compute(employee(PayType.HOURLY, 150), payrollRun, configuration);
+        PayrollComputationResult result = strategy.compute(employee(PayType.HOURLY, 150), payrollRun, rates);
 
-        assertThat(context.getPayType()).isEqualTo(PayType.HOURLY);
+        assertThat(result.getPayType()).isEqualTo(PayType.HOURLY);
         // 150 * 8 * 21.75
-        assertThat(context.getMonthlyRate()).isEqualByComparingTo("26100.00");
-        assertThat(context.getDailyRate()).isEqualByComparingTo("1200.00");
-        assertThat(context.getHourlyRate()).isEqualByComparingTo("150");
+        assertThat(result.getMonthlyRate()).isEqualByComparingTo("26100.00");
+        assertThat(result.getDailyRate()).isEqualByComparingTo("1200.00");
+        assertThat(result.getHourlyRate()).isEqualByComparingTo("150");
         // regularHours = min(88 - 8, 80) = 80
-        assertThat(context.getRegularHours()).isEqualByComparingTo("80");
-        assertThat(context.getRegularPay()).isEqualByComparingTo("12000.00");
+        assertThat(result.getRegularHours()).isEqualByComparingTo("80");
+        assertThat(result.getRegularPay()).isEqualByComparingTo("12000.00");
         // 150 * 8 * 1.25
-        assertThat(context.getOvertimePay()).isEqualByComparingTo("1500.00");
-        assertThat(context.getAbsenceDeduction()).isEqualByComparingTo("0");
-        assertThat(context.getTardinessDeduction()).isEqualByComparingTo("0");
-        assertThat(context.getUndertimeDeduction()).isEqualByComparingTo("0");
+        assertThat(result.getOvertimePay()).isEqualByComparingTo("1500.00");
+        assertThat(result.getAbsenceDeduction()).isEqualByComparingTo("0");
+        assertThat(result.getTardinessDeduction()).isEqualByComparingTo("0");
+        assertThat(result.getUndertimeDeduction()).isEqualByComparingTo("0");
         // statutory computed from 26100: second SSS bracket MSC 20000
-        assertThat(context.getSss()).isEqualByComparingTo("450.00");
-        assertThat(context.getPhilhealth()).isEqualByComparingTo("326.25");
+        assertThat(result.getSss()).isEqualByComparingTo("450.00");
+        assertThat(result.getPhilhealth()).isEqualByComparingTo("326.25");
     }
 
     @Test
     void compute_capsUnapprovedHoursAtStandardHours() {
         stubAttendance(10, 0, 0, 0, 90, 0);
 
-        PayrollContext context = strategy.compute(employee(PayType.HOURLY, 150), payrollRun, configuration);
+        PayrollComputationResult result = strategy.compute(employee(PayType.HOURLY, 150), payrollRun, rates);
 
         // 10 hours beyond daysWorked * 8 without approved OT are unpaid
-        assertThat(context.getRegularHours()).isEqualByComparingTo("80");
-        assertThat(context.getRegularPay()).isEqualByComparingTo("12000.00");
-        assertThat(context.getOvertimePay()).isEqualByComparingTo("0.00");
+        assertThat(result.getRegularHours()).isEqualByComparingTo("80");
+        assertThat(result.getRegularPay()).isEqualByComparingTo("12000.00");
+        assertThat(result.getOvertimePay()).isEqualByComparingTo("0.00");
     }
 
     @Test
     void compute_clampsRegularHoursAtZeroWhenOvertimeExceedsTotalHours() {
         stubAttendance(0, 0, 0, 0, 0, 8);
 
-        PayrollContext context = strategy.compute(employee(PayType.HOURLY, 150), payrollRun, configuration);
+        PayrollComputationResult result = strategy.compute(employee(PayType.HOURLY, 150), payrollRun, rates);
 
-        assertThat(context.getRegularHours()).isEqualByComparingTo("0");
-        assertThat(context.getRegularPay()).isEqualByComparingTo("0.00");
+        assertThat(result.getRegularHours()).isEqualByComparingTo("0");
+        assertThat(result.getRegularPay()).isEqualByComparingTo("0.00");
     }
 
     @Test
     void compute_nullPayTypeFallsBackToMonthlyBasis() {
         stubAttendance(10, 0, 0, 0, 80, 0);
 
-        PayrollContext context = strategy.compute(employee(null, 20000), payrollRun, configuration);
+        PayrollComputationResult result = strategy.compute(employee(null, 20000), payrollRun, rates);
 
-        assertThat(context.getMonthlyRate()).isEqualByComparingTo("20000");
-        assertThat(context.getSemiMonthlyRate()).isEqualByComparingTo("10000.00");
-        assertThat(context.getRegularPay()).isEqualByComparingTo("10000.00");
+        assertThat(result.getMonthlyRate()).isEqualByComparingTo("20000");
+        assertThat(result.getSemiMonthlyRate()).isEqualByComparingTo("10000.00");
+        assertThat(result.getRegularPay()).isEqualByComparingTo("10000.00");
     }
 
     @Test
@@ -248,7 +248,7 @@ class SemiMonthlyPayrollStrategyTest {
                         .undertimeMinutes(0)
                         .build());
 
-        assertThatThrownBy(() -> strategy.compute(employee, payrollRun, configuration))
+        assertThatThrownBy(() -> strategy.compute(employee, payrollRun, rates))
                 .isInstanceOf(PayrollRunException.class)
                 .hasMessageContaining("No salary record found");
     }
@@ -263,25 +263,25 @@ class SemiMonthlyPayrollStrategyTest {
                 .build();
         stubAttendance(10, 1, 30, 15, 80, 2);
 
-        PayrollContext context = strategy.compute(employee(PayType.MONTHLY, 20000), monthlyRun, configuration);
+        PayrollComputationResult result = strategy.compute(employee(PayType.MONTHLY, 20000), monthlyRun, rates);
 
-        assertThat(context.getPayType()).isEqualTo(PayType.MONTHLY);
-        assertThat(context.getMonthlyRate()).isEqualByComparingTo("20000");
+        assertThat(result.getPayType()).isEqualTo(PayType.MONTHLY);
+        assertThat(result.getMonthlyRate()).isEqualByComparingTo("20000");
         // period base = full monthly rate (÷1), not semi-monthly (÷2)
-        assertThat(context.getSemiMonthlyRate()).isEqualByComparingTo("20000.00");
-        assertThat(context.getDailyRate()).isEqualByComparingTo("919.54");
-        assertThat(context.getAbsenceDeduction()).isEqualByComparingTo("919.54");
-        assertThat(context.getTardinessDeduction()).isEqualByComparingTo("57.47");
-        assertThat(context.getRegularPay()).isEqualByComparingTo("18994.25");
-        assertThat(context.getOvertimePay()).isEqualByComparingTo("287.35");
-        assertThat(context.getGrossPay()).isEqualByComparingTo("19281.60");
+        assertThat(result.getSemiMonthlyRate()).isEqualByComparingTo("20000.00");
+        assertThat(result.getDailyRate()).isEqualByComparingTo("919.54");
+        assertThat(result.getAbsenceDeduction()).isEqualByComparingTo("919.54");
+        assertThat(result.getTardinessDeduction()).isEqualByComparingTo("57.47");
+        assertThat(result.getRegularPay()).isEqualByComparingTo("18994.25");
+        assertThat(result.getOvertimePay()).isEqualByComparingTo("287.35");
+        assertThat(result.getGrossPay()).isEqualByComparingTo("19281.60");
         // statutory: full monthly amounts (÷1 instead of ÷2)
-        assertThat(context.getSss()).isEqualByComparingTo("450.00");
-        assertThat(context.getPhilhealth()).isEqualByComparingTo("500.00");
-        assertThat(context.getPagibig()).isEqualByComparingTo("200.00");
+        assertThat(result.getSss()).isEqualByComparingTo("450.00");
+        assertThat(result.getPhilhealth()).isEqualByComparingTo("500.00");
+        assertThat(result.getPagibig()).isEqualByComparingTo("200.00");
         // tax: income used directly for bracket (×1), not doubled
-        assertThat(context.getWithholdingTax()).isEqualByComparingTo("1813.16");
-        assertThat(context.getNetPay()).isEqualByComparingTo("16318.44");
+        assertThat(result.getWithholdingTax()).isEqualByComparingTo("1813.16");
+        assertThat(result.getNetPay()).isEqualByComparingTo("16318.44");
     }
 
     @Test
@@ -289,16 +289,16 @@ class SemiMonthlyPayrollStrategyTest {
         when(statutorySchedulePolicy.shouldCollectStatutory(anyLong(), any())).thenReturn(false);
         stubAttendance(10, 0, 0, 0, 80, 0);
 
-        PayrollContext context = strategy.compute(employee(PayType.MONTHLY, 20000), payrollRun, configuration);
+        PayrollComputationResult result = strategy.compute(employee(PayType.MONTHLY, 20000), payrollRun, rates);
 
-        assertThat(context.getSss()).isEqualByComparingTo("0");
-        assertThat(context.getPhilhealth()).isEqualByComparingTo("0");
-        assertThat(context.getPagibig()).isEqualByComparingTo("0");
-        assertThat(context.getSssEr()).isEqualByComparingTo("0");
-        assertThat(context.getPhilhealthEr()).isEqualByComparingTo("0");
-        assertThat(context.getPagibigEr()).isEqualByComparingTo("0");
+        assertThat(result.getSss()).isEqualByComparingTo("0");
+        assertThat(result.getPhilhealth()).isEqualByComparingTo("0");
+        assertThat(result.getPagibig()).isEqualByComparingTo("0");
+        assertThat(result.getSssEr()).isEqualByComparingTo("0");
+        assertThat(result.getPhilhealthEr()).isEqualByComparingTo("0");
+        assertThat(result.getPagibigEr()).isEqualByComparingTo("0");
         // withholding tax still applies — netPay = grossPay - withholdingTax (no statutory deductions)
-        assertThat(context.getNetPay()).isEqualByComparingTo(
-                context.getGrossPay().subtract(context.getWithholdingTax()));
+        assertThat(result.getNetPay()).isEqualByComparingTo(
+                result.getGrossPay().subtract(result.getWithholdingTax()));
     }
 }

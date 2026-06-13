@@ -8,6 +8,14 @@ import com.iodsky.mysweldo.deduction.Deduction;
 import com.iodsky.mysweldo.deduction.DeductionService;
 import com.iodsky.mysweldo.employee.EmployeeService;
 import com.iodsky.mysweldo.attendance.AttendanceService;
+import com.iodsky.mysweldo.pagIbig.PagibigRate;
+import com.iodsky.mysweldo.pagIbig.PagibigRateRepository;
+import com.iodsky.mysweldo.philhealth.PhilhealthRate;
+import com.iodsky.mysweldo.philhealth.PhilhealthRateRepository;
+import com.iodsky.mysweldo.sss.SssRate;
+import com.iodsky.mysweldo.sss.SssRateRepository;
+import com.iodsky.mysweldo.tax.TaxBracket;
+import com.iodsky.mysweldo.tax.TaxBracketRepository;
 import com.iodsky.mysweldo.payroll.core.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,12 +42,15 @@ public class PayrollRunService {
     private final PayrollRunMapper mapper;
     private final EmployeeService employeeService;
     private final AttendanceService attendanceService;
-    private final PayrollCalculator calculator;
     private final PayrollItemRepository payrollItemRepository;
-    private final PayrollBuilder payrollBuilder;
+    private final PayrollItemAssembler payrollItemAssembler;
     private final PayrollItemMapper payrollItemMapper;
     private final DeductionService deductionService;
     private final BenefitService benefitService;
+    private final PhilhealthRateRepository philhealthRateRepository;
+    private final PagibigRateRepository pagibigRateRepository;
+    private final SssRateRepository sssRateRepository;
+    private final TaxBracketRepository taxBracketRepository;
 
     public PayrollRunDto createPayrollRun(PayrollRunRequest request) {
         PayrollPeriod period;
@@ -80,7 +91,7 @@ public class PayrollRunService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No active employees found");
         }
 
-        PayrollConfiguration configuration = calculator.loadConfiguration(run.getPeriod().getEndDate());
+        StatutoryRateSnapshot statutoryRates = loadStatutoryRates(run.getPeriod().getEndDate());
 
         List<PayrollItem> payrollItems = new ArrayList<>();
         List<Long> skippedIds = new ArrayList<>();
@@ -97,7 +108,7 @@ public class PayrollRunService {
                 continue;
             }
 
-            PayrollItem payrollItem = payrollBuilder.buildPayroll(employeeId, run, configuration);
+            PayrollItem payrollItem = payrollItemAssembler.buildPayroll(employeeId, run, statutoryRates);
 
             payrollItems.add(payrollItem);
         }
@@ -164,7 +175,7 @@ public class PayrollRunService {
 
         PayrollItem item = findPayrollItem(id, itemId);
 
-        for (LineItemEntry entry : request.getDeductions()) {
+        for (LineItemRequest entry : request.getDeductions()) {
             //      - Look up an existing PayrollDeduction in item.getDeductions() where deduction.getCode() == entry.getCode()
             Optional<PayrollDeduction> existing = item.getDeductions().stream()
                     .filter(d -> d.getDeduction().getCode().equals(entry.getCode()))
@@ -206,7 +217,7 @@ public class PayrollRunService {
 
         PayrollItem item = findPayrollItem(id, itemId);
 
-        for (LineItemEntry entry : request.getBenefits()) {
+        for (LineItemRequest entry : request.getBenefits()) {
             Optional<PayrollBenefit> existing = item.getBenefits().stream()
                     .filter(b -> b.getBenefit().getCode().equals(entry.getCode()))
                     .findFirst();
@@ -288,6 +299,36 @@ public class PayrollRunService {
     private PayrollRun findPayrollRun(UUID id) {
         return  repository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Payroll run " + id + " not found"));
+    }
+
+    private StatutoryRateSnapshot loadStatutoryRates(LocalDate payrollDate) {
+        PhilhealthRate philhealth = philhealthRateRepository
+                .findLatestByEffectiveDate(payrollDate)
+                .orElseThrow(() -> new PayrollRunException(
+                        "PhilHealth rate table not found for date: " + payrollDate));
+
+        PagibigRate pagibig = pagibigRateRepository
+                .findLatestByEffectiveDate(payrollDate)
+                .orElseThrow(() -> new PayrollRunException(
+                        "Pag-IBIG rate table not found for date: " + payrollDate));
+
+        SssRate sssRateTable = sssRateRepository
+                .findLatestByEffectiveDate(payrollDate)
+                .orElseThrow(() -> new PayrollRunException(
+                        "SSS rate table not found for date: " + payrollDate));
+
+        List<TaxBracket> taxBrackets = taxBracketRepository.findAllByEffectiveDate(payrollDate);
+        if (taxBrackets.isEmpty()) {
+            throw new PayrollRunException(
+                    "Income tax bracket configurations not found for date: " + payrollDate);
+        }
+
+        return StatutoryRateSnapshot.builder()
+                .philhealthRateTable(philhealth)
+                .pagibigRateTable(pagibig)
+                .sssRateTable(sssRateTable)
+                .incomeTaxBrackets(taxBrackets)
+                .build();
     }
 
     private void computeRunTotals(PayrollRun run) {

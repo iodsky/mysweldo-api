@@ -11,6 +11,6 @@ public class UpdatePayrollBenefitRequest {
 
     @NotNull
     @NotEmpty
-    List<LineItemEntry> benefits;
+    List<LineItemRequest> benefits;
 
 }

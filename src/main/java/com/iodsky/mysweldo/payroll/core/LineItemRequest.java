@@ -1,15 +1,15 @@
 package com.iodsky.mysweldo.payroll.core;
 
-import lombok.Builder;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
 @Data
-@Builder
-public class EmployerContributionDto {
+public class LineItemRequest {
 
-    private String contribution;
+    @NotNull
+    private String code;
     private BigDecimal amount;
 
 }

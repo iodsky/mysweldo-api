@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class HourlyPayBasisStrategyTest {
 
     private final HourlyPayBasisStrategy strategy =
-            new HourlyPayBasisStrategy(new PayrollCalculator(null, null, null, null));
+            new HourlyPayBasisStrategy(new PayrollCalculator());
 
     private AttendancePayrollSummary attendance(double daysWorked, double absenceDays, int tardy, int undertime) {
         return AttendancePayrollSummary.builder()

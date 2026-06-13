@@ -11,7 +11,7 @@ import java.util.List;
 
 @Getter
 @Builder
-public class PayrollContext {
+public class PayrollComputationResult {
     private Employee employee;
     private List<EmployeeBenefit> employeeBenefits;
 
@@ -55,4 +55,3 @@ public class PayrollContext {
     private BigDecimal totalDeductions;
     private BigDecimal netPay;
 }
-

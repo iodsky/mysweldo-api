@@ -11,6 +11,6 @@ public class UpdatePayrollDeductionRequest {
 
     @NotNull
     @NotEmpty
-    List<LineItemEntry> deductions;
+    List<LineItemRequest> deductions;
 
 }

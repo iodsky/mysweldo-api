@@ -9,13 +9,10 @@ import lombok.Getter;
 
 import java.util.List;
 
-/**
- * Holds preloaded payroll configuration data to avoid repeated database queries
- * when calculating multiple payrolls for the same period.
- */
+/** Preloaded statutory rates for a payroll period, shared across all employees in a run. */
 @Getter
 @Builder
-public class PayrollConfiguration {
+public class StatutoryRateSnapshot {
     private PhilhealthRate philhealthRateTable;
     private PagibigRate pagibigRateTable;
     private SssRate sssRateTable;

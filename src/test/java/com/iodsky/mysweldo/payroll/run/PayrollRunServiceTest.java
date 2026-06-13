@@ -2,12 +2,19 @@ package com.iodsky.mysweldo.payroll.run;
 
 import com.iodsky.mysweldo.attendance.AttendanceService;
 import com.iodsky.mysweldo.benefit.Benefit;
-import com.iodsky.mysweldo.payroll.core.PayrollConfiguration;
 import com.iodsky.mysweldo.benefit.BenefitService;
 import com.iodsky.mysweldo.deduction.Deduction;
 import com.iodsky.mysweldo.deduction.DeductionService;
 import com.iodsky.mysweldo.employee.EmployeeService;
+import com.iodsky.mysweldo.pagIbig.PagibigRate;
+import com.iodsky.mysweldo.pagIbig.PagibigRateRepository;
 import com.iodsky.mysweldo.payroll.core.*;
+import com.iodsky.mysweldo.philhealth.PhilhealthRate;
+import com.iodsky.mysweldo.philhealth.PhilhealthRateRepository;
+import com.iodsky.mysweldo.sss.SssRate;
+import com.iodsky.mysweldo.sss.SssRateRepository;
+import com.iodsky.mysweldo.tax.TaxBracket;
+import com.iodsky.mysweldo.tax.TaxBracketRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,35 +48,19 @@ class PayrollRunServiceTest {
     @InjectMocks
     private PayrollRunService service;
 
-    @Mock
-    private PayrollRunRepository repository;
-
-    @Mock
-    private PayrollRunMapper mapper;
-
-    @Mock
-    private EmployeeService employeeService;
-
-    @Mock
-    private AttendanceService attendanceService;
-
-    @Mock
-    private PayrollCalculator calculator;
-
-    @Mock
-    private PayrollItemRepository payrollItemRepository;
-
-    @Mock
-    private PayrollBuilder payrollBuilder;
-
-    @Mock
-    private PayrollItemMapper payrollItemMapper;
-
-    @Mock
-    private DeductionService deductionService;
-
-    @Mock
-    private BenefitService benefitService;
+    @Mock private PayrollRunRepository repository;
+    @Mock private PayrollRunMapper mapper;
+    @Mock private EmployeeService employeeService;
+    @Mock private AttendanceService attendanceService;
+    @Mock private PayrollItemRepository payrollItemRepository;
+    @Mock private PayrollItemAssembler payrollItemAssembler;
+    @Mock private PayrollItemMapper payrollItemMapper;
+    @Mock private DeductionService deductionService;
+    @Mock private BenefitService benefitService;
+    @Mock private PhilhealthRateRepository philhealthRateRepository;
+    @Mock private PagibigRateRepository pagibigRateRepository;
+    @Mock private SssRateRepository sssRateRepository;
+    @Mock private TaxBracketRepository taxBracketRepository;
 
     private PayrollRun draftRun(UUID id) {
         return PayrollRun.builder()
@@ -81,6 +72,13 @@ class PayrollRunServiceTest {
                         PayrollFrequency.SEMI_MONTHLY))
                 .type(PayrollRunType.REGULAR)
                 .build();
+    }
+
+    private void stubStatutoryRates() {
+        when(philhealthRateRepository.findLatestByEffectiveDate(any())).thenReturn(Optional.of(mock(PhilhealthRate.class)));
+        when(pagibigRateRepository.findLatestByEffectiveDate(any())).thenReturn(Optional.of(mock(PagibigRate.class)));
+        when(sssRateRepository.findLatestByEffectiveDate(any())).thenReturn(Optional.of(mock(SssRate.class)));
+        when(taxBracketRepository.findAllByEffectiveDate(any())).thenReturn(List.of(mock(TaxBracket.class)));
     }
 
     @Nested
@@ -136,10 +134,6 @@ class PayrollRunServiceTest {
     @Nested
     class GeneratePayrollTests {
 
-        private PayrollConfiguration configuration() {
-            return mock(PayrollConfiguration.class);
-        }
-
         @Test
         void shouldGeneratePayrollForProvidedEmployeeIds() {
             UUID runId = UUID.randomUUID();
@@ -158,9 +152,9 @@ class PayrollRunServiceTest {
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(eq(runId), anyLong())).thenReturn(false);
             when(attendanceService.hasAttendance(eq(1L), any(), any())).thenReturn(true);
             when(attendanceService.hasAttendance(eq(2L), any(), any())).thenReturn(true);
-            when(calculator.loadConfiguration(any())).thenReturn(configuration());
-            when(payrollBuilder.buildPayroll(eq(1L), eq(run), any())).thenReturn(item1);
-            when(payrollBuilder.buildPayroll(eq(2L), eq(run), any())).thenReturn(item2);
+            stubStatutoryRates();
+            when(payrollItemAssembler.buildPayroll(eq(1L), eq(run), any())).thenReturn(item1);
+            when(payrollItemAssembler.buildPayroll(eq(2L), eq(run), any())).thenReturn(item2);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(List.of(item1, item2));
             when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().id(runId).build());
 
@@ -185,8 +179,8 @@ class PayrollRunServiceTest {
             when(employeeService.getAllActiveEmployeeIds()).thenReturn(List.of(10L));
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 10L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(10L), any(), any())).thenReturn(true);
-            when(calculator.loadConfiguration(any())).thenReturn(configuration());
-            when(payrollBuilder.buildPayroll(eq(10L), eq(run), any())).thenReturn(item);
+            stubStatutoryRates();
+            when(payrollItemAssembler.buildPayroll(eq(10L), eq(run), any())).thenReturn(item);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(List.of(item));
             when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().build());
 
@@ -209,8 +203,8 @@ class PayrollRunServiceTest {
             when(employeeService.getAllActiveEmployeeIds()).thenReturn(List.of(10L));
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 10L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(10L), any(), any())).thenReturn(true);
-            when(calculator.loadConfiguration(any())).thenReturn(configuration());
-            when(payrollBuilder.buildPayroll(eq(10L), eq(run), any())).thenReturn(item);
+            stubStatutoryRates();
+            when(payrollItemAssembler.buildPayroll(eq(10L), eq(run), any())).thenReturn(item);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(List.of(item));
             when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().build());
 
@@ -230,11 +224,11 @@ class PayrollRunServiceTest {
                     .netPay(BigDecimal.valueOf(18000)).build();
 
             when(repository.findById(runId)).thenReturn(Optional.of(run));
-            when(calculator.loadConfiguration(any())).thenReturn(configuration());
+            stubStatutoryRates();
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 1L)).thenReturn(true);
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 2L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(2L), any(), any())).thenReturn(true);
-            when(payrollBuilder.buildPayroll(eq(2L), eq(run), any())).thenReturn(item2);
+            when(payrollItemAssembler.buildPayroll(eq(2L), eq(run), any())).thenReturn(item2);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(List.of(item2));
             when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().build());
 
@@ -252,7 +246,7 @@ class PayrollRunServiceTest {
             request.setEmployeeIds(List.of(1L));
 
             when(repository.findById(runId)).thenReturn(Optional.of(run));
-            when(calculator.loadConfiguration(any())).thenReturn(configuration());
+            stubStatutoryRates();
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 1L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(1L), any(), any())).thenReturn(false);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(Collections.emptyList());
@@ -280,10 +274,10 @@ class PayrollRunServiceTest {
                     .build();
 
             when(repository.findById(runId)).thenReturn(Optional.of(run));
-            when(calculator.loadConfiguration(any())).thenReturn(configuration());
+            stubStatutoryRates();
             when(payrollItemRepository.existsByPayrollRun_IdAndEmployee_Id(runId, 1L)).thenReturn(false);
             when(attendanceService.hasAttendance(eq(1L), any(), any())).thenReturn(true);
-            when(payrollBuilder.buildPayroll(eq(1L), eq(run), any())).thenReturn(item);
+            when(payrollItemAssembler.buildPayroll(eq(1L), eq(run), any())).thenReturn(item);
             when(payrollItemRepository.findAllByPayrollRun_Id(runId)).thenReturn(List.of(item));
             when(mapper.toDto(run)).thenReturn(PayrollRunDto.builder().build());
 
@@ -660,7 +654,7 @@ class PayrollRunServiceTest {
             PayrollRun run = draftRun(runId);
             PayrollItem item = itemWithDeductions("SSS", BigDecimal.valueOf(500));
 
-            LineItemEntry entry = new LineItemEntry();
+            LineItemRequest entry = new LineItemRequest();
             entry.setCode("SSS");
             entry.setAmount(BigDecimal.valueOf(800));
 
@@ -692,7 +686,7 @@ class PayrollRunServiceTest {
                     .build();
 
             Deduction deduction = Deduction.builder().code("PAGIBIG").build();
-            LineItemEntry entry = new LineItemEntry();
+            LineItemRequest entry = new LineItemRequest();
             entry.setCode("PAGIBIG");
             entry.setAmount(BigDecimal.valueOf(200));
 
@@ -720,7 +714,7 @@ class PayrollRunServiceTest {
             item.setGrossPay(BigDecimal.valueOf(20000));
             item.setTotalBenefits(BigDecimal.ZERO);
 
-            LineItemEntry entry = new LineItemEntry();
+            LineItemRequest entry = new LineItemRequest();
             entry.setCode("SSS");
             entry.setAmount(BigDecimal.valueOf(1000));
 
@@ -799,7 +793,7 @@ class PayrollRunServiceTest {
                     .netPay(BigDecimal.valueOf(20500))
                     .build();
 
-            LineItemEntry entry = new LineItemEntry();
+            LineItemRequest entry = new LineItemRequest();
             entry.setCode("RICE");
             entry.setAmount(BigDecimal.valueOf(1000));
 
@@ -832,7 +826,7 @@ class PayrollRunServiceTest {
                     .build();
 
             Benefit benefit = Benefit.builder().code("TRANSPORT").build();
-            LineItemEntry entry = new LineItemEntry();
+            LineItemRequest entry = new LineItemRequest();
             entry.setCode("TRANSPORT");
             entry.setAmount(BigDecimal.valueOf(300));
 
@@ -868,7 +862,7 @@ class PayrollRunServiceTest {
                     .netPay(BigDecimal.valueOf(20500))
                     .build();
 
-            LineItemEntry entry = new LineItemEntry();
+            LineItemRequest entry = new LineItemRequest();
             entry.setCode("RICE");
             entry.setAmount(BigDecimal.valueOf(1500));
 

@@ -16,7 +16,7 @@ class PayBasisStrategyFactoryTest {
 
     @BeforeEach
     void setUp() {
-        PayrollCalculator calculator = new PayrollCalculator(null, null, null, null);
+        PayrollCalculator calculator = new PayrollCalculator();
         monthly = new MonthlyPayBasisStrategy(calculator);
         daily = new DailyPayBasisStrategy(calculator);
         hourly = new HourlyPayBasisStrategy(calculator);

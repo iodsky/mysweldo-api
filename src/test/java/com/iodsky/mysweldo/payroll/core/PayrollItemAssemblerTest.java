@@ -10,7 +10,6 @@ import com.iodsky.mysweldo.payroll.run.PayrollPeriod;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;
 import com.iodsky.mysweldo.payroll.run.PayrollRunException;
 import com.iodsky.mysweldo.payroll.strategy.PayrollComputationStrategy;
-import com.iodsky.mysweldo.payroll.strategy.PayrollStrategyFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -28,17 +27,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class PayrollBuilderTest {
+class PayrollItemAssemblerTest {
 
     @InjectMocks
-    private PayrollBuilder builder;
+    private PayrollItemAssembler assembler;
 
     @Mock private EmployeeService employeeService;
     @Mock private DeductionService deductionService;
     @Mock private ContributionService contributionService;
-    @Mock private PayrollStrategyFactory strategyFactory;
     @Mock private PayrollComputationStrategy strategy;
-    @Mock private PayrollConfiguration config;
+    @Mock private StatutoryRateSnapshot rates;
 
     private PayrollRun semiMonthlyRun;
 
@@ -69,30 +67,29 @@ class PayrollBuilderTest {
         @Test
         void shouldProceedWhenEmployeeFrequencyMatchesRun() {
             Employee employee = employeeWithFrequency(PayrollFrequency.SEMI_MONTHLY);
-            PayrollContext context = mock(PayrollContext.class);
+            PayrollComputationResult result = mock(PayrollComputationResult.class);
 
             when(employeeService.getEmployeeById(1L)).thenReturn(employee);
-            when(strategyFactory.getStrategy(PayrollFrequency.SEMI_MONTHLY)).thenReturn(strategy);
-            when(strategy.compute(any(), any(), any())).thenReturn(context);
-            when(context.getEmployee()).thenReturn(employee);
-            when(context.getEmployeeBenefits()).thenReturn(List.of());
-            when(context.getOvertimeHours()).thenReturn(BigDecimal.ZERO);
-            when(context.getGrossPay()).thenReturn(BigDecimal.ZERO);
-            when(context.getTotalBenefits()).thenReturn(BigDecimal.ZERO);
-            when(context.getTotalDeductions()).thenReturn(BigDecimal.ZERO);
-            when(context.getNetPay()).thenReturn(BigDecimal.ZERO);
-            when(context.getSss()).thenReturn(BigDecimal.ZERO);
-            when(context.getPhilhealth()).thenReturn(BigDecimal.ZERO);
-            when(context.getPagibig()).thenReturn(BigDecimal.ZERO);
-            when(context.getWithholdingTax()).thenReturn(BigDecimal.ZERO);
-            when(context.getSssEr()).thenReturn(BigDecimal.ZERO);
-            when(context.getPhilhealthEr()).thenReturn(BigDecimal.ZERO);
-            when(context.getPagibigEr()).thenReturn(BigDecimal.ZERO);
+            when(strategy.compute(any(), any(), any())).thenReturn(result);
+            when(result.getEmployee()).thenReturn(employee);
+            when(result.getEmployeeBenefits()).thenReturn(List.of());
+            when(result.getOvertimeHours()).thenReturn(BigDecimal.ZERO);
+            when(result.getGrossPay()).thenReturn(BigDecimal.ZERO);
+            when(result.getTotalBenefits()).thenReturn(BigDecimal.ZERO);
+            when(result.getTotalDeductions()).thenReturn(BigDecimal.ZERO);
+            when(result.getNetPay()).thenReturn(BigDecimal.ZERO);
+            when(result.getSss()).thenReturn(BigDecimal.ZERO);
+            when(result.getPhilhealth()).thenReturn(BigDecimal.ZERO);
+            when(result.getPagibig()).thenReturn(BigDecimal.ZERO);
+            when(result.getWithholdingTax()).thenReturn(BigDecimal.ZERO);
+            when(result.getSssEr()).thenReturn(BigDecimal.ZERO);
+            when(result.getPhilhealthEr()).thenReturn(BigDecimal.ZERO);
+            when(result.getPagibigEr()).thenReturn(BigDecimal.ZERO);
             when(deductionService.getDeductionByCode(any())).thenReturn(null);
             when(contributionService.getContributionByCode(any())).thenReturn(null);
 
-            assertThatNoException().isThrownBy(() -> builder.buildPayroll(1L, semiMonthlyRun, config));
-            verify(strategy).compute(employee, semiMonthlyRun, config);
+            assertThatNoException().isThrownBy(() -> assembler.buildPayroll(1L, semiMonthlyRun, rates));
+            verify(strategy).compute(employee, semiMonthlyRun, rates);
         }
 
         @Test
@@ -100,7 +97,7 @@ class PayrollBuilderTest {
             Employee employee = employeeWithFrequency(PayrollFrequency.WEEKLY);
             when(employeeService.getEmployeeById(1L)).thenReturn(employee);
 
-            assertThatThrownBy(() -> builder.buildPayroll(1L, semiMonthlyRun, config))
+            assertThatThrownBy(() -> assembler.buildPayroll(1L, semiMonthlyRun, rates))
                     .isInstanceOf(PayrollRunException.class)
                     .hasMessageContaining("WEEKLY")
                     .hasMessageContaining("SEMI_MONTHLY");
@@ -118,30 +115,29 @@ class PayrollBuilderTest {
                             .build())
                     .benefits(List.of())
                     .build();
-            PayrollContext context = mock(PayrollContext.class);
+            PayrollComputationResult result = mock(PayrollComputationResult.class);
 
             when(employeeService.getEmployeeById(1L)).thenReturn(employee);
-            when(strategyFactory.getStrategy(PayrollFrequency.SEMI_MONTHLY)).thenReturn(strategy);
-            when(strategy.compute(any(), any(), any())).thenReturn(context);
-            when(context.getEmployee()).thenReturn(employee);
-            when(context.getEmployeeBenefits()).thenReturn(List.of());
-            when(context.getOvertimeHours()).thenReturn(BigDecimal.ZERO);
-            when(context.getGrossPay()).thenReturn(BigDecimal.ZERO);
-            when(context.getTotalBenefits()).thenReturn(BigDecimal.ZERO);
-            when(context.getTotalDeductions()).thenReturn(BigDecimal.ZERO);
-            when(context.getNetPay()).thenReturn(BigDecimal.ZERO);
-            when(context.getSss()).thenReturn(BigDecimal.ZERO);
-            when(context.getPhilhealth()).thenReturn(BigDecimal.ZERO);
-            when(context.getPagibig()).thenReturn(BigDecimal.ZERO);
-            when(context.getWithholdingTax()).thenReturn(BigDecimal.ZERO);
-            when(context.getSssEr()).thenReturn(BigDecimal.ZERO);
-            when(context.getPhilhealthEr()).thenReturn(BigDecimal.ZERO);
-            when(context.getPagibigEr()).thenReturn(BigDecimal.ZERO);
+            when(strategy.compute(any(), any(), any())).thenReturn(result);
+            when(result.getEmployee()).thenReturn(employee);
+            when(result.getEmployeeBenefits()).thenReturn(List.of());
+            when(result.getOvertimeHours()).thenReturn(BigDecimal.ZERO);
+            when(result.getGrossPay()).thenReturn(BigDecimal.ZERO);
+            when(result.getTotalBenefits()).thenReturn(BigDecimal.ZERO);
+            when(result.getTotalDeductions()).thenReturn(BigDecimal.ZERO);
+            when(result.getNetPay()).thenReturn(BigDecimal.ZERO);
+            when(result.getSss()).thenReturn(BigDecimal.ZERO);
+            when(result.getPhilhealth()).thenReturn(BigDecimal.ZERO);
+            when(result.getPagibig()).thenReturn(BigDecimal.ZERO);
+            when(result.getWithholdingTax()).thenReturn(BigDecimal.ZERO);
+            when(result.getSssEr()).thenReturn(BigDecimal.ZERO);
+            when(result.getPhilhealthEr()).thenReturn(BigDecimal.ZERO);
+            when(result.getPagibigEr()).thenReturn(BigDecimal.ZERO);
             when(deductionService.getDeductionByCode(any())).thenReturn(null);
             when(contributionService.getContributionByCode(any())).thenReturn(null);
 
-            assertThatNoException().isThrownBy(() -> builder.buildPayroll(1L, semiMonthlyRun, config));
-            verify(strategy).compute(employee, semiMonthlyRun, config);
+            assertThatNoException().isThrownBy(() -> assembler.buildPayroll(1L, semiMonthlyRun, rates));
+            verify(strategy).compute(employee, semiMonthlyRun, rates);
         }
 
         @Test
@@ -156,7 +152,7 @@ class PayrollBuilderTest {
             Employee employee = employeeWithFrequency(PayrollFrequency.BI_WEEKLY);
             when(employeeService.getEmployeeById(1L)).thenReturn(employee);
 
-            assertThatThrownBy(() -> builder.buildPayroll(1L, monthlyRun, config))
+            assertThatThrownBy(() -> assembler.buildPayroll(1L, monthlyRun, rates))
                     .isInstanceOf(PayrollRunException.class)
                     .hasMessageContaining("BI_WEEKLY")
                     .hasMessageContaining("MONTHLY");

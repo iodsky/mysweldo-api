@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class PayrollCalculatorTest {
 
-    private final PayrollCalculator calculator = new PayrollCalculator(null, null, null, null);
+    private final PayrollCalculator calculator = new PayrollCalculator();
 
     private SssRate sssRate() {
         return SssRate.builder()

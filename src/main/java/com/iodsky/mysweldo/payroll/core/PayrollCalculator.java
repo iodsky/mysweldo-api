@@ -2,76 +2,25 @@ package com.iodsky.mysweldo.payroll.core;
 
 import com.iodsky.mysweldo.employee.EmployeeBenefit;
 import com.iodsky.mysweldo.pagIbig.PagibigRate;
-import com.iodsky.mysweldo.pagIbig.PagibigRateRepository;
 import com.iodsky.mysweldo.philhealth.PhilhealthRate;
-import com.iodsky.mysweldo.philhealth.PhilhealthRateRepository;
 import com.iodsky.mysweldo.sss.SssRate;
-import com.iodsky.mysweldo.sss.SssRateRepository;
 import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.payroll.run.PayrollRunException;
 import com.iodsky.mysweldo.tax.TaxBracket;
-import com.iodsky.mysweldo.tax.TaxBracketRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class PayrollCalculator {
 
     public static final BigDecimal STANDARD_WORK_HOURS_PER_DAY = BigDecimal.valueOf(8);
-    private final PhilhealthRateRepository philhealthRateTableRepository;
-    private final PagibigRateRepository pagibigRateTableRepository;
-    private final SssRateRepository sssRateTableRepository;
-    private final TaxBracketRepository incomeTaxBracketRepository;
 
     private static final BigDecimal SEMI_MONTHLY_PERIODS_PER_MONTH = BigDecimal.valueOf(2);
     public static final BigDecimal AVERAGE_WORKING_DAYS_PER_MONTH = BigDecimal.valueOf(21.75);
     private static final BigDecimal OVERTIME_MULTIPLIER = BigDecimal.valueOf(1.25);
-
-    public PayrollConfiguration loadConfiguration(LocalDate payrollDate) {
-        PhilhealthRate philhealth = philhealthRateTableRepository
-                .findLatestByEffectiveDate(payrollDate)
-                .orElseThrow(() -> new PayrollRunException(
-                        "PhilHealth rate table not found for date: " + payrollDate
-                ));
-
-        PagibigRate pagibig = pagibigRateTableRepository
-                .findLatestByEffectiveDate(payrollDate)
-            .orElseThrow(() -> new PayrollRunException(
-                        "Pag-IBIG rate table not found for date: " + payrollDate
-                ));
-
-        SssRate sssRateTable = sssRateTableRepository
-                .findLatestByEffectiveDate(payrollDate)
-                .orElseThrow(() -> new PayrollRunException(
-                        "SSS rate table not found for date: " + payrollDate
-                ));
-
-        List<TaxBracket> taxBrackets = incomeTaxBracketRepository
-                .findAllByEffectiveDate(payrollDate);
-
-        if (taxBrackets.isEmpty()) {
-            throw new PayrollRunException(
-                    "Income tax bracket configurations not found for date: " + payrollDate
-            );
-        }
-
-        return PayrollConfiguration.builder()
-                .philhealthRateTable(philhealth)
-                .pagibigRateTable(pagibig)
-                .sssRateTable(sssRateTable)
-                .incomeTaxBrackets(taxBrackets)
-                .build();
-    }
-
-    public BigDecimal calculateSemiMonthlyRate(BigDecimal monthlyRate) {
-        return monthlyRate.divide(SEMI_MONTHLY_PERIODS_PER_MONTH, 2, RoundingMode.HALF_UP);
-    }
 
     public BigDecimal calculatePeriodRate(BigDecimal monthlyRate, PayrollFrequency frequency) {
         return monthlyRate.divide(monthlyConversionFactor(frequency), 2, RoundingMode.HALF_UP);

@@ -6,8 +6,8 @@ import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.employee.EmployeeBenefit;
 import com.iodsky.mysweldo.employee.PayType;
 import com.iodsky.mysweldo.payroll.core.PayrollCalculator;
-import com.iodsky.mysweldo.payroll.core.PayrollConfiguration;
-import com.iodsky.mysweldo.payroll.core.PayrollContext;
+import com.iodsky.mysweldo.payroll.core.PayrollComputationResult;
+import com.iodsky.mysweldo.payroll.core.StatutoryRateSnapshot;
 import com.iodsky.mysweldo.payroll.core.StatutorySchedulePolicy;
 import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;
@@ -19,16 +19,9 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
-* Strategy for computing SEMI_MONTHLY payroll
- * Responsibilities:
- * - Fetch required data for the payroll period
- * - Orchestrate calculations using PayrollCalculator
- * - Build and return a PayrollContext with all computed values
- */
 @Component
 @RequiredArgsConstructor
-public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
+public class StandardPayrollComputationStrategy implements PayrollComputationStrategy {
 
     private final AttendanceService attendanceService;
     private final OvertimeRequestService overtimeRequestService;
@@ -36,16 +29,8 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
     private final PayBasisStrategyFactory payBasisStrategyFactory;
     private final StatutorySchedulePolicy statutorySchedulePolicy;
 
-    /**
-     * Computes payroll for a SEMI_MONTHLY employee within a given payroll run.
-     *
-     * @param employee Employee to compute payroll for
-     * @param payrollRun The current payroll run
-     * @param config Payroll configuration (statutory rates, tax brackets)
-     * @return PayrollContext containing all calculated fields
-     */
     @Override
-    public PayrollContext compute(Employee employee, PayrollRun payrollRun, PayrollConfiguration config) {
+    public PayrollComputationResult compute(Employee employee, PayrollRun payrollRun, StatutoryRateSnapshot rates) {
         AttendancePayrollSummary attendanceSummary = attendanceService.getAttendanceSummary(
                 employee.getId(),
                 payrollRun.getPeriod().getStartDate(),
@@ -98,13 +83,13 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
 
         BigDecimal grossPay = payrollCalculator.calculateGrossPay(basis.regularPay(), overtimePay, taxableBenefits);
 
-        BigDecimal sss = payrollCalculator.calculateSssDeduction(monthlyEquivalent, config.getSssRateTable(), frequency);
-        BigDecimal philhealth = payrollCalculator.calculatePhilhealthDeduction(monthlyEquivalent, config.getPhilhealthRateTable(), frequency);
-        BigDecimal pagibig = payrollCalculator.calculatePagibigDeduction(monthlyEquivalent, config.getPagibigRateTable(), frequency);
+        BigDecimal sss = payrollCalculator.calculateSssDeduction(monthlyEquivalent, rates.getSssRateTable(), frequency);
+        BigDecimal philhealth = payrollCalculator.calculatePhilhealthDeduction(monthlyEquivalent, rates.getPhilhealthRateTable(), frequency);
+        BigDecimal pagibig = payrollCalculator.calculatePagibigDeduction(monthlyEquivalent, rates.getPagibigRateTable(), frequency);
 
-        BigDecimal sssEr = payrollCalculator.calculateSssEmployerContribution(monthlyEquivalent, config.getSssRateTable(), frequency);
-        BigDecimal philhealthEr = payrollCalculator.calculatePhilhealthEmployerContribution(monthlyEquivalent, config.getPhilhealthRateTable(), frequency);
-        BigDecimal pagibigEr = payrollCalculator.calculatePagibigEmployerContribution(monthlyEquivalent, config.getPagibigRateTable(), frequency);
+        BigDecimal sssEr = payrollCalculator.calculateSssEmployerContribution(monthlyEquivalent, rates.getSssRateTable(), frequency);
+        BigDecimal philhealthEr = payrollCalculator.calculatePhilhealthEmployerContribution(monthlyEquivalent, rates.getPhilhealthRateTable(), frequency);
+        BigDecimal pagibigEr = payrollCalculator.calculatePagibigEmployerContribution(monthlyEquivalent, rates.getPagibigRateTable(), frequency);
 
         if (!statutorySchedulePolicy.shouldCollectStatutory(employee.getId(), payrollRun)) {
             sss = BigDecimal.ZERO;
@@ -120,7 +105,7 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
 
         BigDecimal taxableIncome = payrollCalculator.calculateTaxableIncome(grossPay, totalStatutoryDeductions);
 
-        BigDecimal withholdingTax = payrollCalculator.calculateWithholdingTax(taxableIncome, config.getIncomeTaxBrackets(), frequency);
+        BigDecimal withholdingTax = payrollCalculator.calculateWithholdingTax(taxableIncome, rates.getIncomeTaxBrackets(), frequency);
 
         BigDecimal totalDeductions = payrollCalculator.calculateTotalDeductions(withholdingTax, totalStatutoryDeductions);
 
@@ -131,7 +116,7 @@ public class SemiMonthlyPayrollStrategy implements PayrollComputationStrategy {
                 withholdingTax
         );
 
-        return PayrollContext.builder()
+        return PayrollComputationResult.builder()
                 .employee(employee)
                 .employeeBenefits(benefits)
                 .payType(payType)
