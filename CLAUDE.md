@@ -81,3 +81,31 @@ Flyway migrations live in `src/main/resources/db/migration/`. Add new migrations
 ### CI/CD
 
 GitHub Actions (`.github/workflows/ci-cd.yml`): tests run on all PRs; Docker image is built, pushed to GHCR, and SSH-deployed to VPS only on `master` merges. Traefik handles HTTPS at `mysweldo-api.iodsky.com`.
+
+## Commit convention
+
+Format: `<type>: <short imperative title>`
+
+Followed by a bullet-point body in **all lowercase**:
+
+```
+feat: add daily pay basis strategy
+
+- introduce paybasisstrategy interface for per-paytype rate computation
+- implement dailypaybasisstrategy with earned-only attendance deductions
+- wire factory into semimonthlypayrollstrategy
+```
+
+| Type | When to use |
+|------|-------------|
+| `feat` | new feature or behaviour |
+| `fix` | bug fix |
+| `refactor` | restructure without behaviour change |
+| `test` | add or update tests only |
+| `chore` | build, deps, config, CI |
+| `docs` | documentation only |
+
+Rules:
+- Title: imperative mood, no period, ≤ 72 chars
+- Body bullets: all lowercase, each bullet is one logical change
+- No bullet for trivial single-change commits (title is enough)

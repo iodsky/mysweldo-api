@@ -68,6 +68,7 @@ public class PayrollBuilder {
         PayrollItem payroll = PayrollItem.builder()
                 .payrollRun(payrollRun)
                 .employee(context.getEmployee())
+                .payType(context.getPayType())
                 .monthlyRate(context.getMonthlyRate())
                 .semiMonthlyRate(context.getSemiMonthlyRate())
                 .dailyRate(context.getDailyRate())

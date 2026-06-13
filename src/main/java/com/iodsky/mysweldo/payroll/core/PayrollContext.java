@@ -2,6 +2,7 @@ package com.iodsky.mysweldo.payroll.core;
 
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.employee.EmployeeBenefit;
+import com.iodsky.mysweldo.employee.PayType;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -13,6 +14,8 @@ import java.util.List;
 public class PayrollContext {
     private Employee employee;
     private List<EmployeeBenefit> employeeBenefits;
+
+    private PayType payType;
 
     private BigDecimal monthlyRate;
     private BigDecimal semiMonthlyRate;

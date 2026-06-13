@@ -80,6 +80,22 @@ public class PayrollCalculator {
         return dailyRate.divide(STANDARD_WORK_HOURS_PER_DAY, 2, RoundingMode.HALF_UP);
     }
 
+    public BigDecimal calculateMonthlyEquivalentFromDailyRate(BigDecimal dailyRate) {
+        return dailyRate.multiply(AVERAGE_WORKING_DAYS_PER_MONTH).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateDailyRateFromHourlyRate(BigDecimal hourlyRate) {
+        return hourlyRate.multiply(STANDARD_WORK_HOURS_PER_DAY).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateDailyBasisPay(BigDecimal dailyRate, BigDecimal daysWorked) {
+        return dailyRate.multiply(daysWorked).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateHourlyBasisPay(BigDecimal hourlyRate, BigDecimal regularHours) {
+        return hourlyRate.multiply(regularHours).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    }
+
     public BigDecimal calculateOvertimePay(BigDecimal hourlyRate, BigDecimal overtimeHours) {
         return hourlyRate
                 .multiply(overtimeHours)
