@@ -4,6 +4,7 @@ package com.iodsky.mysweldo.payroll.run;
 import com.iodsky.mysweldo.benefit.Benefit;
 import com.iodsky.mysweldo.benefit.BenefitService;
 import com.iodsky.mysweldo.common.DateRange;
+import com.iodsky.mysweldo.contribution.ContributionService;
 import com.iodsky.mysweldo.deduction.Deduction;
 import com.iodsky.mysweldo.deduction.DeductionService;
 import com.iodsky.mysweldo.employee.EmployeeService;
@@ -46,6 +47,7 @@ public class PayrollRunService {
     private final PayrollItemAssembler payrollItemAssembler;
     private final PayrollItemMapper payrollItemMapper;
     private final DeductionService deductionService;
+    private final ContributionService contributionService;
     private final BenefitService benefitService;
     private final PhilhealthRateRepository philhealthRateRepository;
     private final PagibigRateRepository pagibigRateRepository;
@@ -328,6 +330,13 @@ public class PayrollRunService {
                 .pagibigRateTable(pagibig)
                 .sssRateTable(sssRateTable)
                 .incomeTaxBrackets(taxBrackets)
+                .sssDeduction(deductionService.getDeductionByCode("SSS"))
+                .phicDeduction(deductionService.getDeductionByCode("PHIC"))
+                .hdmfDeduction(deductionService.getDeductionByCode("HDMF"))
+                .taxDeduction(deductionService.getDeductionByCode("TAX"))
+                .sssErContribution(contributionService.getContributionByCode("SSS_ER"))
+                .phicErContribution(contributionService.getContributionByCode("PHIC_ER"))
+                .hdmfErContribution(contributionService.getContributionByCode("HDMF_ER"))
                 .build();
     }
 

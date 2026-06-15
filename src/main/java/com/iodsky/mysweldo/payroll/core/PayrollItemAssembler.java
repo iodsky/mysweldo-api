@@ -1,7 +1,5 @@
 package com.iodsky.mysweldo.payroll.core;
 
-import com.iodsky.mysweldo.contribution.ContributionService;
-import com.iodsky.mysweldo.deduction.DeductionService;
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.employee.EmployeeService;
 import com.iodsky.mysweldo.employee.EmployeeBenefit;
@@ -29,8 +27,6 @@ import java.util.List;
 public class PayrollItemAssembler {
 
     private final EmployeeService employeeService;
-    private final DeductionService deductionService;
-    private final ContributionService contributionService;
     private final PayrollComputationStrategy strategy;
 
     public PayrollItem buildPayroll(Long employeeId, PayrollRun run, StatutoryRateSnapshot rates) {
@@ -51,13 +47,13 @@ public class PayrollItemAssembler {
         }
 
         PayrollComputationResult result = strategy.compute(employee, run, rates);
-        return assemblePayrollItem(result, run);
+        return assemblePayrollItem(result, run, rates);
     }
 
-    private PayrollItem assemblePayrollItem(PayrollComputationResult result, PayrollRun payrollRun) {
-        List<PayrollDeduction> deductions = buildDeductions(result);
+    private PayrollItem assemblePayrollItem(PayrollComputationResult result, PayrollRun payrollRun, StatutoryRateSnapshot rates) {
+        List<PayrollDeduction> deductions = buildDeductions(result, rates);
         List<PayrollBenefit> payrollBenefits = buildPayrollBenefits(result.getEmployeeBenefits());
-        List<EmployerContribution> employerContributions = buildEmployerContributions(result);
+        List<EmployerContribution> employerContributions = buildEmployerContributions(result, rates);
 
         int overtimeMinutes = result.getOvertimeHours().multiply(BigDecimal.valueOf(60)).setScale(2, RoundingMode.HALF_UP).intValue();
 
@@ -91,26 +87,26 @@ public class PayrollItemAssembler {
         return payroll;
     }
 
-    private List<PayrollDeduction> buildDeductions(PayrollComputationResult result) {
+    private List<PayrollDeduction> buildDeductions(PayrollComputationResult result, StatutoryRateSnapshot rates) {
         List<PayrollDeduction> deductions = new ArrayList<>();
 
         deductions.add(PayrollDeduction.builder()
-                .deduction(deductionService.getDeductionByCode("SSS"))
+                .deduction(rates.getSssDeduction())
                 .amount(result.getSss())
                 .build());
 
         deductions.add(PayrollDeduction.builder()
-                .deduction(deductionService.getDeductionByCode("PHIC"))
+                .deduction(rates.getPhicDeduction())
                 .amount(result.getPhilhealth())
                 .build());
 
         deductions.add(PayrollDeduction.builder()
-                .deduction(deductionService.getDeductionByCode("HDMF"))
+                .deduction(rates.getHdmfDeduction())
                 .amount(result.getPagibig())
                 .build());
 
         deductions.add(PayrollDeduction.builder()
-                .deduction(deductionService.getDeductionByCode("TAX"))
+                .deduction(rates.getTaxDeduction())
                 .amount(result.getWithholdingTax())
                 .build());
 
@@ -126,21 +122,21 @@ public class PayrollItemAssembler {
                 .toList();
     }
 
-    private List<EmployerContribution> buildEmployerContributions(PayrollComputationResult result) {
+    private List<EmployerContribution> buildEmployerContributions(PayrollComputationResult result, StatutoryRateSnapshot rates) {
         List<EmployerContribution> contributions = new ArrayList<>();
 
         contributions.add(EmployerContribution.builder()
-                .contribution(contributionService.getContributionByCode("SSS_ER"))
+                .contribution(rates.getSssErContribution())
                 .amount(result.getSssEr())
                 .build());
 
         contributions.add(EmployerContribution.builder()
-                .contribution(contributionService.getContributionByCode("PHIC_ER"))
+                .contribution(rates.getPhicErContribution())
                 .amount(result.getPhilhealthEr())
                 .build());
 
         contributions.add(EmployerContribution.builder()
-                .contribution(contributionService.getContributionByCode("HDMF_ER"))
+                .contribution(rates.getHdmfErContribution())
                 .amount(result.getPagibigEr())
                 .build());
 

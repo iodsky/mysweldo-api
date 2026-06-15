@@ -3,6 +3,8 @@ package com.iodsky.mysweldo.payroll.run;
 import com.iodsky.mysweldo.attendance.AttendanceService;
 import com.iodsky.mysweldo.benefit.Benefit;
 import com.iodsky.mysweldo.benefit.BenefitService;
+import com.iodsky.mysweldo.contribution.Contribution;
+import com.iodsky.mysweldo.contribution.ContributionService;
 import com.iodsky.mysweldo.deduction.Deduction;
 import com.iodsky.mysweldo.deduction.DeductionService;
 import com.iodsky.mysweldo.employee.EmployeeService;
@@ -56,6 +58,7 @@ class PayrollRunServiceTest {
     @Mock private PayrollItemAssembler payrollItemAssembler;
     @Mock private PayrollItemMapper payrollItemMapper;
     @Mock private DeductionService deductionService;
+    @Mock private ContributionService contributionService;
     @Mock private BenefitService benefitService;
     @Mock private PhilhealthRateRepository philhealthRateRepository;
     @Mock private PagibigRateRepository pagibigRateRepository;
@@ -79,6 +82,13 @@ class PayrollRunServiceTest {
         when(pagibigRateRepository.findLatestByEffectiveDate(any())).thenReturn(Optional.of(mock(PagibigRate.class)));
         when(sssRateRepository.findLatestByEffectiveDate(any())).thenReturn(Optional.of(mock(SssRate.class)));
         when(taxBracketRepository.findAllByEffectiveDate(any())).thenReturn(List.of(mock(TaxBracket.class)));
+        when(deductionService.getDeductionByCode("SSS")).thenReturn(mock(Deduction.class));
+        when(deductionService.getDeductionByCode("PHIC")).thenReturn(mock(Deduction.class));
+        when(deductionService.getDeductionByCode("HDMF")).thenReturn(mock(Deduction.class));
+        when(deductionService.getDeductionByCode("TAX")).thenReturn(mock(Deduction.class));
+        when(contributionService.getContributionByCode("SSS_ER")).thenReturn(mock(Contribution.class));
+        when(contributionService.getContributionByCode("PHIC_ER")).thenReturn(mock(Contribution.class));
+        when(contributionService.getContributionByCode("HDMF_ER")).thenReturn(mock(Contribution.class));
     }
 
     @Nested

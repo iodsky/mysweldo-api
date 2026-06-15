@@ -85,8 +85,6 @@ class PayrollItemAssemblerTest {
             when(result.getSssEr()).thenReturn(BigDecimal.ZERO);
             when(result.getPhilhealthEr()).thenReturn(BigDecimal.ZERO);
             when(result.getPagibigEr()).thenReturn(BigDecimal.ZERO);
-            when(deductionService.getDeductionByCode(any())).thenReturn(null);
-            when(contributionService.getContributionByCode(any())).thenReturn(null);
 
             assertThatNoException().isThrownBy(() -> assembler.buildPayroll(1L, semiMonthlyRun, rates));
             verify(strategy).compute(employee, semiMonthlyRun, rates);
@@ -133,8 +131,6 @@ class PayrollItemAssemblerTest {
             when(result.getSssEr()).thenReturn(BigDecimal.ZERO);
             when(result.getPhilhealthEr()).thenReturn(BigDecimal.ZERO);
             when(result.getPagibigEr()).thenReturn(BigDecimal.ZERO);
-            when(deductionService.getDeductionByCode(any())).thenReturn(null);
-            when(contributionService.getContributionByCode(any())).thenReturn(null);
 
             assertThatNoException().isThrownBy(() -> assembler.buildPayroll(1L, semiMonthlyRun, rates));
             verify(strategy).compute(employee, semiMonthlyRun, rates);
