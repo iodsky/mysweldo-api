@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Table(name="overtime_request", uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "date"}))
+@Table(name="overtime_request")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter

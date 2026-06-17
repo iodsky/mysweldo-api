@@ -1,7 +1,5 @@
 package com.iodsky.mysweldo.overtime;
 
-import com.iodsky.mysweldo.attendance.Attendance;
-import com.iodsky.mysweldo.attendance.AttendanceService;
 import com.iodsky.mysweldo.common.RequestStatus;
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.employee.EmployeeService;
@@ -30,6 +28,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,9 +42,6 @@ class OvertimeRequestServiceTest {
 
     @Mock
     private UserService userService;
-
-    @Mock
-    private AttendanceService attendanceService;
 
     @Mock
     private OvertimeRequestRepository repository;
@@ -84,19 +80,15 @@ class OvertimeRequestServiceTest {
 
         @Test
         void shouldCreateOvertimeRequestForSelfWhenNoEmployeeIdProvided() {
-            AddOvertimeRequest request = AddOvertimeRequest.builder()
+            OvertimeRequestDto request = OvertimeRequestDto.builder()
                     .date(DATE)
+                    .overtimeHours(new BigDecimal("2.5"))
                     .reason("Late project deadline")
-                    .build();
-
-            Attendance attendance = Attendance.builder()
-                    .overtime(new BigDecimal("2.5"))
                     .build();
 
             when(userService.getAuthenticatedUser()).thenReturn(regularUser);
             when(repository.existsByEmployee_IdAndDate(2L, DATE)).thenReturn(false);
             when(employeeService.getEmployeeById(2L)).thenReturn(otherEmployee);
-            when(attendanceService.getEmployeeAttendanceByDate(2L, DATE)).thenReturn(attendance);
             when(repository.save(any(OvertimeRequest.class))).thenAnswer(i -> i.getArgument(0));
 
             OvertimeRequest result = service.createOvertimeRequest(request);
@@ -110,20 +102,15 @@ class OvertimeRequestServiceTest {
 
         @Test
         void shouldCreateOvertimeRequestOnBehalfOfAnotherEmployeeWhenRequesterIsHR() {
-            AddOvertimeRequest request = AddOvertimeRequest.builder()
+            OvertimeRequestDto request = OvertimeRequestDto.builder()
                     .employeeId(2L)
                     .date(DATE)
                     .reason("Project overtime")
                     .build();
 
-            Attendance attendance = Attendance.builder()
-                    .overtime(new BigDecimal("1.0"))
-                    .build();
-
             when(userService.getAuthenticatedUser()).thenReturn(hrUser);
             when(repository.existsByEmployee_IdAndDate(2L, DATE)).thenReturn(false);
             when(employeeService.getEmployeeById(2L)).thenReturn(otherEmployee);
-            when(attendanceService.getEmployeeAttendanceByDate(2L, DATE)).thenReturn(attendance);
             when(repository.save(any(OvertimeRequest.class))).thenAnswer(i -> i.getArgument(0));
 
             OvertimeRequest result = service.createOvertimeRequest(request);
@@ -134,7 +121,7 @@ class OvertimeRequestServiceTest {
 
         @Test
         void shouldThrow403WhenNonHRUserAttemptsToCreateRequestForAnotherEmployee() {
-            AddOvertimeRequest request = AddOvertimeRequest.builder()
+            OvertimeRequestDto request = OvertimeRequestDto.builder()
                     .employeeId(1L)
                     .date(DATE)
                     .build();
@@ -149,7 +136,7 @@ class OvertimeRequestServiceTest {
 
         @Test
         void shouldThrow409WhenOvertimeRequestAlreadyExistsForEmployeeAndDate() {
-            AddOvertimeRequest request = AddOvertimeRequest.builder()
+            OvertimeRequestDto request = OvertimeRequestDto.builder()
                     .date(DATE)
                     .build();
 
@@ -162,43 +149,6 @@ class OvertimeRequestServiceTest {
                     .isEqualTo(HttpStatus.CONFLICT);
         }
 
-        @Test
-        void shouldThrow404WhenNoAttendanceRecordExistsForGivenDate() {
-            AddOvertimeRequest request = AddOvertimeRequest.builder()
-                    .date(DATE)
-                    .build();
-
-            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
-            when(repository.existsByEmployee_IdAndDate(2L, DATE)).thenReturn(false);
-            when(employeeService.getEmployeeById(2L)).thenReturn(otherEmployee);
-            when(attendanceService.getEmployeeAttendanceByDate(2L, DATE)).thenReturn(null);
-
-            assertThatThrownBy(() -> service.createOvertimeRequest(request))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                    .isEqualTo(HttpStatus.NOT_FOUND);
-        }
-
-        @Test
-        void shouldThrow400WhenAttendanceRecordHasZeroOvertimeHours() {
-            AddOvertimeRequest request = AddOvertimeRequest.builder()
-                    .date(DATE)
-                    .build();
-
-            Attendance attendance = Attendance.builder()
-                    .overtime(BigDecimal.ZERO)
-                    .build();
-
-            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
-            when(repository.existsByEmployee_IdAndDate(2L, DATE)).thenReturn(false);
-            when(employeeService.getEmployeeById(2L)).thenReturn(otherEmployee);
-            when(attendanceService.getEmployeeAttendanceByDate(2L, DATE)).thenReturn(attendance);
-
-            assertThatThrownBy(() -> service.createOvertimeRequest(request))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                    .isEqualTo(HttpStatus.BAD_REQUEST);
-        }
     }
 
     @Nested
@@ -380,7 +330,7 @@ class OvertimeRequestServiceTest {
                     .reason("Old reason")
                     .build();
 
-            UpdateOvertimeRequest request = UpdateOvertimeRequest.builder()
+            OvertimeRequestDto request = OvertimeRequestDto.builder()
                     .date(DATE)
                     .reason("New reason")
                     .build();
@@ -397,7 +347,7 @@ class OvertimeRequestServiceTest {
         }
 
         @Test
-        void shouldUpdateDateAndRecalculateOvertimeHoursWhenDateChanges() {
+        void shouldUpdateDateWhenDateChanges() {
             UUID id = UUID.randomUUID();
             LocalDate newDate = DATE.plusDays(1);
 
@@ -409,11 +359,7 @@ class OvertimeRequestServiceTest {
                     .status(RequestStatus.PENDING)
                     .build();
 
-            Attendance attendance = Attendance.builder()
-                    .overtime(new BigDecimal("3.0"))
-                    .build();
-
-            UpdateOvertimeRequest request = UpdateOvertimeRequest.builder()
+            OvertimeRequestDto request = OvertimeRequestDto.builder()
                     .date(newDate)
                     .reason("Updated reason")
                     .build();
@@ -421,13 +367,11 @@ class OvertimeRequestServiceTest {
             when(userService.getAuthenticatedUser()).thenReturn(regularUser);
             when(repository.findById(id)).thenReturn(Optional.of(existing));
             when(repository.existsByEmployee_IdAndDate(2L, newDate)).thenReturn(false);
-            when(attendanceService.getEmployeeAttendanceByDate(2L, newDate)).thenReturn(attendance);
             when(repository.save(any(OvertimeRequest.class))).thenAnswer(i -> i.getArgument(0));
 
             OvertimeRequest result = service.updateOvertimeRequest(id, request);
 
             assertThat(result.getDate()).isEqualTo(newDate);
-            assertThat(result.getOvertimeHours()).isEqualByComparingTo(new BigDecimal("3.0"));
         }
 
         @Test
@@ -440,7 +384,7 @@ class OvertimeRequestServiceTest {
                     .status(RequestStatus.APPROVED)
                     .build();
 
-            UpdateOvertimeRequest request = UpdateOvertimeRequest.builder()
+            OvertimeRequestDto request = OvertimeRequestDto.builder()
                     .date(DATE)
                     .build();
 
@@ -465,7 +409,7 @@ class OvertimeRequestServiceTest {
                     .status(RequestStatus.PENDING)
                     .build();
 
-            UpdateOvertimeRequest request = UpdateOvertimeRequest.builder()
+            OvertimeRequestDto request = OvertimeRequestDto.builder()
                     .date(newDate)
                     .build();
 
@@ -480,64 +424,6 @@ class OvertimeRequestServiceTest {
         }
 
         @Test
-        void shouldThrow404WhenNoAttendanceRecordExistsForNewDate() {
-            UUID id = UUID.randomUUID();
-            LocalDate newDate = DATE.plusDays(1);
-
-            OvertimeRequest existing = OvertimeRequest.builder()
-                    .id(id)
-                    .employee(otherEmployee)
-                    .date(DATE)
-                    .status(RequestStatus.PENDING)
-                    .build();
-
-            UpdateOvertimeRequest request = UpdateOvertimeRequest.builder()
-                    .date(newDate)
-                    .build();
-
-            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
-            when(repository.findById(id)).thenReturn(Optional.of(existing));
-            when(repository.existsByEmployee_IdAndDate(2L, newDate)).thenReturn(false);
-            when(attendanceService.getEmployeeAttendanceByDate(2L, newDate)).thenReturn(null);
-
-            assertThatThrownBy(() -> service.updateOvertimeRequest(id, request))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                    .isEqualTo(HttpStatus.NOT_FOUND);
-        }
-
-        @Test
-        void shouldThrow400WhenAttendanceForNewDateHasNoOvertimeHours() {
-            UUID id = UUID.randomUUID();
-            LocalDate newDate = DATE.plusDays(1);
-
-            OvertimeRequest existing = OvertimeRequest.builder()
-                    .id(id)
-                    .employee(otherEmployee)
-                    .date(DATE)
-                    .status(RequestStatus.PENDING)
-                    .build();
-
-            Attendance attendance = Attendance.builder()
-                    .overtime(BigDecimal.ZERO)
-                    .build();
-
-            UpdateOvertimeRequest request = UpdateOvertimeRequest.builder()
-                    .date(newDate)
-                    .build();
-
-            when(userService.getAuthenticatedUser()).thenReturn(regularUser);
-            when(repository.findById(id)).thenReturn(Optional.of(existing));
-            when(repository.existsByEmployee_IdAndDate(2L, newDate)).thenReturn(false);
-            when(attendanceService.getEmployeeAttendanceByDate(2L, newDate)).thenReturn(attendance);
-
-            assertThatThrownBy(() -> service.updateOvertimeRequest(id, request))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                    .isEqualTo(HttpStatus.BAD_REQUEST);
-        }
-
-        @Test
         void shouldThrow403WhenNonOwnerAttemptsToUpdateRequest() {
             UUID id = UUID.randomUUID();
             OvertimeRequest existing = OvertimeRequest.builder()
@@ -547,7 +433,7 @@ class OvertimeRequestServiceTest {
                     .status(RequestStatus.PENDING)
                     .build();
 
-            UpdateOvertimeRequest request = UpdateOvertimeRequest.builder()
+            OvertimeRequestDto request = OvertimeRequestDto.builder()
                     .date(DATE)
                     .reason("Updated reason")
                     .build();

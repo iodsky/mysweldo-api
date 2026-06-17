@@ -1,7 +1,5 @@
 package com.iodsky.mysweldo.overtime;
 
-import com.iodsky.mysweldo.attendance.Attendance;
-import com.iodsky.mysweldo.attendance.AttendanceService;
 import com.iodsky.mysweldo.common.DateRange;
 import com.iodsky.mysweldo.common.RequestStatus;
 import com.iodsky.mysweldo.employee.Employee;
@@ -29,11 +27,10 @@ public class OvertimeRequestService {
 
     private final EmployeeService employeeService;
     private final UserService userService;
-    private final AttendanceService attendanceService;
     private final OvertimeRequestRepository repository;
 
     @Transactional
-    public OvertimeRequest createOvertimeRequest(AddOvertimeRequest request) {
+    public OvertimeRequest createOvertimeRequest(OvertimeRequestDto request) {
         User authenticatedUser = userService.getAuthenticatedUser();
         boolean isHR = authenticatedUser.getRole().getName().equals("HR");
         Long employeeId = request.getEmployeeId();
@@ -41,8 +38,7 @@ public class OvertimeRequestService {
         if (employeeId == null) {
             employeeId = authenticatedUser.getEmployee().getId();
         } else if (!isHR) {
-            throw  new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "You don't have the permissions to access this resource");
+            throw  new ResponseStatusException(HttpStatus.FORBIDDEN,"You don't have the permissions to access this resource");
         }
 
         if (repository.existsByEmployee_IdAndDate(employeeId, request.getDate())) {
@@ -51,12 +47,11 @@ public class OvertimeRequestService {
         }
 
         Employee employee = employeeService.getEmployeeById(employeeId);
-        Attendance attendance = getEmployeeAttendanceByDate(employeeId, request.getDate());
 
         OvertimeRequest overtimeRequest = OvertimeRequest.builder()
                 .employee(employee)
                 .date(request.getDate())
-                .overtimeHours(attendance.getOvertime())
+                .overtimeHours(request.getOvertimeHours())
                 .status(RequestStatus.PENDING)
                 .reason(request.getReason())
                 .build();
@@ -115,11 +110,12 @@ public class OvertimeRequestService {
     }
 
     @Transactional
-    public OvertimeRequest updateOvertimeRequest(UUID id, UpdateOvertimeRequest request) {
+    public OvertimeRequest updateOvertimeRequest(UUID id, OvertimeRequestDto request) {
         User authenticatedUser = userService.getAuthenticatedUser();
         OvertimeRequest existing = getOvertimeRequestById(id);
+        boolean isHr = authenticatedUser.getRole().getName().equals("HR");
 
-        if (!existing.getEmployee().getId().equals(authenticatedUser.getEmployee().getId())) {
+        if (!existing.getEmployee().getId().equals(authenticatedUser.getEmployee().getId()) && !isHr) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have the permission to access this resource");
         }
 
@@ -134,11 +130,9 @@ public class OvertimeRequestService {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         "Overtime request already exists for date: " + request.getDate());
             }
-
-            Attendance attendance = getEmployeeAttendanceByDate(existing.getEmployee().getId(), request.getDate());
             
             existing.setDate(request.getDate());
-            existing.setOvertimeHours(attendance.getOvertime());
+            existing.setOvertimeHours(request.getOvertimeHours());
         }
 
         existing.setReason(request.getReason());
@@ -171,14 +165,14 @@ public class OvertimeRequestService {
     public void deleteOvertimeRequest(UUID id) {
         User authenticatedUser = userService.getAuthenticatedUser();
         OvertimeRequest existing = getOvertimeRequestById(id);
+        boolean isHr = authenticatedUser.getRole().getName().equals("HR");
 
-        if (!existing.getEmployee().getId().equals(authenticatedUser.getEmployee().getId())) {
+        if (!existing.getEmployee().getId().equals(authenticatedUser.getEmployee().getId()) && !isHr) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have the permissions to access this resource");
         }
 
         if (!existing.getStatus().equals(RequestStatus.PENDING)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Cannot delete approved or rejected overtime request");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete approved or rejected overtime request");
         }
 
         existing.setDeletedAt(Instant.now());
@@ -187,22 +181,6 @@ public class OvertimeRequestService {
 
     public BigDecimal calculateApprovedOvertimeHours(Long employeeId, LocalDate startDate, LocalDate endDate) {
         return repository.sumOvertimeHoursByEmployeeI_IdAndDateBetweenAndStatus(employeeId, startDate, endDate, RequestStatus.APPROVED);
-    }
-
-    private Attendance getEmployeeAttendanceByDate(Long employeeId, LocalDate date) {
-        Attendance attendance = attendanceService.getEmployeeAttendanceByDate(employeeId, date);
-
-        if (attendance == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "No attendance found for employee id: " + employeeId + " date: " + date);
-        }
-
-        if (attendance.getOvertime().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "No overtime hours for given date " + date);
-        }
-
-        return  attendance;
     }
 
 }

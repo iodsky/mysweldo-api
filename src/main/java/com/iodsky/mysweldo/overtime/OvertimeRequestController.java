@@ -34,7 +34,7 @@ public class OvertimeRequestController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create overtime request", description = "Create a new overtime request for the authenticated employee")
-    public ApiResponse<OvertimeRequestDto> createOvertimeRequest(@Valid @RequestBody AddOvertimeRequest request) {
+    public ApiResponse<OvertimeRequestDto> createOvertimeRequest(@Valid @RequestBody OvertimeRequestDto request) {
         OvertimeRequest entity = service.createOvertimeRequest(request);
         return ResponseFactory.success("Overtime request successfully created", mapper.toDto(entity));
     }
@@ -88,7 +88,7 @@ public class OvertimeRequestController {
     @Operation(summary = "Update overtime request", description = "Update an existing overtime request")
     public ApiResponse<OvertimeRequestDto> updateOvertimeRequest(
             @Parameter(description = "Overtime request ID") @PathVariable UUID id,
-            @Valid @RequestBody UpdateOvertimeRequest request) {
+            @Valid @RequestBody OvertimeRequestDto request) {
         OvertimeRequest entity = service.updateOvertimeRequest(id, request);
         return ResponseFactory.success("Overtime request updated successfully", mapper.toDto(entity));
     }
