@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.benefit;
 
+import com.iodsky.mysweldo.payroll.core.PayrollBenefitRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +17,7 @@ import java.time.Instant;
 public class BenefitService {
 
     private final BenefitRepository repository;
+    private final PayrollBenefitRepository payrollBenefitRepository;
 
     @Transactional
     public Benefit createBenefit(BenefitRequest request) {
@@ -61,6 +63,14 @@ public class BenefitService {
     @Transactional
     public void deleteBenefit(String id) {
         Benefit benefit = getBenefitByCode(id);
+
+        if (payrollBenefitRepository.existsByBenefit_Code(id)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Cannot delete benefit '" + id + "'. It is referenced by payroll items"
+            );
+        }
+
         benefit.setDeletedAt(Instant.now());
         repository.save(benefit);
     }

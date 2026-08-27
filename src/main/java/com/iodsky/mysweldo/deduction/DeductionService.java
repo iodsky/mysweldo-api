@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.deduction;
 
+import com.iodsky.mysweldo.payroll.core.PayrollDeductionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +17,7 @@ import java.time.Instant;
 public class DeductionService {
 
     private final DeductionRepository repository;
+    private final PayrollDeductionRepository payrollDeductionRepository;
 
     @Transactional
     public Deduction createDeduction(DeductionRequest request) {
@@ -61,6 +63,14 @@ public class DeductionService {
     @Transactional
     public void deleteDeduction(String code) {
         Deduction deduction = getDeductionByCode(code);
+
+        if (payrollDeductionRepository.existsByDeduction_Code(code)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Cannot delete deduction '" + code + "'. It is referenced by payroll items"
+            );
+        }
+
         deduction.setDeletedAt(Instant.now());
         repository.save(deduction);
     }

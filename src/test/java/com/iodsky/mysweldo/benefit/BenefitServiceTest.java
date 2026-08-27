@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.benefit;
 
+import com.iodsky.mysweldo.payroll.core.PayrollBenefitRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,9 @@ class BenefitServiceTest {
 
     @Mock
     private BenefitRepository repository;
+
+    @Mock
+    private PayrollBenefitRepository payrollBenefitRepository;
 
     @InjectMocks
     private BenefitService service;
@@ -206,6 +210,20 @@ class BenefitServiceTest {
                     .isInstanceOf(ResponseStatusException.class)
                     .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                     .isEqualTo(HttpStatus.NOT_FOUND);
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        void shouldThrowConflictWhenBenefitIsReferencedByPayrollItems() {
+            Benefit existing = Benefit.builder().code("TRANSPO").build();
+            when(repository.findById("TRANSPO")).thenReturn(Optional.of(existing));
+            when(payrollBenefitRepository.existsByBenefit_Code("TRANSPO")).thenReturn(true);
+
+            assertThatThrownBy(() -> service.deleteBenefit("TRANSPO"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.CONFLICT);
 
             verify(repository, never()).save(any());
         }

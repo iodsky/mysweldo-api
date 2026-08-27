@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.contribution;
 
+import com.iodsky.mysweldo.payroll.core.EmployerContributionRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,9 @@ class ContributionServiceTest {
 
     @Mock
     private ContributionRepository repository;
+
+    @Mock
+    private EmployerContributionRepository employerContributionRepository;
 
     @Nested
     class CreateContributionTests {
@@ -176,6 +180,24 @@ class ContributionServiceTest {
                     .isInstanceOf(ResponseStatusException.class)
                     .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                     .isEqualTo(HttpStatus.NOT_FOUND);
+        }
+
+        @Test
+        void shouldThrowConflictWhenContributionIsReferencedByPayrollItems() {
+            Contribution contribution = Contribution.builder()
+                    .code("SSS")
+                    .description("Social Security System")
+                    .build();
+
+            when(repository.findById("SSS")).thenReturn(Optional.of(contribution));
+            when(employerContributionRepository.existsByContribution_Code("SSS")).thenReturn(true);
+
+            assertThatThrownBy(() -> service.deleteContribution("SSS"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.CONFLICT);
+
+            verify(repository, never()).save(any());
         }
     }
 }

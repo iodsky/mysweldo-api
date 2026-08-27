@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.contribution;
 
+import com.iodsky.mysweldo.payroll.core.EmployerContributionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +17,7 @@ import java.time.Instant;
 public class ContributionService {
 
     private final ContributionRepository repository;
+    private final EmployerContributionRepository employerContributionRepository;
 
     @Transactional
     public Contribution createContribution(ContributionRequest request) {
@@ -58,6 +60,14 @@ public class ContributionService {
     @Transactional
     public void deleteContribution(String id) {
         Contribution contribution = getContributionByCode(id);
+
+        if (employerContributionRepository.existsByContribution_Code(id)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Cannot delete contribution '" + id + "'. It is referenced by payroll items"
+            );
+        }
+
         contribution.setDeletedAt(Instant.now());
         repository.save(contribution);
     }

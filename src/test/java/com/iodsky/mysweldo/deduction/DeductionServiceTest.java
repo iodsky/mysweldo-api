@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.deduction;
 
+import com.iodsky.mysweldo.payroll.core.PayrollDeductionRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,9 @@ class DeductionServiceTest {
 
     @Mock
     private DeductionRepository repository;
+
+    @Mock
+    private PayrollDeductionRepository payrollDeductionRepository;
 
     @Nested
     class CreateDeductionTests {
@@ -170,6 +174,24 @@ class DeductionServiceTest {
                     .isInstanceOf(ResponseStatusException.class)
                     .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                     .isEqualTo(HttpStatus.NOT_FOUND);
+        }
+
+        @Test
+        void shouldThrowConflictWhenDeductionIsReferencedByPayrollItems() {
+            Deduction deduction = Deduction.builder()
+                    .code("SSS")
+                    .description("Social Security System")
+                    .build();
+
+            when(repository.findByCode("SSS")).thenReturn(Optional.of(deduction));
+            when(payrollDeductionRepository.existsByDeduction_Code("SSS")).thenReturn(true);
+
+            assertThatThrownBy(() -> service.deleteDeduction("SSS"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.CONFLICT);
+
+            verify(repository, never()).save(any());
         }
     }
 }
