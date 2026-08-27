@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -86,12 +85,5 @@ public class PhilhealthRateService {
         philhealthRate.setEffectiveDate(request.getEffectiveDate());
 
         return repository.save(philhealthRate);
-    }
-
-    @Transactional
-    public void deletePhilhealthRate(UUID id) {
-        PhilhealthRate philhealthRate = getPhilhealthRateById(id);
-        philhealthRate.setDeletedAt(Instant.now());
-        repository.save(philhealthRate);
     }
 }

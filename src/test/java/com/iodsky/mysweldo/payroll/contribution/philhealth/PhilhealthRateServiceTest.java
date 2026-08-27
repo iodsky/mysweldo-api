@@ -280,43 +280,5 @@ class PhilhealthRateServiceTest {
                             .isEqualTo(HttpStatus.NOT_FOUND));
         }
     }
-
-    @Nested
-    class DeletePhilhealthRateTests {
-
-        @Test
-        void shouldSoftDeleteRateTableBySettingDeletedAt() {
-            when(repository.findById(rateTable.getId()))
-                    .thenReturn(Optional.of(rateTable));
-            when(repository.save(any(PhilhealthRate.class))).thenAnswer(inv -> inv.getArgument(0));
-
-            service.deletePhilhealthRate(rateTable.getId());
-
-            assertThat(rateTable.getDeletedAt()).isNotNull();
-        }
-
-        @Test
-        void shouldThrowNotFoundWhenDeletingNonExistentRateTable() {
-            UUID unknownId = UUID.randomUUID();
-            when(repository.findById(unknownId)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> service.deletePhilhealthRate(unknownId))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
-                            .isEqualTo(HttpStatus.NOT_FOUND));
-        }
-
-        @Test
-        void shouldThrowNotFoundWhenDeletingAlreadySoftDeletedRateTable() {
-            rateTable.setDeletedAt(Instant.now());
-            when(repository.findById(rateTable.getId()))
-                    .thenReturn(Optional.of(rateTable));
-
-            assertThatThrownBy(() -> service.deletePhilhealthRate(rateTable.getId()))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
-                            .isEqualTo(HttpStatus.NOT_FOUND));
-        }
-    }
 }
 

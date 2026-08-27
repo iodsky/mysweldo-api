@@ -12,12 +12,7 @@ import org.hibernate.annotations.SQLRestriction;
 import java.time.LocalDate;
 
 @Entity
-@Table(
-        name = "leave_request",
-        uniqueConstraints = @UniqueConstraint(
-                columnNames = {"employee_id", "startDate", "endDate"}
-        )
-)
+@Table(name = "leave_request")
 @SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter

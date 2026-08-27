@@ -119,12 +119,4 @@ public class TaxBracketController {
                 mapper.toDto(bracket)
         );
     }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete income tax bracket", description = "Soft delete an income tax bracket. Requires PAYROLL role.")
-    public ApiResponse<Void> deleteIncomeTaxBracket(
-            @Parameter(description = "Bracket ID") @PathVariable UUID id) {
-        service.deleteIncomeTaxBracket(id);
-        return ResponseFactory.success("Income tax bracket deleted successfully");
-    }
 }

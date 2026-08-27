@@ -100,12 +100,4 @@ public class SssRateController {
                 mapper.toDto(sssRate)
         );
     }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete SSS rate", description = "Soft delete an SSS rate. Requires PAYROLL role.")
-    public ApiResponse<Void> deleteSssRate(
-            @Parameter(description = "Rate ID") @PathVariable UUID id) {
-        service.deleteSssRate(id);
-        return ResponseFactory.success("SSS rate deleted successfully");
-    }
 }

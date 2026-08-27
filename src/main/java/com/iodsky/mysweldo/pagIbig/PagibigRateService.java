@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -89,12 +88,5 @@ public class PagibigRateService {
         pagibigRate.setEffectiveDate(request.getEffectiveDate());
 
         return repository.save(pagibigRate);
-    }
-
-    @Transactional
-    public void deletePagibigRate(UUID id) {
-        PagibigRate pagibigRate = getPagibigRateById(id);
-        pagibigRate.setDeletedAt(Instant.now());
-        repository.save(pagibigRate);
     }
 }

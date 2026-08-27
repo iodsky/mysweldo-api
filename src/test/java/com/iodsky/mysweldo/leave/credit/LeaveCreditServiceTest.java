@@ -560,31 +560,4 @@ class LeaveCreditServiceTest {
                     .isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
-
-    @Nested
-    class DeleteLeaveCreditsByEmployeeIdTests {
-
-        @Test
-        void shouldSoftDeleteAllCreditsForEmployeeBySettingDeletedAt() {
-            LeaveCredit credit1 = LeaveCredit.builder().type(LeaveType.VACATION).credits(14.0).build();
-            LeaveCredit credit2 = LeaveCredit.builder().type(LeaveType.SICK).credits(7.0).build();
-
-            when(repository.findAllByEmployee_Id(1L)).thenReturn(List.of(credit1, credit2));
-
-            service.deleteLeaveCreditsByEmployeeId(1L);
-
-            assertThat(credit1.getDeletedAt()).isNotNull();
-            assertThat(credit2.getDeletedAt()).isNotNull();
-            verify(repository).saveAll(List.of(credit1, credit2));
-        }
-
-        @Test
-        void shouldSaveEmptyListWhenEmployeeHasNoCredits() {
-            when(repository.findAllByEmployee_Id(1L)).thenReturn(List.of());
-
-            service.deleteLeaveCreditsByEmployeeId(1L);
-
-            verify(repository).saveAll(List.of());
-        }
-    }
 }

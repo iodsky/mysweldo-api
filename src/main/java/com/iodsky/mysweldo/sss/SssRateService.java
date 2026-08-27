@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -109,12 +108,5 @@ public class SssRateService {
         sssRate.setEffectiveDate(request.getEffectiveDate());
 
         return repositiry.save(sssRate);
-    }
-
-    @Transactional
-    public void deleteSssRate(UUID id) {
-        SssRate sssRate = getSssRateById(id);
-        sssRate.setDeletedAt(Instant.now());
-        repositiry.save(sssRate);
     }
 }

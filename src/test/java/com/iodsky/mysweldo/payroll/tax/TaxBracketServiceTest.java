@@ -387,46 +387,5 @@ class TaxBracketServiceTest {
             verify(repository, never()).save(any());
         }
     }
-
-    @Nested
-    class DeleteTaxBracketTests {
-
-        @Test
-        void shouldSoftDeleteBracketBySettingDeletedAt() {
-            when(repository.findById(bracket.getId())).thenReturn(Optional.of(bracket));
-            when(repository.save(any(TaxBracket.class))).thenReturn(bracket);
-
-            service.deleteIncomeTaxBracket(bracket.getId());
-
-            assertThat(bracket.getDeletedAt()).isNotNull();
-            verify(repository).save(bracket);
-        }
-
-        @Test
-        void shouldThrowNotFoundWhenBracketToDeleteDoesNotExist() {
-            UUID unknownId = UUID.randomUUID();
-            when(repository.findById(unknownId)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> service.deleteIncomeTaxBracket(unknownId))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
-                            .isEqualTo(HttpStatus.NOT_FOUND));
-
-            verify(repository, never()).save(any());
-        }
-
-        @Test
-        void shouldThrowNotFoundWhenBracketToDeleteIsAlreadySoftDeleted() {
-            bracket.setDeletedAt(Instant.now());
-            when(repository.findById(bracket.getId())).thenReturn(Optional.of(bracket));
-
-            assertThatThrownBy(() -> service.deleteIncomeTaxBracket(bracket.getId()))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
-                            .isEqualTo(HttpStatus.NOT_FOUND));
-
-            verify(repository, never()).save(any());
-        }
-    }
 }
 

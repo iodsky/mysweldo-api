@@ -261,42 +261,4 @@ class PagibigRateServiceTest {
                             .isEqualTo(HttpStatus.NOT_FOUND));
         }
     }
-
-    @Nested
-    class DeletePagibigRateTests {
-
-        @Test
-        void shouldSoftDeleteRateTableBySettingDeletedAt() {
-            when(pagibigRateTableRepository.findById(rateTable.getId()))
-                    .thenReturn(Optional.of(rateTable));
-            when(pagibigRateTableRepository.save(any(PagibigRate.class))).thenAnswer(inv -> inv.getArgument(0));
-
-            service.deletePagibigRate(rateTable.getId());
-
-            assertThat(rateTable.getDeletedAt()).isNotNull();
-        }
-
-        @Test
-        void shouldThrowNotFoundWhenDeletingNonExistentRateTable() {
-            UUID unknownId = UUID.randomUUID();
-            when(pagibigRateTableRepository.findById(unknownId)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> service.deletePagibigRate(unknownId))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
-                            .isEqualTo(HttpStatus.NOT_FOUND));
-        }
-
-        @Test
-        void shouldThrowNotFoundWhenDeletingAlreadySoftDeletedRateTable() {
-            rateTable.setDeletedAt(Instant.now());
-            when(pagibigRateTableRepository.findById(rateTable.getId()))
-                    .thenReturn(Optional.of(rateTable));
-
-            assertThatThrownBy(() -> service.deletePagibigRate(rateTable.getId()))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
-                            .isEqualTo(HttpStatus.NOT_FOUND));
-        }
-    }
 }

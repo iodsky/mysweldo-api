@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -97,12 +96,5 @@ public class TaxBracketService {
         bracket.setEffectiveDate(request.getEffectiveDate());
 
         return repository.save(bracket);
-    }
-
-    @Transactional
-    public void deleteIncomeTaxBracket(UUID id) {
-        TaxBracket bracket = getIncomeTaxBracketById(id);
-        bracket.setDeletedAt(Instant.now());
-        repository.save(bracket);
     }
 }

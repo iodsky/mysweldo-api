@@ -22,6 +22,6 @@ public class Department extends BaseModel {
     @Column(length = 20)
     private String id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String title;
 }

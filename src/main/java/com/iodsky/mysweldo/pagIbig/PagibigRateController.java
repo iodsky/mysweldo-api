@@ -95,12 +95,4 @@ public class PagibigRateController {
                 mapper.toDto(pagibigRate)
         );
     }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete Pag-IBIG rate", description = "Soft delete a Pag-IBIG rate. Requires PAYROLL role.")
-    public ApiResponse<Void> deletePagibigRate(
-            @Parameter(description = "Rate ID") @PathVariable UUID id) {
-        service.deletePagibigRate(id);
-        return ResponseFactory.success("Pag-IBIG rate deleted successfully");
-    }
 }

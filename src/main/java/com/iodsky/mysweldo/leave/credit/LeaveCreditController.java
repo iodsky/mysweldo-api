@@ -54,13 +54,4 @@ public class LeaveCreditController {
                 .stream().map(mapper::toDto).toList();
         return ResponseFactory.success("Leave credits retrieved successfully", credits);
     }
-
-    @PreAuthorize("hasAnyRole('HR', 'SUPERUSER')")
-    @DeleteMapping("/employee/{employeeId}")
-    @Operation(summary = "Delete employee leave credits", description = "Delete all leave credits for a specific employee. Requires HR role.")
-    public ApiResponse<Void> deleteLeaveCreditsByEmployeeId(
-            @Parameter(description = "Employee ID") @PathVariable Long employeeId) {
-        service.deleteLeaveCreditsByEmployeeId(employeeId);
-        return ResponseFactory.success("Employee leave credits deleted successfully");
-    }
 }

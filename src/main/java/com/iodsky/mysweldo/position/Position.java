@@ -26,6 +26,6 @@ public class Position extends BaseModel {
     @JsonIgnore
     private Department department;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String title;
 }

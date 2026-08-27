@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -116,13 +115,6 @@ public class LeaveCreditService {
         existing.setCredits(updated.getCredits());
 
         return repository.save(existing);
-    }
-
-    public void deleteLeaveCreditsByEmployeeId(Long employeeId) {
-        List<LeaveCredit> credits = repository.findAllByEmployee_Id(employeeId);
-        Instant now = Instant.now();
-        credits.forEach(credit -> credit.setDeletedAt(now));
-        repository.saveAll(credits);
     }
 
 }

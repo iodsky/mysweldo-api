@@ -97,12 +97,4 @@ public class PhilhealthRateController {
                 mapper.toDto(philhealthRate)
         );
     }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete PhilHealth rate", description = "Soft delete a PhilHealth rate. Requires PAYROLL role.")
-    public ApiResponse<Void> deletePhilhealthRate(
-            @Parameter(description = "Rate ID") @PathVariable UUID id) {
-        service.deletePhilhealthRate(id);
-        return ResponseFactory.success("PhilHealth rate deleted successfully");
-    }
 }

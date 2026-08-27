@@ -4,7 +4,11 @@ package com.iodsky.mysweldo.employee;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -178,19 +182,39 @@ public class EmployeeMapper  {
         salary.setPayType(request.getSalaryRequest().getPayType());
         salary.setPayrollFrequency(request.getSalaryRequest().getPayFrequency());
 
-        List<EmployeeBenefit> benefits = request.getBenefits()
-                .stream()
-                .map( b -> benefitMapper.toEntity(
-                        EmployeeBenefitRequest.builder()
-                                .benefitCode(b.getBenefitCode())
-                                .amount(b.getAmount())
-                                .build()
-                )).
-                toList();
+        List<EmployeeBenefit> currentBenefits = existing.getBenefits();
+        if (currentBenefits == null) {
+            currentBenefits = new ArrayList<>();
+            existing.setBenefits(currentBenefits);
+        }
 
-        benefits.forEach(b -> b.setEmployee(existing));
-        existing.getBenefits().clear();
-        existing.getBenefits().addAll(benefits);
+        Map<String, EmployeeBenefit> benefitsByCode = currentBenefits.stream()
+                .collect(Collectors.toMap(
+                        b -> b.getBenefit().getCode(),
+                        b -> b,
+                        (first, second) -> first
+                ));
+
+        Set<String> requestedCodes = request.getBenefits().stream()
+                .map(EmployeeBenefitRequest::getBenefitCode)
+                .collect(Collectors.toSet());
+
+        for (EmployeeBenefitRequest req : request.getBenefits()) {
+            EmployeeBenefit existingBenefit = benefitsByCode.get(req.getBenefitCode());
+            if (existingBenefit != null) {
+                existingBenefit.setAmount(req.getAmount());
+            } else {
+                EmployeeBenefit newBenefit = benefitMapper.toEntity(
+                        EmployeeBenefitRequest.builder()
+                                .benefitCode(req.getBenefitCode())
+                                .amount(req.getAmount())
+                                .build());
+                newBenefit.setEmployee(existing);
+                currentBenefits.add(newBenefit);
+            }
+        }
+
+        currentBenefits.removeIf(b -> !requestedCodes.contains(b.getBenefit().getCode()));
     }
 
 }

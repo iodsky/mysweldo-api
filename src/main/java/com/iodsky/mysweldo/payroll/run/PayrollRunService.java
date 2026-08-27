@@ -27,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Stream;
@@ -286,8 +285,7 @@ public class PayrollRunService {
 
         PayrollItem item = findPayrollItem(id, itemId);
 
-        item.setDeletedAt(Instant.now());
-        payrollItemRepository.save(item);
+        payrollItemRepository.delete(item);
 
         computeRunTotals(run);
         repository.save(run);

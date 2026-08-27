@@ -314,43 +314,5 @@ class SssRateServiceTest {
                             .isEqualTo(HttpStatus.NOT_FOUND));
         }
     }
-
-    @Nested
-    class DeleteSssRateTests {
-
-        @Test
-        void shouldSoftDeleteRateTableBySettingDeletedAtWhenExists() {
-            when(sssRateTableRepository.findById(rateTable.getId()))
-                    .thenReturn(Optional.of(rateTable));
-            when(sssRateTableRepository.save(any(SssRate.class))).thenAnswer(inv -> inv.getArgument(0));
-
-            service.deleteSssRate(rateTable.getId());
-
-            assertThat(rateTable.getDeletedAt()).isNotNull();
-        }
-
-        @Test
-        void shouldThrowNotFoundWhenDeletingNonExistentRateTable() {
-            UUID unknownId = UUID.randomUUID();
-            when(sssRateTableRepository.findById(unknownId)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> service.deleteSssRate(unknownId))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
-                            .isEqualTo(HttpStatus.NOT_FOUND));
-        }
-
-        @Test
-        void shouldThrowNotFoundWhenDeletingAlreadySoftDeletedRateTable() {
-            rateTable.setDeletedAt(Instant.now());
-            when(sssRateTableRepository.findById(rateTable.getId()))
-                    .thenReturn(Optional.of(rateTable));
-
-            assertThatThrownBy(() -> service.deleteSssRate(rateTable.getId()))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
-                            .isEqualTo(HttpStatus.NOT_FOUND));
-        }
-    }
 }
 
