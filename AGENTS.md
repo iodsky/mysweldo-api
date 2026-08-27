@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Spring Boot 3.5.6 · Java 21 · Maven · PostgreSQL 16 · Flyway · Spring Security (JWT) · Spring Batch · SpringDoc.
+Spring Boot 3.5.6 · Java 21 · Gradle · PostgreSQL 16 · Flyway · Spring Security (JWT) · Spring Batch · SpringDoc.
 
 ## Commands
 
@@ -8,20 +8,20 @@ Spring Boot 3.5.6 · Java 21 · Maven · PostgreSQL 16 · Flyway · Spring Secur
 # Start local PostgreSQL (+ pgAdmin at :5050); needs .env first
 docker compose -f db.compose.yml up -d
 
-# Run app locally (sources .env, then mvn spring-boot:run, profile=local)
+# Run app locally (sources .env, then ./gradlew bootRun, profile=local)
 ./run.sh
 
 # All tests
-./mvnw clean test
+./gradlew clean test
 
 # Single test class / method
-./mvnw test -Dtest=BenefitServiceTest
-./mvnw test -Dtest=BenefitServiceTest#methodName
+./gradlew test --tests "com.iodsky.mysweldo.benefit.BenefitServiceTest"
+./gradlew test --tests "com.iodsky.mysweldo.benefit.BenefitServiceTest.methodName"
 ```
 
-- Copy `.env.template` → `.env` and fill DB/JWT values before running. `.env` is loaded via `spring.config.import: optional:file:.env[.properties]` — not through Maven, so new env vars must be added to `.env.template`.
+- Copy `.env.template` → `.env` and fill DB/JWT values before running. `.env` is loaded via `spring.config.import: optional:file:.env[.properties]` — not through Gradle, so new env vars must be added to `.env.template`.
 - All endpoints are under `/api` (server context-path). Swagger UI at `/api/swagger-ui.html`, OpenAPI JSON at `/api/docs`.
-- CI (`.github/workflows/ci-cd.yml`) runs `./mvnw clean test` on all PRs to `master`/`develop`; Docker image build + GHCR push + SSH deploy to VPS happen only on `master`.
+- CI (`.github/workflows/ci-cd.yml`) runs `./gradlew clean test` on all PRs to `master`/`develop`; on `master` it builds `./gradlew clean bootJar`, builds + pushes the Docker image to GHCR. The SSH deploy step is commented out.
 
 ## Architecture
 
