@@ -4,7 +4,6 @@ import com.iodsky.mysweldo.employee.EmployeeService;
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.security.role.Role;
 import com.iodsky.mysweldo.security.role.RoleService;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
