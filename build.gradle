@@ -1,0 +1,52 @@
+plugins {
+    id 'java'
+    alias libs.plugins.spring.boot
+    alias libs.plugins.dependency.management
+}
+
+group = 'com.iodsky'
+version = '0.0.1-SNAPSHOT'
+description = 'mysweldo-api'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-batch'
+    implementation libs.jjwt.api
+    implementation libs.springdoc.openapi.starter.webmvc.ui
+    implementation libs.flyway.core
+
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
+
+    runtimeOnly 'org.springframework.boot:spring-boot-devtools'
+    runtimeOnly libs.postgresql
+    runtimeOnly libs.jjwt.impl
+    runtimeOnly libs.jjwt.jackson
+    runtimeOnly libs.flyway.database.postgresql
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation libs.spring.security.test
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

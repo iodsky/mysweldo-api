@@ -2,21 +2,17 @@ FROM eclipse-temurin:21-jdk AS builder
 
 WORKDIR /app
 
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
-
-RUN ./mvnw dependency:go-offline
-
+COPY gradlew settings.gradle build.gradle gradle.properties ./
+COPY gradle gradle
 COPY src src
 
-RUN ./mvnw clean package -DskipTests
+RUN ./gradlew --no-daemon bootJar
 
 FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-COPY --from=builder /app/target/*.jar app.jar
+COPY --from=builder /app/build/libs/*.jar app.jar
 
 EXPOSE 8001
 
