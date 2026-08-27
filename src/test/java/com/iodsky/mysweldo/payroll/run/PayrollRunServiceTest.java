@@ -139,6 +139,45 @@ class PayrollRunServiceTest {
                     .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                     .isEqualTo(HttpStatus.BAD_REQUEST);
         }
+
+        @Test
+        void shouldThrowConflictWhenAnOverlappingRegularRunExists() {
+            PayrollRunRequest request = new PayrollRunRequest();
+            request.setPeriodStartDate(LocalDate.of(2025, 3, 1));
+            request.setPeriodEndDate(LocalDate.of(2025, 3, 15));
+            request.setPayrollFrequency(PayrollFrequency.SEMI_MONTHLY);
+            request.setType(PayrollRunType.REGULAR);
+
+            when(repository.existsOverlappingByType(
+                    eq(PayrollRunType.REGULAR),
+                    eq(LocalDate.of(2025, 3, 1)),
+                    eq(LocalDate.of(2025, 3, 15))))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> service.createPayrollRun(request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.CONFLICT);
+
+            verify(repository, never()).save(any(PayrollRun.class));
+        }
+
+        @Test
+        void shouldAllowOffCycleRunThatOverlapsARegularRun() {
+            PayrollRunRequest request = new PayrollRunRequest();
+            request.setPeriodStartDate(LocalDate.of(2025, 3, 1));
+            request.setPeriodEndDate(LocalDate.of(2025, 3, 15));
+            request.setPayrollFrequency(PayrollFrequency.SEMI_MONTHLY);
+            request.setType(PayrollRunType.OFF_CYCLE);
+
+            PayrollRunDto expectedDto = PayrollRunDto.builder().status(PayrollRunStatus.DRAFT).build();
+            when(mapper.toDto(any(PayrollRun.class))).thenReturn(expectedDto);
+
+            service.createPayrollRun(request);
+
+            verify(repository, never()).existsOverlappingByType(any(), any(), any());
+            verify(repository).save(any(PayrollRun.class));
+        }
     }
 
     @Nested

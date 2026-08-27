@@ -65,6 +65,18 @@ public class PayrollRunService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
 
+        if (request.getType() == PayrollRunType.REGULAR
+                && repository.existsOverlappingByType(
+                        PayrollRunType.REGULAR,
+                        period.getStartDate(),
+                        period.getEndDate())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "A REGULAR payroll run already covers period " + period.getStartDate()
+                            + " to " + period.getEndDate()
+            );
+        }
+
         PayrollRun payrollRun = PayrollRun.builder()
                 .period(period)
                 .type(request.getType())
