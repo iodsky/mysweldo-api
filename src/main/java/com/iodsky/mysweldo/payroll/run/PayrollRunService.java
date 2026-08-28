@@ -329,7 +329,7 @@ public class PayrollRunService {
                 .orElseThrow(() -> new PayrollRunException(
                         "SSS rate table not found for date: " + payrollDate));
 
-        List<TaxBracket> taxBrackets = taxBracketRepository.findAllByEffectiveDate(payrollDate);
+        List<TaxBracket> taxBrackets = taxBracketRepository.findAllByLatestEffectiveDate(payrollDate);
         if (taxBrackets.isEmpty()) {
             throw new PayrollRunException(
                     "Income tax bracket configurations not found for date: " + payrollDate);

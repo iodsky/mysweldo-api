@@ -61,7 +61,7 @@ public class TaxBracketService {
     }
 
     public List<TaxBracket> getAllIncomeTaxBracketsByDate(LocalDate effectiveDate) {
-        return repository.findAllByEffectiveDate(effectiveDate);
+        return repository.findAllByLatestEffectiveDate(effectiveDate);
     }
 
     public TaxBracket getIncomeTaxBracketById(UUID id) {

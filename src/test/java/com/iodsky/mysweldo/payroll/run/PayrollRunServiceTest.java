@@ -81,7 +81,7 @@ class PayrollRunServiceTest {
         when(philhealthRateRepository.findLatestByEffectiveDate(any())).thenReturn(Optional.of(mock(PhilhealthRate.class)));
         when(pagibigRateRepository.findLatestByEffectiveDate(any())).thenReturn(Optional.of(mock(PagibigRate.class)));
         when(sssRateRepository.findLatestByEffectiveDate(any())).thenReturn(Optional.of(mock(SssRate.class)));
-        when(taxBracketRepository.findAllByEffectiveDate(any())).thenReturn(List.of(mock(TaxBracket.class)));
+        when(taxBracketRepository.findAllByLatestEffectiveDate(any())).thenReturn(List.of(mock(TaxBracket.class)));
         when(deductionService.getDeductionByCode("SSS")).thenReturn(mock(Deduction.class));
         when(deductionService.getDeductionByCode("PHIC")).thenReturn(mock(Deduction.class));
         when(deductionService.getDeductionByCode("HDMF")).thenReturn(mock(Deduction.class));
