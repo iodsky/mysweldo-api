@@ -14,8 +14,17 @@ import java.util.UUID;
 @Repository
 public interface TaxBracketRepository extends JpaRepository<TaxBracket, UUID>, JpaSpecificationExecutor<TaxBracket> {
 
-    @Query("SELECT i FROM TaxBracket i WHERE i.effectiveDate <= :date AND i.deletedAt IS NULL ORDER BY i.minIncome ASC")
-    List<TaxBracket> findAllByEffectiveDate(@Param("date") LocalDate date);
+    @Query("""
+            SELECT b FROM TaxBracket b
+            WHERE b.effectiveDate = (
+                SELECT MAX(b2.effectiveDate)
+                FROM TaxBracket b2
+                WHERE b2.effectiveDate <= :date AND b2.deletedAt IS NULL
+            )
+            AND b.deletedAt IS NULL
+            ORDER BY b.minIncome ASC
+            """)
+    List<TaxBracket> findAllByLatestEffectiveDate(@Param("date") LocalDate date);
 
     @Query("SELECT i FROM TaxBracket i WHERE i.minIncome <= :income AND (i.maxIncome IS NULL OR i.maxIncome >= :income) AND i.effectiveDate <= :date AND i.deletedAt IS NULL ORDER BY i.effectiveDate DESC LIMIT 1")
     TaxBracket findByIncomeAndEffectiveDate(

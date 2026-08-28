@@ -234,7 +234,7 @@ class TaxBracketServiceTest {
         @Test
         void shouldReturnBracketsMatchingGivenEffectiveDate() {
             LocalDate date = LocalDate.of(2024, 1, 1);
-            when(repository.findAllByEffectiveDate(date)).thenReturn(List.of(bracket));
+            when(repository.findAllByLatestEffectiveDate(date)).thenReturn(List.of(bracket));
 
             List<TaxBracket> result = service.getAllIncomeTaxBracketsByDate(date);
 
@@ -245,7 +245,7 @@ class TaxBracketServiceTest {
         @Test
         void shouldReturnEmptyListWhenNoBracketsExistForGivenDate() {
             LocalDate date = LocalDate.of(2099, 1, 1);
-            when(repository.findAllByEffectiveDate(date)).thenReturn(List.of());
+            when(repository.findAllByLatestEffectiveDate(date)).thenReturn(List.of());
 
             List<TaxBracket> result = service.getAllIncomeTaxBracketsByDate(date);
 
