@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -20,6 +21,7 @@ public class DepartmentService {
     private final DepartmentRepository repository;
     private final PositionRepository positionRepository;
 
+    @Transactional
     public Department createDepartment(DepartmentRequest request) {
         if (repository.existsById(request.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Department with ID " + request.getId() + " already exists");
@@ -47,12 +49,14 @@ public class DepartmentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Department " + id + " not found"));
     }
 
+    @Transactional
     public Department updateDepartment(String id, DepartmentUpdateRequest request) {
         Department department = getDepartmentById(id);
         department.setTitle(request.getTitle());
         return repository.save(department);
     }
 
+    @Transactional
     public void deleteDepartment(String id) {
         Department department = getDepartmentById(id);
 

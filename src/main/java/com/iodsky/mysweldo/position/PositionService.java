@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -22,6 +23,7 @@ public class PositionService {
     private final DepartmentService departmentService;
     private final PositionMapper mapper;
 
+    @Transactional
     public Position createPosition(PositionRequest request) {
         if (repository.existsById(request.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Position with ID " + request.getId() + " already exists");
@@ -49,6 +51,7 @@ public class PositionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Position " + id + " not found"));
     }
 
+    @Transactional
     public Position updatePosition(String id, PositionUpdateRequest request) {
         Position position = getPositionById(id);
         Department department = departmentService.getDepartmentById(request.getDepartmentId());
@@ -69,6 +72,7 @@ public class PositionService {
         return repository.save(position);
     }
 
+    @Transactional
     public void deletePosition(String id) {
         Position position = getPositionById(id);
 

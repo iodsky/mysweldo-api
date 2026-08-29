@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -16,6 +17,7 @@ public class RoleService {
 
     private final RoleRepository repository;
 
+    @Transactional
     public Role createRole(RoleRequest request) {
         String name = request.getName();
         if (repository.existsByName(name)) {
@@ -44,6 +46,7 @@ public class RoleService {
         return repository.findAll(pageable);
     }
 
+    @Transactional
     public Role updateRole(Long id, RoleRequest request) {
         Role role = getRoleById(id);
 
@@ -53,6 +56,7 @@ public class RoleService {
         return repository.save(role);
     }
 
+    @Transactional
     public void deleteRole(Long id) {
         Role role = getRoleById(id);
 
