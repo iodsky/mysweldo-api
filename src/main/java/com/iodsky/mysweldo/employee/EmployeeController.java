@@ -75,6 +75,14 @@ public class EmployeeController {
         return ResponseFactory.success("Employee retrieved successfully", employee);
     }
 
+    @PreAuthorize("hasAnyRole('HR', 'IT', 'PAYROLL', 'SUPERUSER')")
+    @GetMapping("/{id}/salary-history")
+    @Operation(summary = "Get salary history", description = "Retrieve the salary change history for an employee. Requires HR, IT, or PAYROLL role.")
+    public ApiResponse<List<SalaryHistoryDto>> getSalaryHistory(@Parameter(description = "Employee ID") @PathVariable long id) {
+        List<SalaryHistoryDto> history = service.getSalaryHistory(id);
+        return ResponseFactory.success("Salary history retrieved successfully", history);
+    }
+
     @PreAuthorize("hasAnyRole('HR', 'SUPERUSER')")
     @PutMapping("/{id}")
     @Operation(summary = "Update employee", description = "Update an existing employee's information. Requires HR role.")

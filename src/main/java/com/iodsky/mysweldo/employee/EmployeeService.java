@@ -5,6 +5,7 @@ import com.iodsky.mysweldo.department.Department;
 import com.iodsky.mysweldo.department.DepartmentService;
 import com.iodsky.mysweldo.position.Position;
 import com.iodsky.mysweldo.position.PositionService;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.security.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -27,6 +30,7 @@ public class EmployeeService {
     private final DepartmentService departmentService;
     private final PositionService positionService;
     private final BenefitService benefitService;
+    private final SalaryHistoryRepository salaryHistoryRepository;
 
     public static final List<EmploymentStatus> NON_ACTIVE_STATUSES = List.of(EmploymentStatus.RESIGNED, EmploymentStatus.TERMINATED);
 
@@ -52,7 +56,9 @@ public class EmployeeService {
                 b.setBenefit(benefitService.getBenefitByCode(b.getBenefit().getCode()));
             });
 
-            return employeeRepository.save(employee);
+            Employee saved = employeeRepository.save(employee);
+            recordSalaryHistory(saved);
+            return saved;
     }
 
     public Page<EmployeeBasicDto> getAllEmployees(int page, int limit, String departmentId, Long supervisorId, String status) {
@@ -102,9 +108,22 @@ public class EmployeeService {
             employee.setDepartment(department);
             employee.setPosition(position);
 
+            BigDecimal previousRate = employee.getSalary() != null ? employee.getSalary().getRate() : null;
+            PayType previousPayType = employee.getSalary() != null ? employee.getSalary().getPayType() : null;
+            PayrollFrequency previousFrequency = employee.getSalary() != null ? employee.getSalary().getPayrollFrequency() : null;
+
             employeeMapper.updateEntity(employee, request);
 
-            return employeeRepository.save(employee);
+            Employee saved = employeeRepository.save(employee);
+
+            if (employee.getSalary() != null
+                    && (!Objects.equals(previousRate, employee.getSalary().getRate())
+                    || !Objects.equals(previousPayType, employee.getSalary().getPayType())
+                    || !Objects.equals(previousFrequency, employee.getSalary().getPayrollFrequency()))) {
+                recordSalaryHistory(saved);
+            }
+
+            return saved;
 
     }
 
@@ -130,6 +149,41 @@ public class EmployeeService {
 
     public List<Long> getAllActiveEmployeeIds() {
         return employeeRepository.findAllActiveEmployeeIds();
+    }
+
+    public List<SalaryHistoryDto> getSalaryHistory(Long employeeId) {
+        getEmployeeById(employeeId);
+
+        return salaryHistoryRepository.findAllByEmployee_IdOrderByEffectiveFromDesc(employeeId)
+                .stream()
+                .map(this::toSalaryHistoryDto)
+                .toList();
+    }
+
+    private void recordSalaryHistory(Employee employee) {
+        Salary salary = employee.getSalary();
+        if (salary == null) {
+            return;
+        }
+
+        salaryHistoryRepository.save(SalaryHistory.builder()
+                .employee(employee)
+                .rate(salary.getRate())
+                .payType(salary.getPayType())
+                .payrollFrequency(salary.getPayrollFrequency())
+                .effectiveFrom(LocalDate.now())
+                .build());
+    }
+
+    private SalaryHistoryDto toSalaryHistoryDto(SalaryHistory history) {
+        return SalaryHistoryDto.builder()
+                .id(history.getId())
+                .rate(history.getRate())
+                .payType(history.getPayType())
+                .payFrequency(history.getPayrollFrequency())
+                .effectiveFrom(history.getEffectiveFrom())
+                .createdAt(history.getCreatedAt())
+                .build();
     }
 
     public Page<EmployeeBasic> getEmployees(Pageable pageable) {

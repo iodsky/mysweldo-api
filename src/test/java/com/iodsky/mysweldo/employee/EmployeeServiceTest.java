@@ -4,6 +4,7 @@ import com.iodsky.mysweldo.benefit.BenefitService;
 import com.iodsky.mysweldo.benefit.Benefit;
 import com.iodsky.mysweldo.department.Department;
 import com.iodsky.mysweldo.department.DepartmentService;
+import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.position.Position;
 import com.iodsky.mysweldo.position.PositionService;
 import com.iodsky.mysweldo.security.user.User;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -24,10 +26,13 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -56,6 +61,9 @@ class EmployeeServiceTest {
     @Mock
         private BenefitService benefitService;
 
+    @Mock
+    private SalaryHistoryRepository salaryHistoryRepository;
+
     private Department department;
     private Position position;
     private Employee savedEmployee;
@@ -66,6 +74,11 @@ class EmployeeServiceTest {
         position = Position.builder().id("POS-001").title("Engineer").build();
         savedEmployee = Employee.builder().id(1L).firstName("John").lastName("Doe").build();
         savedEmployee.setBenefits(new ArrayList<>());
+        savedEmployee.setSalary(Salary.builder()
+                .rate(BigDecimal.valueOf(30000))
+                .payType(PayType.MONTHLY)
+                .payrollFrequency(PayrollFrequency.MONTHLY)
+                .build());
     }
 
     @Nested
@@ -706,6 +719,113 @@ class EmployeeServiceTest {
             List<Long> result = service.getAllActiveEmployeeIds();
 
             assertThat(result).isNotNull().isEmpty();
+        }
+    }
+
+    @Nested
+    class SalaryHistoryTests {
+
+        private EmployeeRequest basicRequest() {
+            EmployeeRequest request = mock(EmployeeRequest.class);
+            when(request.getSupervisorId()).thenReturn(null);
+            when(request.getDepartmentId()).thenReturn("DEPT-001");
+            when(request.getPositionId()).thenReturn("POS-001");
+            return request;
+        }
+
+        @Test
+        void shouldRecordInitialSalaryHistoryWhenCreatingEmployee() {
+            EmployeeRequest request = basicRequest();
+
+            Employee mappedEmployee = Employee.builder().id(1L).build();
+            mappedEmployee.setBenefits(new ArrayList<>());
+            mappedEmployee.setSalary(Salary.builder()
+                    .rate(BigDecimal.valueOf(30000))
+                    .payType(PayType.MONTHLY)
+                    .payrollFrequency(PayrollFrequency.MONTHLY)
+                    .build());
+
+            when(employeeMapper.toEntity(request)).thenReturn(mappedEmployee);
+            when(departmentService.getDepartmentById("DEPT-001")).thenReturn(department);
+            when(positionService.getPositionById("POS-001")).thenReturn(position);
+            when(employeeRepository.save(mappedEmployee)).thenReturn(savedEmployee);
+
+            service.createEmployee(request);
+
+            ArgumentCaptor<SalaryHistory> captor = ArgumentCaptor.forClass(SalaryHistory.class);
+            verify(salaryHistoryRepository).save(captor.capture());
+            assertThat(captor.getValue().getEmployee()).isEqualTo(savedEmployee);
+            assertThat(captor.getValue().getRate()).isEqualByComparingTo(BigDecimal.valueOf(30000));
+            assertThat(captor.getValue().getEffectiveFrom()).isNotNull();
+        }
+
+        @Test
+        void shouldRecordSalaryHistoryWhenSalaryChangesOnUpdate() {
+            EmployeeRequest request = basicRequest();
+
+            when(employeeRepository.findById(1L)).thenReturn(Optional.of(savedEmployee));
+            when(departmentService.getDepartmentById("DEPT-001")).thenReturn(department);
+            when(positionService.getPositionById("POS-001")).thenReturn(position);
+            when(employeeRepository.save(savedEmployee)).thenReturn(savedEmployee);
+
+            doAnswer(invocation -> {
+                savedEmployee.getSalary().setRate(BigDecimal.valueOf(50000));
+                return null;
+            }).when(employeeMapper).updateEntity(eq(savedEmployee), eq(request));
+
+            service.updateEmployeeById(1L, request);
+
+            ArgumentCaptor<SalaryHistory> captor = ArgumentCaptor.forClass(SalaryHistory.class);
+            verify(salaryHistoryRepository).save(captor.capture());
+            assertThat(captor.getValue().getRate()).isEqualByComparingTo(BigDecimal.valueOf(50000));
+        }
+
+        @Test
+        void shouldNotRecordSalaryHistoryWhenSalaryIsUnchangedOnUpdate() {
+            EmployeeRequest request = basicRequest();
+
+            when(employeeRepository.findById(1L)).thenReturn(Optional.of(savedEmployee));
+            when(departmentService.getDepartmentById("DEPT-001")).thenReturn(department);
+            when(positionService.getPositionById("POS-001")).thenReturn(position);
+            when(employeeRepository.save(savedEmployee)).thenReturn(savedEmployee);
+
+            service.updateEmployeeById(1L, request);
+
+            verify(salaryHistoryRepository, never()).save(any());
+        }
+
+        @Test
+        void shouldReturnSalaryHistoryForEmployee() {
+            SalaryHistory history = SalaryHistory.builder()
+                    .id(UUID.randomUUID())
+                    .rate(BigDecimal.valueOf(50000))
+                    .payType(PayType.MONTHLY)
+                    .payrollFrequency(PayrollFrequency.MONTHLY)
+                    .effectiveFrom(LocalDate.of(2025, 6, 1))
+                    .build();
+
+            when(employeeRepository.findById(1L)).thenReturn(Optional.of(savedEmployee));
+            when(salaryHistoryRepository.findAllByEmployee_IdOrderByEffectiveFromDesc(1L))
+                    .thenReturn(List.of(history));
+
+            List<SalaryHistoryDto> result = service.getSalaryHistory(1L);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().getRate()).isEqualByComparingTo(BigDecimal.valueOf(50000));
+            assertThat(result.getFirst().getPayFrequency()).isEqualTo(PayrollFrequency.MONTHLY);
+            assertThat(result.getFirst().getEffectiveFrom()).isEqualTo(LocalDate.of(2025, 6, 1));
+        }
+
+        @Test
+        void shouldThrow404WhenEmployeeNotFoundForSalaryHistory() {
+            when(employeeRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.getSalaryHistory(999L))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.NOT_FOUND);
+
+            verify(salaryHistoryRepository, never()).findAllByEmployee_IdOrderByEffectiveFromDesc(any());
         }
     }
 }
