@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -32,6 +33,7 @@ public class AttendanceService {
     private final UserService userService;
     private final AttendanceMapper attendanceMapper;
 
+    @Transactional
     public AttendanceDto createAttendance(AttendanceRequest request) {
         Employee employee = employeeService.getEmployeeById(request.getEmployeeId());
 
@@ -74,6 +76,7 @@ public class AttendanceService {
         return attendanceMapper.toDto(saved);
     }
 
+    @Transactional
     public AttendanceDto clockIn() {
         Employee employee = userService.getAuthenticatedUser().getEmployee();
         LocalDate today = LocalDate.now();
@@ -96,6 +99,7 @@ public class AttendanceService {
         return repository.findByEmployee_IdAndDate(employeeId, date).orElse(null);
     }
 
+    @Transactional
     public AttendanceDto updateAttendance(UUID id, AttendanceRequest request) {
         Attendance attendance = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance not found with id: " + id));
@@ -132,6 +136,7 @@ public class AttendanceService {
         return attendanceMapper.toDto(updated);
     }
 
+    @Transactional
     public AttendanceDto clockOut() {
         Employee employee = userService.getAuthenticatedUser().getEmployee();
         Attendance attendance = repository.findFirstByEmployee_IdAndTimeOutIsNullOrderByDateDescTimeInDesc(employee.getId())

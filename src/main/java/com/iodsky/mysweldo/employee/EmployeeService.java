@@ -86,6 +86,7 @@ public class EmployeeService {
         return employeeRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee " + id + " not found"));
     }
 
+    @Transactional
     public Employee updateEmployeeById(Long id, EmployeeRequest request) {
         Employee employee = this.getEmployeeById(id);
 

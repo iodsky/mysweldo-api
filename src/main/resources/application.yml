@@ -6,6 +6,8 @@ spring:
   sql:
     init:
       mode: never
+  jpa:
+    open-in-view: true
   flyway:
     enabled: true
     baseline-on-migrate: true
