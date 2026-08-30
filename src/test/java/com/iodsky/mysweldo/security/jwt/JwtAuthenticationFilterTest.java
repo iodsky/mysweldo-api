@@ -2,6 +2,8 @@ package com.iodsky.mysweldo.security.jwt;
 
 import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +22,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -41,12 +45,23 @@ class JwtAuthenticationFilterTest {
     private MockHttpServletRequest request;
     private MockHttpServletResponse response;
 
+    @BeforeEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
     private void initRequest(String authorizationHeader) {
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
         if (authorizationHeader != null) {
             request.addHeader("Authorization", authorizationHeader);
         }
+    }
+
+    private void initRequestWithAccessCookie(String token) {
+        request = new MockHttpServletRequest();
+        response = new MockHttpServletResponse();
+        request.setCookies(new Cookie("access_token", token));
     }
 
     @Nested
@@ -70,8 +85,20 @@ class JwtAuthenticationFilterTest {
         void shouldNotThrowAndContinueChainWhenTokenIsBlank() throws Exception {
             initRequest("Bearer ");
 
-            when(jwtService.extractUserEmail(""))
-                    .thenThrow(new IllegalArgumentException("JWT String argument cannot be null or empty."));
+            assertThatCode(() -> filter.doFilterInternal(request, response, filterChain))
+                    .doesNotThrowAnyException();
+
+            verify(filterChain).doFilter(request, response);
+            verify(jwtService, never()).extractUserEmail(anyString());
+            assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        }
+
+        @Test
+        void shouldNotThrowAndContinueChainWhenTokenIsExpired() throws Exception {
+            initRequest("Bearer expired.token.value");
+
+            when(jwtService.extractUserEmail("expired.token.value"))
+                    .thenThrow(new io.jsonwebtoken.ExpiredJwtException(null, null, "Expired token"));
 
             assertThatCode(() -> filter.doFilterInternal(request, response, filterChain))
                     .doesNotThrowAnyException();
@@ -81,10 +108,11 @@ class JwtAuthenticationFilterTest {
         }
 
         @Test
-        void shouldNotThrowAndContinueChainWhenTokenIsExpired() throws Exception {
-            initRequest("Bearer expired.token.value");
+        void shouldNotThrowAndContinueChainWhenCookieTokenIsExpired() throws Exception {
+            initRequestWithAccessCookie("expired.cookie.token");
 
-            when(jwtService.extractUserEmail("expired.token.value"))
+            when(jwtService.getAccessTokenFromCookie(request)).thenReturn("expired.cookie.token");
+            when(jwtService.extractUserEmail("expired.cookie.token"))
                     .thenThrow(new io.jsonwebtoken.ExpiredJwtException(null, null, "Expired token"));
 
             assertThatCode(() -> filter.doFilterInternal(request, response, filterChain))
@@ -106,6 +134,25 @@ class JwtAuthenticationFilterTest {
             when(jwtService.extractUserEmail("valid.token.value")).thenReturn("admin@example.com");
             when(userDetailsService.loadUserByUsername("admin@example.com")).thenReturn(userDetails);
             when(jwtService.isTokenValid("valid.token.value", userDetails)).thenReturn(true);
+
+            filter.doFilterInternal(request, response, filterChain);
+
+            verify(filterChain).doFilter(request, response);
+            assertThat(SecurityContextHolder.getContext().getAuthentication())
+                    .isInstanceOf(UsernamePasswordAuthenticationToken.class)
+                    .extracting(auth -> auth.getPrincipal())
+                    .isEqualTo(userDetails);
+        }
+
+        @Test
+        void shouldSetAuthenticationWhenTokenIsInCookie() throws Exception {
+            initRequestWithAccessCookie("cookie.token.value");
+            UserDetails userDetails = new User("admin@example.com", "password", List.of());
+
+            when(jwtService.getAccessTokenFromCookie(request)).thenReturn("cookie.token.value");
+            when(jwtService.extractUserEmail("cookie.token.value")).thenReturn("admin@example.com");
+            when(userDetailsService.loadUserByUsername("admin@example.com")).thenReturn(userDetails);
+            when(jwtService.isTokenValid("cookie.token.value", userDetails)).thenReturn(true);
 
             filter.doFilterInternal(request, response, filterChain);
 

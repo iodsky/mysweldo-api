@@ -25,7 +25,10 @@ public class AuthenticationController {
     public ApiResponse<AuthSession> authenticate(@Valid @RequestBody AuthRequest request, HttpServletResponse response) {
         AuthSession authResponse = service.authenticate(request);
 
-        String refreshToken = service.generateRefreshToken(authResponse.getUser().getEmail(), request.getAccessType());
+        String accessToken = service.generateAccessToken(request.getEmail(), request.getAccessType());
+        service.addAccessTokenCookie(accessToken, response);
+
+        String refreshToken = service.generateRefreshToken(request.getEmail(), request.getAccessType());
         service.addRefreshTokenCookie(refreshToken, response);
 
         return ResponseFactory.success("Authentication successful", authResponse);
@@ -35,14 +38,16 @@ public class AuthenticationController {
     @Operation(summary = "Logout and clear JWT token", description = "Logout from the system and clear the JWT token cookie")
     public ApiResponse<Void> logout(HttpServletResponse response) {
         service.clearRefreshTokenCookie(response);
+        service.clearAccessTokenCookie(response);
         return ResponseFactory.success("Logout success", null);
     }
 
     @PostMapping("/refresh")
     @Operation(summary = "Refresh access token", description = "Use the refresh token from cookie to get a new short-lived access token")
-    public ApiResponse<AccessToken> refresh(HttpServletRequest request) {
+    public ApiResponse<Void> refresh(HttpServletRequest request, HttpServletResponse response) {
         String accessToken = service.generateAccessToken(request);
-        return ResponseFactory.success("Refresh success", new AccessToken(accessToken));
+        service.addAccessTokenCookie(accessToken, response);
+        return ResponseFactory.success("Refresh success", null);
     }
 
     @GetMapping("/me")

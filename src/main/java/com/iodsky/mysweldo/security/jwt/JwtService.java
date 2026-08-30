@@ -40,6 +40,7 @@ public class JwtService {
     private String sameSite;
 
     private static final String JWT_COOKIE_NAME = "jwt";
+    private static final String ACCESS_TOKEN_COOKIE_NAME = "access_token";
     private static final String COOKIE_PATH = "/";
 
     public String buildToken(Map<String, Object> claims, UserDetails userDetails, Long expirationTime) {
@@ -104,23 +105,26 @@ public class JwtService {
     // Cookie Management Methods
 
     public void addTokenToCookie(String token, HttpServletResponse response) {
-        ResponseCookie cookie = ResponseCookie
-                .from(JWT_COOKIE_NAME, token)
-                .path(COOKIE_PATH)
-                .maxAge(refreshTokenExpiration / 1000)
-                .httpOnly(httpOnly)
-                .secure(secure)
-                .sameSite(sameSite)
-                .build();
+        addCookie(JWT_COOKIE_NAME, token, refreshTokenExpiration / 1000, response);
+    }
 
-        response.addHeader("Set-Cookie", cookie.toString());
+    public void addAccessTokenCookie(String token, HttpServletResponse response) {
+        addCookie(ACCESS_TOKEN_COOKIE_NAME, token, accessTokenExpiration / 1000, response);
     }
 
     public void clearJwtCookie(HttpServletResponse response) {
+        addCookie(JWT_COOKIE_NAME, "", 0, response);
+    }
+
+    public void clearAccessTokenCookie(HttpServletResponse response) {
+        addCookie(ACCESS_TOKEN_COOKIE_NAME, "", 0, response);
+    }
+
+    private void addCookie(String name, String value, long maxAge, HttpServletResponse response) {
         ResponseCookie cookie = ResponseCookie
-                .from(JWT_COOKIE_NAME, "")
+                .from(name, value)
                 .path(COOKIE_PATH)
-                .maxAge(0)
+                .maxAge(maxAge)
                 .httpOnly(httpOnly)
                 .secure(secure)
                 .sameSite(sameSite)
@@ -130,10 +134,18 @@ public class JwtService {
     }
 
     public String getTokenFromCookie(HttpServletRequest request) {
+        return getCookieValue(request, JWT_COOKIE_NAME);
+    }
+
+    public String getAccessTokenFromCookie(HttpServletRequest request) {
+        return getCookieValue(request, ACCESS_TOKEN_COOKIE_NAME);
+    }
+
+    private String getCookieValue(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if (JWT_COOKIE_NAME.equals(cookie.getName())) {
+                if (name.equals(cookie.getName())) {
                     return cookie.getValue();
                 }
             }

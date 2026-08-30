@@ -50,26 +50,17 @@ public class AuthenticationService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid access for this account");
         }
 
-        String accessToken = generateAccessToken(user.getEmail(), request.getAccessType());
-
         UserDto userDto = userMapper.toDto(user);
         return new AuthSession(
                 userDto,
-                request.getAccessType(),
-                accessToken
+                request.getAccessType()
         );
     }
 
     public AuthenticatedUser getAuthenticatedUser(HttpServletRequest request) {
-        String authorizationHeader = request.getHeader("Authorization");
+        String token = jwtService.getAccessTokenFromCookie(request);
 
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or missing token");
-        }
-
-        String token = authorizationHeader.substring(7);
-
-        if (token.isBlank()) {
+        if (token == null || token.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or missing token");
         }
 
@@ -125,8 +116,16 @@ public class AuthenticationService {
         jwtService.addTokenToCookie(token, response);
     }
 
+    public void addAccessTokenCookie(String token, HttpServletResponse response) {
+        jwtService.addAccessTokenCookie(token, response);
+    }
+
     public void clearRefreshTokenCookie(HttpServletResponse response) {
         jwtService.clearJwtCookie(response);
+    }
+
+    public void clearAccessTokenCookie(HttpServletResponse response) {
+        jwtService.clearAccessTokenCookie(response);
     }
 
 }

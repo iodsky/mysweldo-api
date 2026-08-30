@@ -83,8 +83,6 @@ class AuthenticationServiceTest {
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                     .thenReturn(null);
             when(userService.getUserByEmail("john@example.com")).thenReturn(validUser);
-            when(jwtService.generateAccessToken(any(), any()))
-                    .thenReturn("mocked.access.token");
             when(userMapper.toDto(validUser)).thenReturn(validUserDto);
 
             AuthSession response = authenticationService.authenticate(validLoginRequest);
@@ -92,7 +90,7 @@ class AuthenticationServiceTest {
             assertThat(response).isNotNull();
             assertThat(response.getUser().getEmail()).isEqualTo("john@example.com");
             assertThat(response.getUser().getRole()).isEqualTo("EMPLOYEE");
-            assertThat(response.getToken()).isEqualTo("mocked.access.token");
+            assertThat(response.getAccessType()).isEqualTo(AccessType.EMPLOYEE);
         }
 
         @Test

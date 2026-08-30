@@ -9,5 +9,4 @@ import lombok.Data;
 public class AuthSession {
     private UserDto user;
     private AccessType accessType;
-    private String token;
 }
