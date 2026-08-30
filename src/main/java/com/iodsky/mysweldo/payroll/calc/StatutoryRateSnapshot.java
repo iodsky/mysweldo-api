@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.core;
+package com.iodsky.mysweldo.payroll.calc;
 
 import com.iodsky.mysweldo.contribution.Contribution;
 import com.iodsky.mysweldo.deduction.Deduction;

@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.core;
+package com.iodsky.mysweldo.payroll.calc;
 
 import com.iodsky.mysweldo.contribution.ContributionService;
 import com.iodsky.mysweldo.deduction.DeductionService;
@@ -8,7 +8,8 @@ import com.iodsky.mysweldo.employee.Salary;
 import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.payroll.run.PayrollPeriod;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;
-import com.iodsky.mysweldo.payroll.run.PayrollRunException;
+import com.iodsky.mysweldo.payroll.PayrollRunException;
+import com.iodsky.mysweldo.payroll.item.PayrollItem;
 import com.iodsky.mysweldo.payroll.strategy.PayrollComputationStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;

@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.core;
+package com.iodsky.mysweldo.payroll.item;
 
 import com.iodsky.mysweldo.security.user.User;
 import com.iodsky.mysweldo.security.user.UserService;

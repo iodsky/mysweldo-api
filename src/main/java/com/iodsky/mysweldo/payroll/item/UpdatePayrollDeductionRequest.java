@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.core;
+package com.iodsky.mysweldo.payroll.item;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;

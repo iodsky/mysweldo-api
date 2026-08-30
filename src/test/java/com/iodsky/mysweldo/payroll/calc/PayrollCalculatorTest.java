@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.core;
+package com.iodsky.mysweldo.payroll.calc;
 
 import com.iodsky.mysweldo.pagIbig.PagibigRate;
 import com.iodsky.mysweldo.philhealth.PhilhealthRate;

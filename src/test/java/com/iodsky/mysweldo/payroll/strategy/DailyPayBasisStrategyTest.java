@@ -1,7 +1,7 @@
 package com.iodsky.mysweldo.payroll.strategy;
 
 import com.iodsky.mysweldo.attendance.AttendancePayrollSummary;
-import com.iodsky.mysweldo.payroll.core.PayrollCalculator;
+import com.iodsky.mysweldo.payroll.calc.PayrollCalculator;
 import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import org.junit.jupiter.api.Test;
 

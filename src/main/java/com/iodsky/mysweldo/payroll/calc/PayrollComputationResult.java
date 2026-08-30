@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.core;
+package com.iodsky.mysweldo.payroll.calc;
 
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.employee.EmployeeBenefit;

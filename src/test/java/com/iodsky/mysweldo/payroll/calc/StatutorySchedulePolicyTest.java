@@ -1,5 +1,6 @@
-package com.iodsky.mysweldo.payroll.core;
+package com.iodsky.mysweldo.payroll.calc;
 
+import com.iodsky.mysweldo.payroll.item.PayrollItemRepository;
 import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import com.iodsky.mysweldo.payroll.run.PayrollPeriod;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;

@@ -1,6 +1,6 @@
 package com.iodsky.mysweldo.contribution;
 
-import com.iodsky.mysweldo.payroll.core.EmployerContributionRepository;
+import com.iodsky.mysweldo.payroll.item.EmployerContributionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

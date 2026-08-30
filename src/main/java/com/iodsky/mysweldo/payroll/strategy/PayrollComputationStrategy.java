@@ -1,8 +1,8 @@
 package com.iodsky.mysweldo.payroll.strategy;
 
 import com.iodsky.mysweldo.employee.Employee;
-import com.iodsky.mysweldo.payroll.core.PayrollComputationResult;
-import com.iodsky.mysweldo.payroll.core.StatutoryRateSnapshot;
+import com.iodsky.mysweldo.payroll.calc.PayrollComputationResult;
+import com.iodsky.mysweldo.payroll.calc.StatutoryRateSnapshot;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;
 
 public interface PayrollComputationStrategy {

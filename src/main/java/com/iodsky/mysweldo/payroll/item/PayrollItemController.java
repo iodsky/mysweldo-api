@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.core;
+package com.iodsky.mysweldo.payroll.item;
 
 import com.iodsky.mysweldo.common.response.ApiResponse;
 import com.iodsky.mysweldo.common.response.PaginationMeta;

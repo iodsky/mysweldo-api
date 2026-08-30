@@ -1,12 +1,16 @@
-package com.iodsky.mysweldo.payroll.core;
+package com.iodsky.mysweldo.payroll.calc;
 
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.employee.EmployeeService;
 import com.iodsky.mysweldo.employee.EmployeeBenefit;
+import com.iodsky.mysweldo.payroll.PayrollRunException;
+import com.iodsky.mysweldo.payroll.item.EmployerContribution;
+import com.iodsky.mysweldo.payroll.item.PayrollBenefit;
+import com.iodsky.mysweldo.payroll.item.PayrollDeduction;
+import com.iodsky.mysweldo.payroll.item.PayrollItem;
 import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
-import com.iodsky.mysweldo.payroll.run.PayrollRunException;
-import com.iodsky.mysweldo.payroll.strategy.PayrollComputationStrategy;
 import com.iodsky.mysweldo.payroll.run.PayrollRun;
+import com.iodsky.mysweldo.payroll.strategy.PayrollComputationStrategy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

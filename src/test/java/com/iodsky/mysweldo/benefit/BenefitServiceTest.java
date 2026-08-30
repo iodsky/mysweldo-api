@@ -1,6 +1,6 @@
 package com.iodsky.mysweldo.benefit;
 
-import com.iodsky.mysweldo.payroll.core.PayrollBenefitRepository;
+import com.iodsky.mysweldo.payroll.item.PayrollBenefitRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

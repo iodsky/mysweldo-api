@@ -1,6 +1,6 @@
 package com.iodsky.mysweldo.deduction;
 
-import com.iodsky.mysweldo.payroll.core.PayrollDeductionRepository;
+import com.iodsky.mysweldo.payroll.item.PayrollDeductionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

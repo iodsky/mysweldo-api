@@ -1,11 +1,11 @@
-package com.iodsky.mysweldo.payroll.core;
+package com.iodsky.mysweldo.payroll.calc;
 
 import com.iodsky.mysweldo.employee.EmployeeBenefit;
 import com.iodsky.mysweldo.pagIbig.PagibigRate;
 import com.iodsky.mysweldo.philhealth.PhilhealthRate;
 import com.iodsky.mysweldo.sss.SssRate;
 import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
-import com.iodsky.mysweldo.payroll.run.PayrollRunException;
+import com.iodsky.mysweldo.payroll.PayrollRunException;
 import com.iodsky.mysweldo.tax.TaxBracket;
 import org.springframework.stereotype.Component;
 

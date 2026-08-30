@@ -1,6 +1,6 @@
 package com.iodsky.mysweldo.deduction;
 
-import com.iodsky.mysweldo.payroll.core.PayrollDeductionRepository;
+import com.iodsky.mysweldo.payroll.item.PayrollDeductionRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

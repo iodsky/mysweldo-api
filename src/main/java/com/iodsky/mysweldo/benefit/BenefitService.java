@@ -1,6 +1,6 @@
 package com.iodsky.mysweldo.benefit;
 
-import com.iodsky.mysweldo.payroll.core.PayrollBenefitRepository;
+import com.iodsky.mysweldo.payroll.item.PayrollBenefitRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

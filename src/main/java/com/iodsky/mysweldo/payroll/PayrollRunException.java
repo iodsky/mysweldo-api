@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.payroll.run;
+package com.iodsky.mysweldo.payroll;
 
 public class PayrollRunException extends RuntimeException {
 
