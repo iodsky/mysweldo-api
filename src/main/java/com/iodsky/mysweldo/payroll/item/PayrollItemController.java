@@ -1,8 +1,6 @@
 package com.iodsky.mysweldo.payroll.item;
 
-import com.iodsky.mysweldo.common.response.ApiResponse;
-import com.iodsky.mysweldo.common.response.PaginationMeta;
-import com.iodsky.mysweldo.common.response.ResponseFactory;
+import com.iodsky.mysweldo.common.response.PageDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,8 +23,8 @@ public class PayrollItemController {
     private final PayrollItemMapper mapper;
 
     @GetMapping("/me")
-    @Operation(summary = "Get my payroll records", description = "Retrieve payroll records for the authenticated employee")
-    public ApiResponse<List<PayrollItemDto>> getAllEmployeePayroll(
+    @Operation(summary = "Get my payroll records", description = "Retrieve payroll records for the authenticated employee", operationId = "getMyPayrollRecords")
+    public PageDto<PayrollItemDto> getAllEmployeePayroll(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
             @Parameter(description = "Filter by year and month") @RequestParam(required = false) YearMonth period
@@ -35,7 +33,7 @@ public class PayrollItemController {
 
         List<PayrollItemDto> payroll = page.getContent().stream().map(mapper::toDto).toList();
 
-        return ResponseFactory.success("Payroll retrieved successfully", payroll, PaginationMeta.of(page));
+        return PageDto.of(page.map(mapper::toDto));
     }
 
 }

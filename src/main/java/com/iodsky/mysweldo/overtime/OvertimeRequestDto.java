@@ -1,5 +1,7 @@
 package com.iodsky.mysweldo.overtime;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.iodsky.mysweldo.common.RequestStatus;
 
@@ -18,18 +20,18 @@ import java.util.UUID;
 @Data
 @Builder
 public class OvertimeRequestDto {
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)@Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private UUID id;
 
     private Long employeeId;
 
-    @NotNull(message = "Date is required")
+    @NotNull(message = "Date is required")@Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     @Past
     private LocalDate date;
 
     @NotNull
     @DecimalMin(value = "0.01", message = "Overtime hours must be greater than 0")
-    @DecimalMax(value = "24.00", message = "Overtime hours must be less than 24 hours")
+    @DecimalMax(value = "24.00", message = "Overtime hours must be less than 24 hours")@Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal overtimeHours;
  
     private String reason;

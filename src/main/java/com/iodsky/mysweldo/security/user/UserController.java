@@ -1,8 +1,6 @@
 package com.iodsky.mysweldo.security.user;
 
-import com.iodsky.mysweldo.common.response.ApiResponse;
-import com.iodsky.mysweldo.common.response.PaginationMeta;
-import com.iodsky.mysweldo.common.response.ResponseFactory;
+import com.iodsky.mysweldo.common.response.PageDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -35,36 +32,31 @@ public class UserController {
             description = "Create a new user account. Requires IT role.",
             operationId = "createUser"
     )
-    public ApiResponse<UserDto> createUser(@Valid @RequestBody UserRequest userRequest) {
-        UserDto user = mapper.toDto(service.createUser(userRequest));
-        return ResponseFactory.success("User created successfully", user);
+    public UserDto createUser(@Valid @RequestBody UserRequest userRequest) {
+        return mapper.toDto(service.createUser(userRequest));
     }
 
     @GetMapping
-    @Operation(summary = "Get all users", description = "Retrieve a paginated list of user accounts with optional role filtering. Requires IT role.")
-    public ApiResponse<List<UserDto>> getUsers(
+    @Operation(summary = "Get all users", description = "Retrieve a paginated list of user accounts with optional role filtering. Requires IT role.", operationId = "getUsers")
+    public PageDto<UserDto> getUsers(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
             @Parameter(description = "Filter by role") @RequestParam(required = false) String roleName
     ) {
         Page<User> page = service.getAllUsers(pageNo, limit, roleName);
-        List<UserDto> data = page.getContent().stream().map(mapper::toDto).toList();
-
-        return ResponseFactory.success("Users retrieved successfully", data, PaginationMeta.of(page));
+        return PageDto.of(page.map(mapper::toDto));
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<UserDto> getUserById(@PathVariable UUID id) {
-        User user = service.getUserById(id);
-        UserDto res = mapper.toDto(user);
-        return ResponseFactory.success("User retrieved successfully", res);
+    @Operation(summary = "Get user by ID", description = "Retrieve a specific user by their ID. Requires IT role.", operationId = "getUserById")
+    public UserDto getUserById(@PathVariable UUID id) {
+        return mapper.toDto(service.getUserById(id));
     }
 
     @PatchMapping("/{id}/role")
-    public ApiResponse<UserDto> updateUserRole(@PathVariable UUID id, @RequestParam String role) {
-        User user = service.updateUserRole(id, role);
-        UserDto res = mapper.toDto(user);
-        return ResponseFactory.success("User's role updated successfully", res);
+    @Operation(summary = "Update user role", description = "Update the role of a specific user. Requires IT role.", operationId = "updateUserRole")
+    public UserDto updateUserRole(@PathVariable UUID id, @RequestParam String role) {
+        return mapper.toDto(service.updateUserRole(id, role));
     }
 
 }

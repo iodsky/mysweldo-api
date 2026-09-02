@@ -1,5 +1,7 @@
 package com.iodsky.mysweldo.sss;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,12 +18,19 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SssRateDto {
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private UUID id;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal totalSss;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal employeeSss;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal employerSss;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private List<SalaryBracketDto> salaryBrackets;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDate effectiveDate;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -30,8 +39,11 @@ public class SssRateDto {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class SalaryBracketDto {
-        private BigDecimal minSalary;
-        private BigDecimal maxSalary;
-        private BigDecimal msc;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+    private BigDecimal minSalary;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+    private BigDecimal maxSalary;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+    private BigDecimal msc;
     }
 }

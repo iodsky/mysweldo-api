@@ -1,8 +1,6 @@
 package com.iodsky.mysweldo.deduction;
 
-import com.iodsky.mysweldo.common.response.ApiResponse;
-import com.iodsky.mysweldo.common.response.PaginationMeta;
-import com.iodsky.mysweldo.common.response.ResponseFactory;
+import com.iodsky.mysweldo.common.response.PageDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,45 +29,46 @@ public class DeductionController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create deduction", description = "Create a new deduction. Requires PAYROLL role.")
-    public ApiResponse<DeductionDto> createDeduction(@Valid @RequestBody DeductionRequest request) {
+    @Operation(summary = "Create deduction", description = "Create a new deduction. Requires PAYROLL role.", operationId = "createDeduction")
+    public DeductionDto createDeduction(@Valid @RequestBody DeductionRequest request) {
         Deduction deduction = service.createDeduction(request);
-        return ResponseFactory.success("Deduction created successfully", mapper.toDto(deduction));
+        return mapper.toDto(deduction);
     }
 
     @GetMapping
-    @Operation(summary = "Get all deductions", description = "Retrieve all deductions with pagination. Requires PAYROLL role.")
-    public ApiResponse<List<DeductionDto>> getAllDeductions(
+    @Operation(summary = "Get all deductions", description = "Retrieve all deductions with pagination. Requires PAYROLL role.", operationId = "getAllDeductions")
+    public PageDto<DeductionDto> getAllDeductions(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit
     ) {
         Page<Deduction> page = service.getAllDeductions(pageNo, limit);
         List<DeductionDto> deductions = page.getContent().stream().map(mapper::toDto).toList();
-        return ResponseFactory.success("Deductions retrieved successfully", deductions, PaginationMeta.of(page));
+        return PageDto.of(page.map(mapper::toDto));
     }
 
     @GetMapping("/{code}")
-    @Operation(summary = "Get deduction by code", description = "Retrieve a specific deduction. Requires PAYROLL role.")
-    public ApiResponse<DeductionDto> getDeductionByCode(
+    @Operation(summary = "Get deduction by code", description = "Retrieve a specific deduction. Requires PAYROLL role.", operationId = "getDeductionByCode")
+    public DeductionDto getDeductionByCode(
             @Parameter(description = "Deduction code") @PathVariable String code) {
         Deduction deduction = service.getDeductionByCode(code);
-        return ResponseFactory.success("Deduction retrieved successfully", mapper.toDto(deduction));
+        return mapper.toDto(deduction);
     }
 
     @PutMapping("/{code}")
-    @Operation(summary = "Update deduction", description = "Update an existing deduction. Requires PAYROLL role.")
-    public ApiResponse<DeductionDto> updateDeduction(
+    @Operation(summary = "Update deduction", description = "Update an existing deduction. Requires PAYROLL role.", operationId = "updateDeduction")
+    public DeductionDto updateDeduction(
             @Parameter(description = "Deduction code") @PathVariable String code,
             @Valid @RequestBody DeductionRequest request) {
         Deduction deduction = service.updateDeduction(code, request);
-        return ResponseFactory.success("Deduction updated successfully", mapper.toDto(deduction));
+        return mapper.toDto(deduction);
     }
 
     @DeleteMapping("/{code}")
-    @Operation(summary = "Delete deduction", description = "Soft delete a deduction. Requires PAYROLL role.")
-    public ApiResponse<Void> deleteDeduction(
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete deduction", description = "Soft delete a deduction. Requires PAYROLL role.", operationId = "deleteDeduction")
+    public void deleteDeduction(
             @Parameter(description = "Deduction code") @PathVariable String code) {
         service.deleteDeduction(code);
-        return ResponseFactory.success("Deduction deleted successfully");
+        
     }
 }

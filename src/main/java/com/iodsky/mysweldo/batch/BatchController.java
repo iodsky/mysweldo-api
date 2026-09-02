@@ -2,8 +2,8 @@ package com.iodsky.mysweldo.batch;
 
 import com.iodsky.mysweldo.batch.response.JobDetailsResponse;
 import com.iodsky.mysweldo.batch.response.JobLaunchResponse;
-import com.iodsky.mysweldo.common.response.ApiResponse;
-import com.iodsky.mysweldo.common.response.ResponseFactory;
+
+import com.iodsky.mysweldo.common.response.PageDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -44,9 +44,10 @@ public class BatchController {
     @PostMapping(value = "/import-employees", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
             summary = "Import employees from CSV file",
-            description = "Upload a CSV file to import employees via batch job. Returns job execution ID for tracking."
+            description = "Upload a CSV file to import employees via batch job. Returns job execution ID for tracking.",
+            operationId = "importEmployees"
     )
-    public ApiResponse<JobLaunchResponse> importEmployees(
+    public JobLaunchResponse importEmployees(
             @RequestPart("file") MultipartFile file) {
 
         try {
@@ -59,7 +60,7 @@ public class BatchController {
                     .message("Employee import job launched successfully")
                     .build();
 
-            return ResponseFactory.success("Job launched successfully", response);
+            return response;
 
         } catch (Exception e) {
             log.error("Failed to launch employee import job", e);
@@ -71,9 +72,10 @@ public class BatchController {
     @PostMapping(value = "/import-users", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
             summary = "Import users from CSV file",
-            description = "Upload a CSV file to import users via batch job. Returns job execution ID for tracking. Restricted to IT role only."
+            description = "Upload a CSV file to import users via batch job. Returns job execution ID for tracking. Restricted to IT role only.",
+            operationId = "importUsers"
     )
-    public ApiResponse<JobLaunchResponse> importUsers(
+    public JobLaunchResponse importUsers(
             @RequestPart("file") MultipartFile file) {
 
         try {
@@ -86,7 +88,7 @@ public class BatchController {
                     .message("User import job launched successfully")
                     .build();
 
-            return ResponseFactory.success("Job launched successfully", response);
+            return response;
 
         } catch (Exception e) {
             log.error("Failed to launch user import job", e);
@@ -98,9 +100,10 @@ public class BatchController {
     @GetMapping("/{jobExecutionId}")
     @Operation(
             summary = "Get job execution details",
-            description = "Retrieve detailed information about a batch job execution including status and metrics."
+            description = "Retrieve detailed information about a batch job execution including status and metrics.",
+            operationId = "getJobExecutionDetails"
     )
-    public ApiResponse<JobDetailsResponse> getJobExecutionDetails(
+    public JobDetailsResponse getJobExecutionDetails(
             @PathVariable Long jobExecutionId) {
 
         JobExecution jobExecution = jobExplorer.getJobExecution(jobExecutionId);
@@ -131,7 +134,7 @@ public class BatchController {
                 .exitDescription(jobExecution.getExitStatus().getExitDescription())
                 .build();
 
-        return ResponseFactory.success("Job execution details retrieved successfully", details);
+        return details;
     }
 
     /**

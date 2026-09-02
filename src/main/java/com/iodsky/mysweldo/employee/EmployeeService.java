@@ -61,7 +61,7 @@ public class EmployeeService {
             return saved;
     }
 
-    public Page<EmployeeBasicDto> getAllEmployees(int page, int limit, String departmentId, Long supervisorId, String status) {
+    public Page<EmployeeBasicDto> getAllEmployees(int page, int limit, String departmentId, Long supervisorId, EmploymentStatus status) {
         Pageable pageable = PageRequest.of(page, limit);
         Page<EmployeeBasic> result;
 
@@ -70,7 +70,7 @@ public class EmployeeService {
         } else if (supervisorId != null) {
             result = employeeRepository.findAllBySupervisor_Id(supervisorId, pageable);
         } else if (status != null) {
-            result = employeeRepository.findAllByStatus(EmploymentStatus.valueOf(status.toUpperCase()), pageable);
+            result = employeeRepository.findAllByStatus(status, pageable);
         } else {
             result = employeeRepository.findAllByStatusNotIn(NON_ACTIVE_STATUSES, pageable);
         }

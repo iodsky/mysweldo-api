@@ -1,5 +1,7 @@
 package com.iodsky.mysweldo.employee;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.*;
 
 @Getter
@@ -7,6 +9,8 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class PositionBasicDto {
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String id;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String title;
 }

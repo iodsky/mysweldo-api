@@ -320,7 +320,7 @@ class EmployeeServiceTest {
                     .thenReturn(repoResult);
 
             Page<EmployeeBasicDto> result =
-                    service.getAllEmployees(0, 10, null, null, "REGULAR");
+                    service.getAllEmployees(0, 10, null, null, EmploymentStatus.REGULAR);
 
             assertThat(result.getContent()).hasSize(1);
 
@@ -392,7 +392,7 @@ class EmployeeServiceTest {
                     .thenReturn(repoResult);
 
             Page<EmployeeBasicDto> result =
-                    service.getAllEmployees(0, 10, null, 2L, "REGULAR");
+                    service.getAllEmployees(0, 10, null, 2L, EmploymentStatus.REGULAR);
 
             assertThat(result.getContent()).hasSize(1);
 
@@ -404,7 +404,7 @@ class EmployeeServiceTest {
         }
 
         @Test
-        void shouldResolveStatusCaseInsensitivelyWhenLowercaseStatusIsProvided() {
+        void shouldFilterByStatus() {
 
             EmployeeBasic projection = EmployeeBasicStub.builder()
                     .id(1L)
@@ -419,19 +419,12 @@ class EmployeeServiceTest {
                     .thenReturn(repoResult);
 
             Page<EmployeeBasicDto> result =
-                    service.getAllEmployees(0, 10, null, null, "regular");
+                    service.getAllEmployees(0, 10, null, null, EmploymentStatus.REGULAR);
 
             assertThat(result.getContent()).hasSize(1);
 
             verify(employeeRepository)
                     .findAllByStatus(eq(EmploymentStatus.REGULAR), any(Pageable.class));
-        }
-
-        @Test
-        void shouldThrowIllegalArgumentExceptionWhenInvalidStatusStringIsProvided() {
-            // Act & Assert
-            assertThatThrownBy(() -> service.getAllEmployees(0, 10, null, null, "INVALID_STATUS"))
-                    .isInstanceOf(IllegalArgumentException.class);
         }
     }
 

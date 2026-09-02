@@ -1,8 +1,6 @@
 package com.iodsky.mysweldo.pagIbig;
 
-import com.iodsky.mysweldo.common.response.ApiResponse;
-import com.iodsky.mysweldo.common.response.PaginationMeta;
-import com.iodsky.mysweldo.common.response.ResponseFactory;
+import com.iodsky.mysweldo.common.response.PageDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,19 +29,16 @@ public class PagibigRateController {
     private final PagibigRateMapper mapper;
 
     @PostMapping
-    @Operation(summary = "Create Pag-IBIG rate", description = "Create a new Pag-IBIG rate. Requires PAYROLL role.")
-    public ApiResponse<PagibigRateDto> createPagibigRate(
+    @Operation(summary = "Create Pag-IBIG rate", description = "Create a new Pag-IBIG rate. Requires PAYROLL role.", operationId = "createPagibigRate")
+    public PagibigRateDto createPagibigRate(
             @Valid @RequestBody PagibigRateRequest request) {
         PagibigRate pagibigRate = service.createPagibigRate(request);
-        return ResponseFactory.success(
-                "Pag-IBIG rate created successfully",
-                mapper.toDto(pagibigRate)
-        );
+        return mapper.toDto(pagibigRate);
     }
 
     @GetMapping
-    @Operation(summary = "Get all Pag-IBIG rates", description = "Retrieve all Pag-IBIG rates with pagination. Requires PAYROLL role.")
-    public ApiResponse<List<PagibigRateDto>> getAllPagibigRates(
+    @Operation(summary = "Get all Pag-IBIG rates", description = "Retrieve all Pag-IBIG rates with pagination. Requires PAYROLL role.", operationId = "getAllPagibigRates")
+    public PageDto<PagibigRateDto> getAllPagibigRates(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
             @Parameter(description = "Filter by effective date (on or before)") @RequestParam(required = false) LocalDate effectiveDate
@@ -53,46 +48,33 @@ public class PagibigRateController {
                 .map(mapper::toDto)
                 .toList();
 
-        return ResponseFactory.success(
-                "Pag-IBIG rates retrieved successfully",
-                pagibigRates,
-                PaginationMeta.of(page)
-        );
+        return PageDto.of(page.map(mapper::toDto));
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get Pag-IBIG rate by ID", description = "Retrieve a specific Pag-IBIG rate. Requires PAYROLL role.")
-    public ApiResponse<PagibigRateDto> getPagibigRateById(
+    @Operation(summary = "Get Pag-IBIG rate by ID", description = "Retrieve a specific Pag-IBIG rate. Requires PAYROLL role.", operationId = "getPagibigRateById")
+    public PagibigRateDto getPagibigRateById(
             @Parameter(description = "Rate ID") @PathVariable UUID id) {
         PagibigRate pagibigRate = service.getPagibigRateById(id);
-        return ResponseFactory.success(
-                "Pag-IBIG rate retrieved successfully",
-                mapper.toDto(pagibigRate)
-        );
+        return mapper.toDto(pagibigRate);
     }
 
     @GetMapping("/latest")
-    @Operation(summary = "Get latest Pag-IBIG rate", description = "Retrieve the latest Pag-IBIG rate for a given date. Requires PAYROLL role.")
-    public ApiResponse<PagibigRateDto> getLatestPagibigRate(
+    @Operation(summary = "Get latest Pag-IBIG rate", description = "Retrieve the latest Pag-IBIG rate for a given date. Requires PAYROLL role.", operationId = "getLatestPagibigRate")
+    public PagibigRateDto getLatestPagibigRate(
             @Parameter(description = "Date to check (defaults to today)") @RequestParam(required = false) LocalDate date
     ) {
         LocalDate effectiveDate = date != null ? date : LocalDate.now();
         PagibigRate pagibiRate = service.getLatestPagibigRate(effectiveDate);
-        return ResponseFactory.success(
-                "Latest Pag-IBIG rate retrieved successfully",
-                mapper.toDto(pagibiRate)
-        );
+        return mapper.toDto(pagibiRate);
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update Pag-IBIG rate", description = "Update an existing Pag-IBIG rate. Requires PAYROLL role.")
-    public ApiResponse<PagibigRateDto> updatePagibigRate(
+    @Operation(summary = "Update Pag-IBIG rate", description = "Update an existing Pag-IBIG rate. Requires PAYROLL role.", operationId = "updatePagibigRate")
+    public PagibigRateDto updatePagibigRate(
             @Parameter(description = "Rate ID") @PathVariable UUID id,
             @Valid @RequestBody PagibigRateRequest request) {
         PagibigRate pagibigRate = service.updatePagibigRate(id, request);
-        return ResponseFactory.success(
-                "Pag-IBIG rate updated successfully",
-                mapper.toDto(pagibigRate)
-        );
+        return mapper.toDto(pagibigRate);
     }
 }
