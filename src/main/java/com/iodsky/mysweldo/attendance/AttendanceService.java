@@ -20,6 +20,7 @@ import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
@@ -37,39 +38,20 @@ public class AttendanceService {
     public AttendanceDto createAttendance(AttendanceRequest request) {
         Employee employee = employeeService.getEmployeeById(request.getEmployeeId());
 
-        Attendance existing = getEmployeeAttendanceByDate(employee.getId(), request.getDate());
+        validateTimes(request.getTimeIn(), request.getTimeOut());
+
+        Attendance existing = getEmployeeAttendanceByDate(employee.getId(), request.getTimeIn().toLocalDate());
         if (existing != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Attendance record already exists");
         }
 
-        Duration duration = Duration.between(request.getTimeIn(), request.getTimeOut());
-        if (duration.isNegative()) {
-            duration = duration.plusHours(24);
-        }
-
-        if (duration.toMinutes() < 5) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid attendance duration.");
-        }
-
-        BigDecimal totalHours = BigDecimal.valueOf(duration.toMinutes())
-                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-
-        BigDecimal regularHours = BigDecimal
-                .valueOf(Duration.between(employee.getStartShift(), employee.getEndShift()).toMinutes())
-                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-
-        BigDecimal overtime = totalHours.subtract(regularHours);
-        if (overtime.compareTo(BigDecimal.ZERO) < 0) {
-            overtime = BigDecimal.ZERO;
-        }
+        BigDecimal totalHours = calculateHours(request.getTimeIn(), request.getTimeOut());
 
         Attendance attendance = Attendance.builder()
                 .employee(employee)
-                .date(request.getDate())
                 .timeIn(request.getTimeIn())
                 .timeOut(request.getTimeOut())
                 .totalHours(totalHours)
-                .overtime(overtime)
                 .build();
 
         Attendance saved = repository.save(attendance);
@@ -79,7 +61,6 @@ public class AttendanceService {
     @Transactional
     public AttendanceDto clockIn() {
         Employee employee = userService.getAuthenticatedUser().getEmployee();
-        LocalDate today = LocalDate.now();
 
         boolean hasOpenAttendance = repository.existsByEmployee_IdAndTimeOutIsNull(employee.getId());
         if (hasOpenAttendance) {
@@ -88,49 +69,30 @@ public class AttendanceService {
 
         Attendance attendance = repository.save(Attendance.builder()
                 .employee(employee)
-                .date(today)
-                .timeIn(LocalTime.now())
+                .timeIn(LocalDateTime.now())
                 .build());
 
         return attendanceMapper.toDto(attendance);
     }
 
     public Attendance getEmployeeAttendanceByDate(Long employeeId, LocalDate date) {
-        return repository.findByEmployee_IdAndDate(employeeId, date).orElse(null);
+        return repository.findFirstByEmployee_IdAndTimeInBetween(
+                employeeId, date.atStartOfDay(), date.plusDays(1).atStartOfDay()
+        ).orElse(null);
     }
 
     @Transactional
     public AttendanceDto updateAttendance(UUID id, AttendanceRequest request) {
         Attendance attendance = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance not found with id: " + id));
-        Employee employee = attendance.getEmployee();
 
-        Duration duration = Duration.between(request.getTimeIn(), request.getTimeOut());
-        if (duration.isNegative()) {
-            duration = duration.plusHours(24);
-        }
+        validateTimes(request.getTimeIn(), request.getTimeOut());
 
-        if (duration.toMinutes() < 5) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid attendance duration.");
-        }
+        BigDecimal totalHours = calculateHours(request.getTimeIn(), request.getTimeOut());
 
-        BigDecimal totalHours = BigDecimal.valueOf(duration.toMinutes())
-                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-
-        BigDecimal regularHours = BigDecimal
-                .valueOf(Duration.between(employee.getStartShift(), employee.getEndShift()).toMinutes())
-                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-
-        BigDecimal overtime = totalHours.subtract(regularHours);
-        if (overtime.compareTo(BigDecimal.ZERO) < 0) {
-            overtime = BigDecimal.ZERO;
-        }
-
-        attendance.setDate(request.getDate());
         attendance.setTimeIn(request.getTimeIn());
         attendance.setTimeOut(request.getTimeOut());
         attendance.setTotalHours(totalHours);
-        attendance.setOvertime(overtime);
 
         Attendance updated = repository.save(attendance);
         return attendanceMapper.toDto(updated);
@@ -139,15 +101,11 @@ public class AttendanceService {
     @Transactional
     public AttendanceDto clockOut() {
         Employee employee = userService.getAuthenticatedUser().getEmployee();
-        Attendance attendance = repository.findFirstByEmployee_IdAndTimeOutIsNullOrderByDateDescTimeInDesc(employee.getId())
+        Attendance attendance = repository.findFirstByEmployee_IdAndTimeOutIsNullOrderByTimeInDesc(employee.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "No open attendance record found"));
-        LocalTime now = LocalTime.now();
+        LocalDateTime now = LocalDateTime.now();
 
         Duration duration = Duration.between(attendance.getTimeIn(), now);
-        if (duration.isNegative()) {
-            duration = duration.plusHours(24);
-        }
-
         if (duration.toMinutes() < 5) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -158,24 +116,8 @@ public class AttendanceService {
         BigDecimal totalHours = BigDecimal.valueOf(duration.toMinutes())
                 .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
-        LocalTime startShift = employee.getStartShift();
-        LocalTime endShift = employee.getEndShift();
-        if (startShift == null || endShift == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Employee shift times are not configured. Cannot calculate hours.");
-        }
-
-        BigDecimal regularHours = BigDecimal
-                .valueOf(Duration.between(startShift, endShift).toMinutes())
-                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-
-        BigDecimal overtime = totalHours.subtract(regularHours);
-        if (overtime.compareTo(BigDecimal.ZERO) < 0) {
-            overtime = BigDecimal.ZERO;
-        }
-
         attendance.setTimeOut(now);
         attendance.setTotalHours(totalHours);
-        attendance.setOvertime(overtime);
 
         Attendance updated = repository.save(attendance);
         return attendanceMapper.toDto(updated);
@@ -191,7 +133,11 @@ public class AttendanceService {
         }
 
         DateRange dateRange = new DateRange(startDate, endDate);
-        Page<AttendanceView> attendances = repository.findAllByDateBetween(dateRange.startDate(), dateRange.endDate(), pageable);
+        Page<AttendanceView> attendances = repository.findAllByTimeInBetween(
+                dateRange.startDate().atStartOfDay(),
+                dateRange.endDate().plusDays(1).atStartOfDay(),
+                pageable
+        );
         return attendances.map(attendanceMapper::toDto);
     }
 
@@ -210,7 +156,7 @@ public class AttendanceService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have permission to access this resource");
         }
 
-        Sort sort = Sort.by(Sort.Direction.DESC, "date");
+        Sort sort = Sort.by(Sort.Direction.DESC, "timeIn");
         Pageable pageable = PageRequest.of(page, limit, sort);
 
         // Case 1: No date filters - return all attendances
@@ -220,25 +166,33 @@ public class AttendanceService {
         }
 
         // Case 2: Date filter provided - use DateRange to handle defaults
-        // - If only startDate: return attendances from startDate onwards
-        // - If only endDate: return attendances up to endDate
-        // - If both: return attendances within the range
         DateRange dateRange = new DateRange(startDate, endDate);
 
-        Page<AttendanceView> attendances = repository.findByEmployee_IdAndDateBetween(employeeId, dateRange.startDate(), dateRange.endDate(), pageable);
+        Page<AttendanceView> attendances = repository.findByEmployee_IdAndTimeInBetween(
+                employeeId,
+                dateRange.startDate().atStartOfDay(),
+                dateRange.endDate().plusDays(1).atStartOfDay(),
+                pageable
+        );
         return attendances.map(attendanceMapper::toDto);
     }
 
     public List<Attendance> getEmployeeAttendances(Long employeeId, LocalDate startDate, LocalDate endDate) {
-        return repository.findByEmployee_IdAndDateBetween(employeeId, startDate, endDate);
+        return repository.findByEmployee_IdAndTimeInBetween(
+                employeeId, startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay()
+        );
     }
 
     public boolean hasAttendance(Long employeeId, LocalDate startDate, LocalDate endDate) {
-        return !repository.findByEmployee_IdAndDateBetween(employeeId, startDate, endDate).isEmpty();
+        return !repository.findByEmployee_IdAndTimeInBetween(
+                employeeId, startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay()
+        ).isEmpty();
     }
 
     public BigDecimal calculateTotalHoursByEmployeeId(Long employeeId, LocalDate startDate, LocalDate endDate) {
-        return repository.sumTotalHoursByEmployee_IdAndDateBetween(employeeId, startDate, endDate);
+        return repository.sumTotalHoursByEmployee_IdAndTimeInBetween(
+                employeeId, startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay()
+        );
     }
 
     public AttendancePayrollSummary getAttendanceSummary(Long employeeId, LocalDate startDate, LocalDate endDate) {
@@ -256,10 +210,10 @@ public class AttendanceService {
 
             LocalTime shiftStart = employee.getStartShift();
             LocalTime shiftEnd = employee.getEndShift();
-            LocalTime timeIn = a.getTimeIn();
-            LocalTime timeOut = a.getTimeOut();
+            LocalTime timeIn = a.getTimeIn() == null ? null : a.getTimeIn().toLocalTime();
+            LocalTime timeOut = a.getTimeOut() == null ? null : a.getTimeOut().toLocalTime();
 
-            if (shiftStart != null && timeIn !=null) {
+            if (shiftStart != null && timeIn != null) {
                 LocalTime tardyThreshold = shiftStart.plusMinutes(15);
 
                 if (timeIn.isAfter(tardyThreshold)) {
@@ -267,7 +221,7 @@ public class AttendanceService {
                 }
             }
 
-            if (shiftEnd != null && timeOut != null && !LocalTime.MIN.equals(timeOut)) {
+            if (shiftEnd != null && timeOut != null) {
                 LocalTime undertimeThreshold = shiftEnd.minusMinutes(15);
 
                 if (timeOut.isBefore(undertimeThreshold)) {
@@ -288,6 +242,26 @@ public class AttendanceService {
         return startDate.datesUntil(endDate.plusDays(1))
                 .filter(d -> !d.getDayOfWeek().equals(DayOfWeek.SATURDAY) && !d.getDayOfWeek().equals(DayOfWeek.SUNDAY))
                 .count();
+    }
+
+    private void validateTimes(LocalDateTime timeIn, LocalDateTime timeOut) {
+        if (timeIn == null || timeOut == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "timeIn and timeOut are required");
+        }
+
+        Duration duration = Duration.between(timeIn, timeOut);
+        if (duration.isNegative()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Time out must be after time in");
+        }
+
+        if (duration.toMinutes() < 5) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid attendance duration.");
+        }
+    }
+
+    private BigDecimal calculateHours(LocalDateTime timeIn, LocalDateTime timeOut) {
+        return BigDecimal.valueOf(Duration.between(timeIn, timeOut).toMinutes())
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 
 }

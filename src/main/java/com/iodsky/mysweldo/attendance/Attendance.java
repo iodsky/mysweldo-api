@@ -8,8 +8,7 @@ import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 
@@ -32,18 +31,13 @@ public class Attendance extends BaseModel {
     @JsonIgnore
     private Employee employee;
 
-    private LocalDate date;
-
     @Column(name = "time_in")
-    private LocalTime timeIn;
+    private LocalDateTime timeIn;
 
     @Column(name = "time_out")
-    private LocalTime timeOut;
+    private LocalDateTime timeOut;
 
     @Column(name = "total_hours")
     private BigDecimal totalHours;
 
-    private BigDecimal overtime;
-
 }
-
