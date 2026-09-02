@@ -13,11 +13,9 @@ public class AttendanceMapper {
         return AttendanceDto.builder()
                 .id(attendance.getId())
                 .employeeId(attendance.getEmployee().getId())
-                .date(attendance.getDate())
                 .timeIn(attendance.getTimeIn())
                 .timeOut(attendance.getTimeOut())
                 .totalHours(attendance.getTotalHours())
-                .overtimeHours(attendance.getOvertime())
                 .build();
     }
 
@@ -30,11 +28,9 @@ public class AttendanceMapper {
                 .id(attendance.getId())
                 .employeeFirstName(attendance.getEmployee_FirstName())
                 .employeeLastName(attendance.getEmployee_LastName())
-                .date(attendance.getDate())
                 .timeIn(attendance.getTimeIn())
                 .timeOut(attendance.getTimeOut())
                 .totalHours(attendance.getTotalHours())
-                .overtimeHours(attendance.getOvertime())
                 .build();
     }
 }
