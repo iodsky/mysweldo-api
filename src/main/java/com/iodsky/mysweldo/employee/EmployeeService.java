@@ -82,7 +82,7 @@ public class EmployeeService {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         if (principal instanceof User user) {
-            return user.getEmployee();
+            return getEmployeeById(user.getEmployee().getId());
         }
 
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found");

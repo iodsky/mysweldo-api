@@ -436,6 +436,7 @@ class EmployeeServiceTest {
             Employee employee = Employee.builder().id(1L).build();
             User user = mock(User.class);
             when(user.getEmployee()).thenReturn(employee);
+            when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
 
             Authentication authentication = mock(Authentication.class);
             when(authentication.getPrincipal()).thenReturn(user);
