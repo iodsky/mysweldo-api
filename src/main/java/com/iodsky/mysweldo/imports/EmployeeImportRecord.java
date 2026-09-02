@@ -1,7 +1,6 @@
-package com.iodsky.mysweldo.batch.employee;
+package com.iodsky.mysweldo.imports;
 
-
-import com.iodsky.mysweldo.batch.DateTimeUtil;
+import com.iodsky.mysweldo.imports.DateTimeUtil;
 import com.iodsky.mysweldo.employee.*;
 import com.iodsky.mysweldo.payroll.run.PayrollFrequency;
 import lombok.*;
@@ -28,7 +27,6 @@ public class EmployeeImportRecord {
             "status",
             "employmentType",
             "position",
-            "supervisorId",
             "startShift",
             "endShift",
             "rate",
@@ -51,7 +49,6 @@ public class EmployeeImportRecord {
     private String status;
     private String employmentType;
     private String position;
-    private String supervisorId;
     private String startShift;
     private String endShift;
     private String rate;

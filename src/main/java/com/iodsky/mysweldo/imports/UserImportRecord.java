@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.batch.user;
+package com.iodsky.mysweldo.imports;
 
 import lombok.*;
 
@@ -22,4 +22,3 @@ public class UserImportRecord {
     private String password;
 
 }
-

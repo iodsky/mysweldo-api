@@ -1,8 +1,6 @@
-package com.iodsky.mysweldo.batch.response;
+package com.iodsky.mysweldo.imports;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,12 +10,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class JobLaunchResponse {
+public class ImportJobErrorDto {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private Long jobExecutionId;
+    private long rowNumber;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private String fileName;
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private String message;
+    private String reason;
 }

@@ -1,4 +1,4 @@
-package com.iodsky.mysweldo.batch;
+package com.iodsky.mysweldo.imports;
 
 import lombok.experimental.UtilityClass;
 

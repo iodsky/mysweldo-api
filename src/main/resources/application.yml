@@ -12,15 +12,12 @@ spring:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
-  batch:
-    job:
-      enabled: false
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
 
-batch:
+import:
   upload:
     directory: uploads
 

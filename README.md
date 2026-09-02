@@ -2,7 +2,7 @@
 
 A production-grade payroll management REST API built with Spring Boot. It models Philippine statutory payroll rules (SSS, PhilHealth, Pag-IBIG, and withholding tax) alongside employee records, attendance, overtime, leave, and full payroll runs.
 
-This project serves as a demonstration of solid backend engineering: layered domain architecture, stateless JWT security, database migrations, batch processing, and a clean CI/CD + container deployment pipeline to AWS EC2.
+This project serves as a demonstration of solid backend engineering: layered domain architecture, stateless JWT security, database migrations, async CSV imports, and a clean CI/CD + container deployment pipeline to AWS EC2.
 
 > Live: `https://mysweldo-api.iodsky.com` · Swagger UI: `https://mysweldo-api.iodsky.com/api/swagger-ui.html`
 
@@ -16,7 +16,7 @@ This project serves as a demonstration of solid backend engineering: layered dom
 | Persistence | Spring Data JPA + PostgreSQL 16 |
 | Migrations | Flyway |
 | Security | Spring Security + JWT (access + refresh, HTTP-only cookies) |
-| Batch | Spring Batch |
+| Batch | OpenCSV (async CSV imports) |
 | API Docs | springdoc-openapi (Swagger UI) |
 | Container | Docker (multi-stage, `eclipse-temurin`) |
 
@@ -28,7 +28,7 @@ This project serves as a demonstration of solid backend engineering: layered dom
 - **Statutory tables** — SSS, PhilHealth, Pag-IBIG contribution tables and tax brackets.
 - **Payroll engine** — pay-basis strategies (hourly/daily/monthly), statutory deduction & contribution computation, payroll runs.
 - **Security** — role-based access control, stateless JWT auth with refresh tokens.
-- **Bulk import** — on-demand Spring Batch jobs for CSV uploads (employees & users).
+- **Bulk import** — on-demand OpenCSV imports for CSV uploads (employees & users).
 - **Standardized responses** — `ApiResponse` envelope with pagination metadata and centralized exception handling.
 - **Soft delete & auditing** — every entity extends a common `BaseModel` (timestamps, optimistic locking, soft delete).
 
@@ -68,9 +68,9 @@ Payroll logic is deliberately decomposed, not centralized:
 - Only `/auth/**`, `/docs/**`, and `/swagger-ui/**` are public; everything else requires a valid Bearer token.
 - Role-based access is enforced via Spring method security (`@EnableMethodSecurity`).
 
-### Batch / uploads
+### Imports / uploads
 
-- Spring Batch jobs are disabled on startup (`spring.batch.job.enabled: false`) and launched on demand via `batch/BatchController`.
+- CSV imports use OpenCSV via `imports/ImportController`: `POST /jobs/import-employees`, `POST /jobs/import-users` (async) and `GET /jobs/{id}` for status + per-row failures.
 - CSV uploads are capped at 10 MB and stored under `uploads/`.
 
 ## Getting Started
@@ -181,7 +181,7 @@ src/main/java/com/iodsky/mysweldo/
 ├── <domain>/          # Controller, Service, Repository, Entity, Request, Dto, Mapper
 ├── payroll/           # core / strategy / run sub-packages
 ├── security/          # auth, jwt, role, user
-├── batch/             # import jobs (employees, users)
+├── imports/           # OpenCSV CSV imports (employees, users) + job tracking
 └── Application.java   # entry point
 
 src/main/resources/

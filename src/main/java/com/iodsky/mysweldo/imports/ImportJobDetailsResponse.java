@@ -1,36 +1,39 @@
-package com.iodsky.mysweldo.batch.response;
+package com.iodsky.mysweldo.imports;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.batch.core.BatchStatus;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class JobDetailsResponse {
+public class ImportJobDetailsResponse {
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private Long jobExecutionId;
+    private UUID importJobId;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private BatchStatus status;
+    private ImportType type;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+    private ImportStatus status;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String fileName;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private LocalDateTime startTime;
+    private long readCount;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private LocalDateTime endTime;
+    private long writeCount;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private Long readCount;
+    private long skipCount;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private Long writeCount;
+    private Instant startedAt;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private Long skipCount;
+    private Instant finishedAt;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
-    private String exitDescription;
+    private String errorMessage;
+    private List<ImportJobErrorDto> failures;
 }

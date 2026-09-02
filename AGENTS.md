@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Spring Boot 3.5.6 · Java 21 · Gradle · PostgreSQL 16 · Flyway · Spring Security (JWT) · Spring Batch · SpringDoc.
+Spring Boot 3.5.6 · Java 21 · Gradle · PostgreSQL 16 · Flyway · Spring Security (JWT) · SpringDoc.
 
 ## Commands
 
@@ -37,7 +37,7 @@ Every domain module under `src/main/java/com/iodsky/mysweldo/<domain>/` follows 
 <Domain>Mapper.java       # Entity <-> DTO conversion (also used for Request -> Entity)
 ```
 
-Domains: `attendance`, `batch`, `benefit`, `contribution`, `deduction`, `department`, `employee`, `leave` (subpackages `credit`/`request`), `overtime`, `pagIbig`, `payroll`, `philhealth`, `position`, `security` (auth/jwt/role/user), `sss`, `tax`.
+Domains: `attendance`, `benefit`, `contribution`, `deduction`, `department`, `employee`, `imports`, `leave` (subpackages `credit`/`request`), `overtime`, `pagIbig`, `payroll`, `philhealth`, `position`, `security` (auth/jwt/role/user), `sss`, `tax`.
 
 ### Shared infrastructure (`common/`)
 
@@ -63,14 +63,14 @@ Write methods are annotated `@Transactional` so multi-step mutations commit or r
 
 JWT issued at `/auth/login` and `/auth/refresh`. Only `/auth/**`, `/docs/**`, `/swagger-ui/**` are public; everything else requires a valid access token. Both the short-lived access token (`access_token` cookie) and the long-lived refresh token (`jwt` cookie) are set as **httpOnly cookies** by the server and are never exposed to client JS. The `JwtAuthenticationFilter` reads the access token from the cookie first, falling back to the `Authorization: Bearer` header (so Swagger `Authorize` still works). Role-based access is enforced via Spring method security (`@EnableMethodSecurity`).
 
-### Batch / uploads
+### Imports / uploads (`imports/`)
 
-Spring Batch jobs are disabled on startup (`spring.batch.job.enabled: false`); they're launched on demand via `batch/BatchController`. File uploads are capped at 10MB and stored under `uploads/` (configured via `batch.upload.directory`).
+CSV imports use **OpenCSV** (no Spring Batch). `ImportController` exposes `/jobs/import-employees`, `/jobs/import-users` (async) and `/jobs/{id}` (status). `AbstractImportService<T>` runs the async pipeline (`@Async("importTaskExecutor")`, see `common/AsyncConfig`): parse with `CsvToBeanBuilder`, persist each row via repository (per-row commit), skip up to 100 failing rows into `import_job_error` (failures returned in the details endpoint), delete the file when done. Status lives in `import_job`/`import_job_error` (created by V5). `EmployeeImportService`/`UserImportService` hold the row→entity mapping + reference-data caches. Employee imports do **not** assign supervisors (HR does that via `PUT /employees/{id}`); the CSV has no `supervisorId` column. File uploads are capped at 10MB and stored under `uploads/` (configured via `import.upload.directory`).
 
 ## Database
 
 - Flyway migrations in `src/main/resources/db/migration/` as `V{n}__description.sql`. **Never modify an existing migration** — both profiles run `ddl-auto: validate`, and Flyway checksums will fail. Add a new `V{n+1}__...sql` instead.
-- `src/main/resources/db/migration/` is the only schema source of truth. Current: `V1__initial_schema.sql`, `V2__fix_overtime_soft_delete_unique.sql`, `V3__delete_strategy_fixes.sql`, `V4__salary_history.sql`.
+- `src/main/resources/db/migration/` is the only schema source of truth. Current: `V1__initial_schema.sql`, `V2__fix_overtime_soft_delete_unique.sql`, `V3__delete_strategy_fixes.sql`, `V4__salary_history.sql`, `V5__replace_batch_with_import_tracking.sql`.
 
 ## Spring profiles
 
