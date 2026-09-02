@@ -65,7 +65,7 @@ public class DeductionController {
 
     @DeleteMapping("/{code}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete deduction", description = "Soft delete a deduction. Requires PAYROLL role.", operationId = "deleteDeduction")
+    @Operation(summary = "Delete deduction", description = "Soft delete a deduction. A soft-deleted code cannot be recreated. Requires PAYROLL role.", operationId = "deleteDeduction")
     public void deleteDeduction(
             @Parameter(description = "Deduction code") @PathVariable String code) {
         service.deleteDeduction(code);

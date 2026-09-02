@@ -65,7 +65,7 @@ public class BenefitController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete benefit", description = "Soft delete a benefit. Requires PAYROLL role.", operationId = "deleteBenefit")
+    @Operation(summary = "Delete benefit", description = "Soft delete a benefit. A soft-deleted code cannot be recreated. Requires PAYROLL role.", operationId = "deleteBenefit")
     public void deleteBenefitType(
             @Parameter(description = "Benefit code") @PathVariable String id) {
         service.deleteBenefit(id);

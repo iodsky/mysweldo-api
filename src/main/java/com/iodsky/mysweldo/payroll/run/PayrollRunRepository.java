@@ -30,4 +30,7 @@ public interface PayrollRunRepository extends JpaRepository<PayrollRun, UUID> {
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
 
+    @Query(value = "SELECT pg_advisory_xact_lock(:lockKey)", nativeQuery = true)
+    void acquireRunCreationLock(@Param("lockKey") long lockKey);
+
 }

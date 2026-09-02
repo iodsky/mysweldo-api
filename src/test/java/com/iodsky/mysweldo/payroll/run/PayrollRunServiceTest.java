@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -42,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -110,6 +112,7 @@ class PayrollRunServiceTest {
             PayrollRunDto result = service.createPayrollRun(request);
 
             assertThat(result.getStatus()).isEqualTo(PayrollRunStatus.DRAFT);
+            verify(repository).acquireRunCreationLock(anyLong());
             verify(repository).save(any(PayrollRun.class));
         }
 
@@ -160,6 +163,9 @@ class PayrollRunServiceTest {
                     .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                     .isEqualTo(HttpStatus.CONFLICT);
 
+            InOrder inOrder = inOrder(repository);
+            inOrder.verify(repository).acquireRunCreationLock(anyLong());
+            inOrder.verify(repository).existsOverlappingByType(any(), any(), any());
             verify(repository, never()).save(any(PayrollRun.class));
         }
 
@@ -176,6 +182,7 @@ class PayrollRunServiceTest {
 
             service.createPayrollRun(request);
 
+            verify(repository).acquireRunCreationLock(anyLong());
             verify(repository, never()).existsOverlappingByType(any(), any(), any());
             verify(repository).save(any(PayrollRun.class));
         }
