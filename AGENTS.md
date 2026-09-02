@@ -56,7 +56,7 @@ When touching payroll, check the existing strategy classes first — logic is he
 
 ### Security
 
-JWT issued at `/auth/login` and `/auth/refresh`. Only `/auth/**`, `/docs/**`, `/swagger-ui/**` are public; everything else requires a valid Bearer token. Role-based access is enforced via Spring method security (`@EnableMethodSecurity`).
+JWT issued at `/auth/login` and `/auth/refresh`. Only `/auth/**`, `/docs/**`, `/swagger-ui/**` are public; everything else requires a valid access token. Both the short-lived access token (`access_token` cookie) and the long-lived refresh token (`jwt` cookie) are set as **httpOnly cookies** by the server and are never exposed to client JS. The `JwtAuthenticationFilter` reads the access token from the cookie first, falling back to the `Authorization: Bearer` header (so Swagger `Authorize` still works). Role-based access is enforced via Spring method security (`@EnableMethodSecurity`).
 
 ### Batch / uploads
 
