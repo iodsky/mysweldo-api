@@ -1,7 +1,6 @@
 package com.iodsky.mysweldo.common;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeIn;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -20,8 +19,7 @@ import org.springframework.context.annotation.Configuration;
         name = "bearerAuth",
         scheme = "bearer",
         type = SecuritySchemeType.HTTP,
-        bearerFormat = "JWT",
-        in = SecuritySchemeIn.HEADER
+        bearerFormat = "JWT"
 )
 public class OpenApiConfig {
 }

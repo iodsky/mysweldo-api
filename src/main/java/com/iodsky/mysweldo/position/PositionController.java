@@ -34,14 +34,14 @@ public class PositionController {
             description = "Create a new position. Requires HR role.",
             operationId = "createPosition"
     )
-    public ApiResponse<PositionDto> createPosition(@Valid @RequestBody PositionRequest request) {
+    public PositionDto createPosition(@Valid @RequestBody PositionRequest request) {
         PositionDto position = mapper.toDto(service.createPosition(request));
-        return ResponseFactory.success("Position created successfully", position);
+        return position;
     }
 
     @GetMapping
-    @Operation(summary = "Get all positions", description = "Retrieve a paginated list of positions. Requires HR role.")
-    public ApiResponse<List<PositionDto>> getAllPositions(
+    @Operation(summary = "Get all positions", description = "Retrieve a paginated list of positions. Requires HR role.", operationId = "getAllPositions")
+    public PageDto<PositionDto> getAllPositions(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit
     ) {
@@ -51,50 +51,44 @@ public class PositionController {
                 .map(mapper::toDto)
                 .toList();
 
-        return ResponseFactory.success(
-                "Positions retrieved successfully",
-                positions,
-                PaginationMeta.of(page)
-        );
+        return PageDto.of(page.map(mapper::toDto));
     }
 
     @GetMapping("/options")
-    @Operation(summary = "Get all positions", description = "Retrieve list of positions. Requires HR role.")
-    public ApiResponse<List<PositionDto>> getAllPositions(
+    @Operation(summary = "Get all positions", description = "Retrieve list of positions. Requires HR role.", operationId = "getPositionOptions")
+    public List<PositionDto> getAllPositions(
     ) {
         List<PositionDto> positions= service.getAllPositions().stream().map(mapper::toDto).toList();
 
-        return ResponseFactory.success(
-                "Positions retrieved successfully",
-                positions
-        );
+        return positions;
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get position by ID", description = "Retrieve a specific position by its ID. Requires HR role.")
-    public ApiResponse<PositionDto> getPositionById(
+    @Operation(summary = "Get position by ID", description = "Retrieve a specific position by its ID. Requires HR role.", operationId = "getPositionById")
+    public PositionDto getPositionById(
             @Parameter(description = "Position ID") @PathVariable String id
     ) {
         PositionDto position = mapper.toDto(service.getPositionById(id));
-        return ResponseFactory.success("Position retrieved successfully", position);
+        return position;
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update position", description = "Update an existing position's information. Requires HR role.")
-    public ApiResponse<PositionDto> updatePosition(
+    @Operation(summary = "Update position", description = "Update an existing position's information. Requires HR role.", operationId = "updatePosition")
+    public PositionDto updatePosition(
             @Parameter(description = "Position ID") @PathVariable String id,
             @Valid @RequestBody PositionUpdateRequest request
     ) {
         PositionDto position = mapper.toDto(service.updatePosition(id, request));
-        return ResponseFactory.success("Position updated successfully", position);
+        return position;
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete position", description = "Delete a position. Requires HR role.")
-    public ApiResponse<Void> deletePosition(
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete position", description = "Delete a position. Requires HR role.", operationId = "deletePosition")
+    public void deletePosition(
             @Parameter(description = "Position ID") @PathVariable String id
     ) {
         service.deletePosition(id);
-        return ResponseFactory.success("Position deleted successfully");
+        
     }
 }

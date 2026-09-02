@@ -26,13 +26,13 @@ public class LeaveCreditController {
 
     @PreAuthorize("hasAnyRole('HR', 'SUPERUSER')")
     @GetMapping
-    @Operation(summary = "Get all employees' leave credits", description = "Retrieve leave credits for all employees. Requires HR role.")
-    public ApiResponse<List<EmployeeLeaveCreditDto>> getAllLeaveCredits(
+    @Operation(summary = "Get all employees' leave credits", description = "Retrieve leave credits for all employees. Requires HR role.", operationId = "getAllLeaveCredits")
+    public PageDto<EmployeeLeaveCreditDto> getAllLeaveCredits(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit
     ) {
         Page<EmployeeLeaveCreditDto> page = service.getAllLeaveCredits(pageNo, limit);
-        return ResponseFactory.success("Leave credits retrieved successfully", page.getContent(), PaginationMeta.of(page));
+        return PageDto.of(page);
     }
 
     @PreAuthorize("hasAnyRole('HR', 'SUPERUSER')")
@@ -40,18 +40,19 @@ public class LeaveCreditController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Creates employee leave credits",
-            description = "Set up initial leave credits for an employee. Requires HR role. Returns a list of created leave credits.")
-    public ApiResponse<List<LeaveCreditDto>> createLeaveCredits(@Valid @RequestBody LeaveCreditRequest dto) {
+            description = "Set up initial leave credits for an employee. Requires HR role. Returns a list of created leave credits.",
+            operationId = "createLeaveCredits")
+    public List<LeaveCreditDto> createLeaveCredits(@Valid @RequestBody LeaveCreditRequest dto) {
         List<LeaveCreditDto> leaveCredits = service.createLeaveCredits(dto)
                 .stream().map(mapper::toDto).toList();
-        return ResponseFactory.success("Leave credits created successfully", leaveCredits);
+        return leaveCredits;
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Get my leave credits", description = "Retrieve leave credits for the authenticated employee")
-    public ApiResponse<List<LeaveCreditDto>> getLeaveCredits() {
+    @Operation(summary = "Get my leave credits", description = "Retrieve leave credits for the authenticated employee", operationId = "getMyLeaveCredits")
+    public List<LeaveCreditDto> getLeaveCredits() {
         List<LeaveCreditDto> credits = service.getLeaveCreditsByEmployeeId()
                 .stream().map(mapper::toDto).toList();
-        return ResponseFactory.success("Leave credits retrieved successfully", credits);
+        return credits;
     }
 }

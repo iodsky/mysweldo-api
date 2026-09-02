@@ -35,67 +35,61 @@ public class EmployeeController {
             description = "Create a new employee record. Requires HR role.",
             operationId = "createEmployee"
     )
-    public ApiResponse<EmployeeDto> createEmployee(@Valid @RequestBody EmployeeRequest request) {
+    public EmployeeDto createEmployee(@Valid @RequestBody EmployeeRequest request) {
         EmployeeDto employee = mapper.toDto(service.createEmployee(request));
-        return ResponseFactory.success("Employee created successfully", employee);
+        return employee;
     }
 
     @PreAuthorize("hasAnyRole('HR', 'IT', 'PAYROLL', 'SUPERUSER')")
     @GetMapping
-    @Operation(summary = "Get all employees", description = "Retrieve a paginated list of employees with optional filters. Requires HR, IT, or PAYROLL role.")
-    public ApiResponse<List<EmployeeBasicDto>> getAllEmployees(
+    @Operation(summary = "Get all employees", description = "Retrieve a paginated list of employees with optional filters. Requires HR, IT, or PAYROLL role.", operationId = "getAllEmployees")
+    public PageDto<EmployeeBasicDto> getAllEmployees(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
             @Parameter(description = "Filter by department") @RequestParam(required = false) String department,
             @Parameter(description = "Filter by supervisor ID") @RequestParam(required = false) @Positive Long supervisor,
-            @Parameter(description = "Filter by employment status") @RequestParam(required = false) String status
+            @Parameter(description = "Filter by employment status") @RequestParam(required = false) EmploymentStatus status
     ) {
         Page<EmployeeBasicDto> page = service.getAllEmployees(pageNo, limit, department, supervisor, status);
 
-        return ResponseFactory.success(
-                "Employees retrieved successfully",
-                page.getContent(),
-                PaginationMeta.of(page)
-        );
+        return PageDto.of(page);
 
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Get current employee", description = "Retrieve the authenticated employee's information")
-    public ApiResponse<EmployeeDto> getAuthenticatedEmployee() {
+    @Operation(summary = "Get current employee", description = "Retrieve the authenticated employee's information", operationId = "getAuthenticatedEmployee")
+    public EmployeeDto getAuthenticatedEmployee() {
         EmployeeDto employee =  mapper.toDto(service.getAuthenticatedEmployee());
-        return ResponseFactory.success("Employee retrieved successfully", employee);
+        return employee;
     }
 
     @PreAuthorize("hasAnyRole('HR', 'IT', 'PAYROLL', 'SUPERUSER')")
     @GetMapping("/{id}")
-    @Operation(summary = "Get employee by ID", description = "Retrieve a specific employee by their ID. Requires HR, IT, or PAYROLL role.")
-    public ApiResponse<EmployeeDto> getEmployeeById(@Parameter(description = "Employee ID") @PathVariable long id) {
+    @Operation(summary = "Get employee by ID", description = "Retrieve a specific employee by their ID. Requires HR, IT, or PAYROLL role.", operationId = "getEmployeeById")
+    public EmployeeDto getEmployeeById(@Parameter(description = "Employee ID") @PathVariable long id) {
         EmployeeDto employee = mapper.toDto(service.getEmployeeById(id));
-        return ResponseFactory.success("Employee retrieved successfully", employee);
+        return employee;
     }
 
     @PreAuthorize("hasAnyRole('HR', 'IT', 'PAYROLL', 'SUPERUSER')")
     @GetMapping("/{id}/salary-history")
-    @Operation(summary = "Get salary history", description = "Retrieve the salary change history for an employee. Requires HR, IT, or PAYROLL role.")
-    public ApiResponse<List<SalaryHistoryDto>> getSalaryHistory(@Parameter(description = "Employee ID") @PathVariable long id) {
-        List<SalaryHistoryDto> history = service.getSalaryHistory(id);
-        return ResponseFactory.success("Salary history retrieved successfully", history);
+    @Operation(summary = "Get salary history", description = "Retrieve the salary change history for an employee. Requires HR, IT, or PAYROLL role.", operationId = "getSalaryHistory")
+    public List<SalaryHistoryDto> getSalaryHistory(@Parameter(description = "Employee ID") @PathVariable long id) {
+        return service.getSalaryHistory(id);
     }
 
     @PreAuthorize("hasAnyRole('HR', 'SUPERUSER')")
     @PutMapping("/{id}")
-    @Operation(summary = "Update employee", description = "Update an existing employee's information. Requires HR role.")
-    public ApiResponse<EmployeeDto> updateEmployee(@Parameter(description = "Employee ID") @PathVariable long id, @Valid @RequestBody EmployeeRequest request) {
-        EmployeeDto employee = mapper.toDto(service.updateEmployeeById(id, request));
-        return ResponseFactory.success("Employee updated successfully", employee);
+    @Operation(summary = "Update employee", description = "Update an existing employee's information. Requires HR role.", operationId = "updateEmployee")
+    public EmployeeDto updateEmployee(@Parameter(description = "Employee ID") @PathVariable long id, @Valid @RequestBody EmployeeRequest request) {
+        return mapper.toDto(service.updateEmployeeById(id, request));
     }
 
     @PreAuthorize("hasRole('HR')")
     @PatchMapping("/{id}/status")
-    @Operation(summary = "Delete employee", description = "Delete or deactivate an employee. Requires HR role.")
-    public ApiResponse<Void> updateEmployeeStatus(@Parameter(description = "Employee ID") @PathVariable long id, @Parameter(description = "Status to set (INACTIVE or TERMINATED)") @RequestParam EmploymentStatus status) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete employee", description = "Delete or deactivate an employee. Requires HR role.", operationId = "updateEmployeeStatus")
+    public void updateEmployeeStatus(@Parameter(description = "Employee ID") @PathVariable long id, @Parameter(description = "Status to set (INACTIVE or TERMINATED)") @RequestParam EmploymentStatus status) {
         service.updateEmployeeStatus(id, status);
-        return ResponseFactory.success("Employee deleted successfully");
     }
 }

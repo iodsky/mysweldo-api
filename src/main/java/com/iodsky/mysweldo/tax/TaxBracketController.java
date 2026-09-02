@@ -1,8 +1,6 @@
 package com.iodsky.mysweldo.tax;
 
-import com.iodsky.mysweldo.common.response.ApiResponse;
-import com.iodsky.mysweldo.common.response.PaginationMeta;
-import com.iodsky.mysweldo.common.response.ResponseFactory;
+import com.iodsky.mysweldo.common.response.PageDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,19 +32,16 @@ public class TaxBracketController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create income tax bracket", description = "Create a new income tax bracket configuration. Requires PAYROLL role.")
-    public ApiResponse<TaxBracketDto> createIncomeTaxBracket(
+    @Operation(summary = "Create income tax bracket", description = "Create a new income tax bracket configuration. Requires PAYROLL role.", operationId = "createIncomeTaxBracket")
+    public TaxBracketDto createIncomeTaxBracket(
             @Valid @RequestBody TaxBracketRequest request) {
         TaxBracket bracket = service.createIncomeTaxBracket(request);
-        return ResponseFactory.success(
-                "Income tax bracket created successfully",
-                mapper.toDto(bracket)
-        );
+        return mapper.toDto(bracket);
     }
 
     @GetMapping
-    @Operation(summary = "Get all income tax brackets", description = "Retrieve all income tax brackets with pagination and filters. Requires PAYROLL role.")
-    public ApiResponse<List<TaxBracketDto>> getAllIncomeTaxBrackets(
+    @Operation(summary = "Get all income tax brackets", description = "Retrieve all income tax brackets with pagination and filters. Requires PAYROLL role.", operationId = "getAllIncomeTaxBrackets")
+    public PageDto<TaxBracketDto> getAllIncomeTaxBrackets(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit,
             @Parameter(description = "Filter by effective date") @RequestParam(required = false) LocalDate effectiveDate,
@@ -59,41 +54,31 @@ public class TaxBracketController {
                 .map(mapper::toDto)
                 .toList();
 
-        return ResponseFactory.success(
-                "Income tax brackets retrieved successfully",
-                brackets,
-                PaginationMeta.of(page)
-        );
+        return PageDto.of(page.map(mapper::toDto));
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get income tax bracket by ID", description = "Retrieve a specific income tax bracket. Requires PAYROLL role.")
-    public ApiResponse<TaxBracketDto> getIncomeTaxBracketById(
+    @Operation(summary = "Get income tax bracket by ID", description = "Retrieve a specific income tax bracket. Requires PAYROLL role.", operationId = "getIncomeTaxBracketById")
+    public TaxBracketDto getIncomeTaxBracketById(
             @Parameter(description = "Bracket ID") @PathVariable UUID id) {
         TaxBracket bracket = service.getIncomeTaxBracketById(id);
-        return ResponseFactory.success(
-                "Income tax bracket retrieved successfully",
-                mapper.toDto(bracket)
-        );
+        return mapper.toDto(bracket);
     }
 
     @GetMapping("/lookup")
-    @Operation(summary = "Lookup income tax bracket by income", description = "Find the income tax bracket for a given income and date. Requires PAYROLL role.")
-    public ApiResponse<TaxBracketDto> getIncomeTaxBracketByIncome(
+    @Operation(summary = "Lookup income tax bracket by income", description = "Find the income tax bracket for a given income and date. Requires PAYROLL role.", operationId = "lookupIncomeTaxBracketByIncome")
+    public TaxBracketDto getIncomeTaxBracketByIncome(
             @Parameter(description = "Income amount") @RequestParam BigDecimal income,
             @Parameter(description = "Date to check (defaults to today)") @RequestParam(required = false) LocalDate date
     ) {
         LocalDate effectiveDate = date != null ? date : LocalDate.now();
         TaxBracket bracket = service.getIncomeTaxBracketByIncomeAndDate(income, effectiveDate);
-        return ResponseFactory.success(
-                "Income tax bracket found for income",
-                mapper.toDto(bracket)
-        );
+        return mapper.toDto(bracket);
     }
 
     @GetMapping("/by-date")
-    @Operation(summary = "Get all brackets for a date", description = "Retrieve all income tax brackets for a specific effective date. Requires PAYROLL role.")
-    public ApiResponse<List<TaxBracketDto>> getIncomeTaxBracketsByDate(
+    @Operation(summary = "Get all brackets for a date", description = "Retrieve all income tax brackets for a specific effective date. Requires PAYROLL role.", operationId = "getIncomeTaxBracketsByDate")
+    public List<TaxBracketDto> getIncomeTaxBracketsByDate(
             @Parameter(description = "Effective date (defaults to today)") @RequestParam(required = false) LocalDate effectiveDate
     ) {
         LocalDate date = effectiveDate != null ? effectiveDate : LocalDate.now();
@@ -102,21 +87,15 @@ public class TaxBracketController {
                 .map(mapper::toDto)
                 .toList();
 
-        return ResponseFactory.success(
-                "Income tax brackets retrieved successfully",
-                dtos
-        );
+        return dtos;
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update income tax bracket", description = "Update an existing income tax bracket. Requires PAYROLL role.")
-    public ApiResponse<TaxBracketDto> updateIncomeTaxBracket(
+    @Operation(summary = "Update income tax bracket", description = "Update an existing income tax bracket. Requires PAYROLL role.", operationId = "updateIncomeTaxBracket")
+    public TaxBracketDto updateIncomeTaxBracket(
             @Parameter(description = "Bracket ID") @PathVariable UUID id,
             @Valid @RequestBody TaxBracketRequest request) {
         TaxBracket bracket = service.updateIncomeTaxBracket(id, request);
-        return ResponseFactory.success(
-                "Income tax bracket updated successfully",
-                mapper.toDto(bracket)
-        );
+        return mapper.toDto(bracket);
     }
 }

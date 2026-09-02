@@ -1,8 +1,6 @@
 package com.iodsky.mysweldo.contribution;
 
-import com.iodsky.mysweldo.common.response.ApiResponse;
-import com.iodsky.mysweldo.common.response.PaginationMeta;
-import com.iodsky.mysweldo.common.response.ResponseFactory;
+import com.iodsky.mysweldo.common.response.PageDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,45 +29,46 @@ public class ContributionController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create contribution", description = "Create a new contribution. Requires PAYROLL role.")
-    public ApiResponse<ContributionDto> createContribution(@Valid @RequestBody ContributionRequest request) {
+    @Operation(summary = "Create contribution", description = "Create a new contribution. Requires PAYROLL role.", operationId = "createContribution")
+    public ContributionDto createContribution(@Valid @RequestBody ContributionRequest request) {
         Contribution contribution = service.createContribution(request);
-        return ResponseFactory.success("Contribution created successfully", mapper.toDto(contribution));
+        return mapper.toDto(contribution);
     }
 
     @GetMapping
-    @Operation(summary = "Get all contributions", description = "Retrieve all contributions with pagination. Requires PAYROLL or HR role.")
-    public ApiResponse<List<ContributionDto>> getAllContributions(
+    @Operation(summary = "Get all contributions", description = "Retrieve all contributions with pagination. Requires PAYROLL or HR role.", operationId = "getAllContributions")
+    public PageDto<ContributionDto> getAllContributions(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
             @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit
     ) {
         Page<Contribution> page = service.getAllContributions(pageNo, limit);
         List<ContributionDto> contributions = page.getContent().stream().map(mapper::toDto).toList();
-        return ResponseFactory.success("Contributions retrieved successfully", contributions, PaginationMeta.of(page));
+        return PageDto.of(page.map(mapper::toDto));
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get contribution by code", description = "Retrieve a specific contribution. Requires PAYROLL or HR role.")
-    public ApiResponse<ContributionDto> getContributionById(
+    @Operation(summary = "Get contribution by code", description = "Retrieve a specific contribution. Requires PAYROLL or HR role.", operationId = "getContributionById")
+    public ContributionDto getContributionById(
             @Parameter(description = "Contribution code") @PathVariable String id) {
         Contribution contribution = service.getContributionByCode(id);
-        return ResponseFactory.success("Contribution retrieved successfully", mapper.toDto(contribution));
+        return mapper.toDto(contribution);
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update contribution", description = "Update an existing contribution. Requires PAYROLL role.")
-    public ApiResponse<ContributionDto> updateContribution(
+    @Operation(summary = "Update contribution", description = "Update an existing contribution. Requires PAYROLL role.", operationId = "updateContribution")
+    public ContributionDto updateContribution(
             @Parameter(description = "Contribution code") @PathVariable String id,
             @Valid @RequestBody ContributionRequest request) {
         Contribution contribution = service.updateContribution(id, request);
-        return ResponseFactory.success("Contribution updated successfully", mapper.toDto(contribution));
+        return mapper.toDto(contribution);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete contribution", description = "Soft delete a contribution. Requires PAYROLL role.")
-    public ApiResponse<Void> deleteContribution(
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete contribution", description = "Soft delete a contribution. Requires PAYROLL role.", operationId = "deleteContribution")
+    public void deleteContribution(
             @Parameter(description = "Contribution code") @PathVariable String id) {
         service.deleteContribution(id);
-        return ResponseFactory.success("Contribution deleted successfully");
+        
     }
 }
