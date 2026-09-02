@@ -55,7 +55,16 @@ public class PayrollRunService {
     private final SssRateRepository sssRateRepository;
     private final TaxBracketRepository taxBracketRepository;
 
+    /**
+     * Fixed advisory-lock key serializing payroll run creation so the
+     * overlap check + insert in {@link #createPayrollRun} is atomic
+     * (held until the surrounding transaction commits).
+     */
+    private static final long RUN_CREATION_LOCK_KEY = 0x52554E4C4F434B4CL;
+
     public PayrollRunDto createPayrollRun(PayrollRunRequest request) {
+        repository.acquireRunCreationLock(RUN_CREATION_LOCK_KEY);
+
         PayrollPeriod period;
         try {
             period = PayrollPeriod.of(

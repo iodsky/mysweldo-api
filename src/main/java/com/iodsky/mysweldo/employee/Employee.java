@@ -77,7 +77,7 @@ public class Employee extends BaseModel {
     @JsonIgnore
     private Salary salary;
     
-    @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<EmployeeBenefit> benefits;
 

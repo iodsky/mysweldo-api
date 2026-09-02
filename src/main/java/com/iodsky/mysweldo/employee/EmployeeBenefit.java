@@ -29,7 +29,7 @@ public class EmployeeBenefit extends BaseModel {
     @JsonIgnore
     private Employee employee;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "benefit_code")
     @JsonIgnore
     private Benefit benefit;

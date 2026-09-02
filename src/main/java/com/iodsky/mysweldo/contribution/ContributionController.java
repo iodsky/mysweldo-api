@@ -65,7 +65,7 @@ public class ContributionController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete contribution", description = "Soft delete a contribution. Requires PAYROLL role.", operationId = "deleteContribution")
+    @Operation(summary = "Delete contribution", description = "Soft delete a contribution. A soft-deleted code cannot be recreated. Requires PAYROLL role.", operationId = "deleteContribution")
     public void deleteContribution(
             @Parameter(description = "Contribution code") @PathVariable String id) {
         service.deleteContribution(id);

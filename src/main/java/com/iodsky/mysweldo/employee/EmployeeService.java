@@ -151,6 +151,7 @@ public class EmployeeService {
         return employeeRepository.findAllActiveEmployeeIds();
     }
 
+    @Transactional(readOnly = true)
     public List<SalaryHistoryDto> getSalaryHistory(Long employeeId) {
         getEmployeeById(employeeId);
 

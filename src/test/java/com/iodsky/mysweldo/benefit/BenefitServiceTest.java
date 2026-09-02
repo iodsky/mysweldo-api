@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.benefit;
 
+import com.iodsky.mysweldo.employee.EmployeeBenefitRepository;
 import com.iodsky.mysweldo.payroll.item.PayrollBenefitRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,9 @@ class BenefitServiceTest {
 
     @Mock
     private PayrollBenefitRepository payrollBenefitRepository;
+
+    @Mock
+    private EmployeeBenefitRepository employeeBenefitRepository;
 
     @InjectMocks
     private BenefitService service;
@@ -219,6 +223,20 @@ class BenefitServiceTest {
             Benefit existing = Benefit.builder().code("TRANSPO").build();
             when(repository.findById("TRANSPO")).thenReturn(Optional.of(existing));
             when(payrollBenefitRepository.existsByBenefit_Code("TRANSPO")).thenReturn(true);
+
+            assertThatThrownBy(() -> service.deleteBenefit("TRANSPO"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                    .isEqualTo(HttpStatus.CONFLICT);
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        void shouldThrowConflictWhenBenefitIsAssignedToEmployees() {
+            Benefit existing = Benefit.builder().code("TRANSPO").build();
+            when(repository.findById("TRANSPO")).thenReturn(Optional.of(existing));
+            when(employeeBenefitRepository.existsByBenefit_Code("TRANSPO")).thenReturn(true);
 
             assertThatThrownBy(() -> service.deleteBenefit("TRANSPO"))
                     .isInstanceOf(ResponseStatusException.class)
