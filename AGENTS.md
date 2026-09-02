@@ -37,22 +37,27 @@ Every domain module under `src/main/java/com/iodsky/mysweldo/<domain>/` follows 
 <Domain>Mapper.java       # Entity <-> DTO conversion (also used for Request -> Entity)
 ```
 
-Domains: `attendance`, `batch`, `benefit`, `contribution`, `deduction`, `department`, `employee`, `leave`, `overtime`, `pagIbig`, `payroll`, `philhealth`, `position`, `security` (auth/jwt/role/user), `sss`, `tax`.
+Domains: `attendance`, `batch`, `benefit`, `contribution`, `deduction`, `department`, `employee`, `leave` (subpackages `credit`/`request`), `overtime`, `pagIbig`, `payroll`, `philhealth`, `position`, `security` (auth/jwt/role/user), `sss`, `tax`.
 
 ### Shared infrastructure (`common/`)
 
 - `BaseModel` is the superclass of every entity: provides `createdAt`/`updatedAt`, `createdBy`/`lastModifiedBy` (JPA auditing), `version` (optimistic locking), and `deletedAt` (soft delete). Entities are annotated `@SQLRestriction("deleted_at IS NULL")` so soft-deleted rows are auto-filtered — don't add manual `deleted_at` filters on top.
-- All responses are wrapped through `common/response/ResponseFactory` (`ApiResponse` envelope, optional `PaginationMeta`). Errors flow through `GlobalExceptionHandler`.
-- Errors are raised as `ResponseStatusException` in services.
+- Controllers return **DTOs directly** (no envelope). Paginated endpoints return `PageDto<T>` (`content` + `PaginationMeta`). Errors flow through `GlobalExceptionHandler`, which returns an `ErrorResponse` (`timestamp`, `status`, `message`, optional `validationErrors`/`duplicateField`, `path`).
+- Errors are raised as `ResponseStatusException` in services; payroll uses `PayrollRunException` (handled separately in `GlobalExceptionHandler`).
 
 ### Payroll engine (`payroll/`)
 
-Non-trivial; split into three sub-packages with distinct responsibilities:
-- `payroll/core` — `PayrollCalculator` (@Component) + `PayrollItemAssembler` compose statutory deductions/contributions and line items.
+Non-trivial; split into four sub-packages with distinct responsibilities:
+- `payroll/calc` — `PayrollCalculator` (@Component) + `PayrollItemAssembler` compose statutory deductions/contributions and line items; also `StatutoryRateSnapshot`/`StatutorySchedulePolicy`.
 - `payroll/strategy` — pay-basis strategies (`PayBasisStrategyFactory` selects hourly/daily/monthly) and `StandardPayrollComputationStrategy`. Add a new pay type here.
-- `payroll/run` — `PayrollRunService` orchestrates full payroll runs across active employees.
+- `payroll/item` — payroll line items: `PayrollItem`, `PayrollBenefit`, `PayrollDeduction`, `EmployerContribution` entities + service/controller/mapper.
+- `payroll/run` — `PayrollRunService` orchestrates full payroll runs across active employees. Run creation is serialized with a PostgreSQL advisory lock (`pg_advisory_xact_lock` via `PayrollRunRepository.acquireRunCreationLock`) so the REGULAR overlap check + insert is atomic; overlapping REGULAR runs return `409 CONFLICT`.
 
 When touching payroll, check the existing strategy classes first — logic is heavily delegated, not centralized.
+
+### Transactions & OSIV
+
+Write methods are annotated `@Transactional` so multi-step mutations commit or roll back atomically rather than relying on OSIV. `spring.jpa.open-in-view: true` is set deliberately and kept on.
 
 ### Security
 
@@ -65,7 +70,7 @@ Spring Batch jobs are disabled on startup (`spring.batch.job.enabled: false`); t
 ## Database
 
 - Flyway migrations in `src/main/resources/db/migration/` as `V{n}__description.sql`. **Never modify an existing migration** — both profiles run `ddl-auto: validate`, and Flyway checksums will fail. Add a new `V{n+1}__...sql` instead.
-- Currently only `V1__initial_schema.sql` and `V2__...` exist; `src/main/resources/db/migration/` is the only schema source of truth.
+- `src/main/resources/db/migration/` is the only schema source of truth. Current: `V1__initial_schema.sql`, `V2__fix_overtime_soft_delete_unique.sql`, `V3__delete_strategy_fixes.sql`, `V4__salary_history.sql`.
 
 ## Spring profiles
 
@@ -76,5 +81,5 @@ Spring Batch jobs are disabled on startup (`spring.batch.job.enabled: false`); t
 
 ## Conventions
 
-- Controllers return `ResponseFactory` envelopes; services throw `ResponseStatusException`. Match the existing pattern in the domain you touch rather than inventing a new response shape.
+- Controllers return DTOs directly (`PageDto<T>` for paginated). Services throw `ResponseStatusException`. Match the existing pattern in the domain you touch rather than inventing a new response shape.
 - Tests use JUnit 5 + AssertJ, are named `<Domain>ServiceTest`, and live under `src/test/java/com/iodsky/mysweldo/<domain>/`. Stubs for repository/view interfaces are colocated (e.g. `EmployeeBasicStub`, `AttendanceViewStub`).
