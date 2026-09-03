@@ -88,6 +88,12 @@ public class EmployeeService {
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found");
     }
 
+    public Page<EmployeeBasicDto> getSubordinates(int page, int limit) {
+        Long supervisorId = getAuthenticatedEmployee().getId();
+        Pageable pageable = PageRequest.of(page, limit);
+        return employeeRepository.findAllBySupervisor_Id(supervisorId, pageable).map(employeeMapper::toBasicDto);
+    }
+
     public Employee getEmployeeById(Long id) {
         return employeeRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee " + id + " not found"));
     }

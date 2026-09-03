@@ -21,7 +21,11 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
 
     Page<AttendanceView> findAllByEmployee_Id(Long employeeId, Pageable pageable);
 
+    Page<AttendanceView> findAllByEmployee_Supervisor_Id(Long supervisorId, Pageable pageable);
+
     Page<AttendanceView> findByEmployee_IdAndTimeInBetween(Long employeeId, LocalDateTime timeInStart, LocalDateTime timeInEnd, Pageable pageable);
+
+    Page<AttendanceView> findByEmployee_Supervisor_IdAndTimeInBetween(Long supervisorId, LocalDateTime timeInStart, LocalDateTime timeInEnd, Pageable pageable);
 
     List<Attendance> findByEmployee_IdAndTimeInBetween(Long employeeId, LocalDateTime timeInStart, LocalDateTime timeInEnd);
 

@@ -177,6 +177,28 @@ public class AttendanceService {
         return attendances.map(attendanceMapper::toDto);
     }
 
+    public Page<AttendanceDto> getSubordinatesAttendances(int page, int limit, LocalDate startDate, LocalDate endDate) {
+        Long supervisorId = userService.getAuthenticatedUser().getEmployee().getId();
+
+        Sort sort = Sort.by(Sort.Direction.DESC, "timeIn");
+        Pageable pageable = PageRequest.of(page, limit, sort);
+
+        if (startDate == null && endDate == null) {
+            Page<AttendanceView> attendances = repository.findAllByEmployee_Supervisor_Id(supervisorId, pageable);
+            return attendances.map(attendanceMapper::toDto);
+        }
+
+        DateRange dateRange = new DateRange(startDate, endDate);
+
+        Page<AttendanceView> attendances = repository.findByEmployee_Supervisor_IdAndTimeInBetween(
+                supervisorId,
+                dateRange.startDate().atStartOfDay(),
+                dateRange.endDate().plusDays(1).atStartOfDay(),
+                pageable
+        );
+        return attendances.map(attendanceMapper::toDto);
+    }
+
     public List<Attendance> getEmployeeAttendances(Long employeeId, LocalDate startDate, LocalDate endDate) {
         return repository.findByEmployee_IdAndTimeInBetween(
                 employeeId, startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay()

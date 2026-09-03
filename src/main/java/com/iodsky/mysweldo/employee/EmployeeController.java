@@ -63,6 +63,16 @@ public class EmployeeController {
         return employee;
     }
 
+    @PreAuthorize("hasRole('SUPERVISOR')")
+    @GetMapping("/subordinates")
+    @Operation(summary = "Get subordinates", description = "Retrieve a paginated list of employees supervised by the authenticated user. Requires SUPERVISOR role.", operationId = "getSubordinates")
+    public PageDto<EmployeeBasicDto> getSubordinates(
+            @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
+            @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit
+    ) {
+        return PageDto.of(service.getSubordinates(pageNo, limit));
+    }
+
     @PreAuthorize("hasAnyRole('HR', 'IT', 'PAYROLL', 'SUPERUSER')")
     @GetMapping("/{id}")
     @Operation(summary = "Get employee by ID", description = "Retrieve a specific employee by their ID. Requires HR, IT, or PAYROLL role.", operationId = "getEmployeeById")

@@ -63,6 +63,19 @@ public class AttendanceController {
         return PageDto.of(page);
     }
 
+    @GetMapping("/subordinates")
+    @PreAuthorize("hasRole('SUPERVISOR')")
+    @Operation(summary = "Get subordinates' attendances", description = "Retrieve attendance records for employees supervised by the authenticated user. Requires SUPERVISOR role.", operationId = "getSubordinatesAttendances")
+    public PageDto<AttendanceDto> getSubordinatesAttendances(
+            @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
+            @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
+            @Parameter(description = "Filter by start date") @RequestParam(required = false) LocalDate startDate,
+            @Parameter(description = "Filter by end date") @RequestParam(required = false) LocalDate endDate
+    ) {
+        Page<AttendanceDto> page = service.getSubordinatesAttendances(pageNo, limit, startDate, endDate);
+        return PageDto.of(page);
+    }
+
     @GetMapping("/employee/{id}")
     @PreAuthorize("hasAnyRole('HR', 'PAYROLL', 'SUPERUSER')")
     @Operation(summary = "Get employee attendances", description = "Retrieve attendance records for a specific employee. Requires HR or Payroll role.", operationId = "getEmployeeAttendances")
