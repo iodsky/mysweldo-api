@@ -13,7 +13,7 @@ public class RoleMapper {
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .lastModified(entity.getUpdatedAt())
-                .lastModifiedBy(entity.getLastModifiedBy().getId())
+                .lastModifiedBy(entity.getLastModifiedBy() == null ? null : entity.getLastModifiedBy().getId())
                 .build();
     }
 

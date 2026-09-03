@@ -17,8 +17,8 @@ public class OvertimeRequestMapper {
                 .status(entity.getStatus())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
-                .createdBy(entity.getCreatedBy().getId())
-                .lastModifiedBy(entity.getLastModifiedBy().getId())
+                .createdBy(entity.getCreatedBy() == null ? null : entity.getCreatedBy().getId())
+                .lastModifiedBy(entity.getLastModifiedBy() == null ? null : entity.getLastModifiedBy().getId())
                 .build();
     }
 
