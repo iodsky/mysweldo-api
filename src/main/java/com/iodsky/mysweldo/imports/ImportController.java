@@ -1,12 +1,18 @@
 package com.iodsky.mysweldo.imports;
 
+import com.iodsky.mysweldo.common.response.PageDto;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,6 +29,7 @@ import java.util.UUID;
 @RequestMapping("/jobs")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 @Tag(name = "CSV Imports", description = "CSV import endpoints")
 public class ImportController {
 
@@ -70,6 +77,24 @@ public class ImportController {
                 .fileName(fileName)
                 .message("User import launched successfully")
                 .build();
+    }
+
+    @PreAuthorize("hasAnyRole('HR', 'IT', 'PAYROLL', 'SUPERUSER')")
+    @GetMapping
+    @Operation(
+            summary = "List import jobs",
+            description = "Retrieve a paginated list of import jobs, newest first, optionally filtered by type and/or status. Requires HR, IT, PAYROLL, or SUPERUSER role.",
+            operationId = "getAllImportJobs"
+    )
+    public PageDto<ImportJobSummaryDto> getAllImportJobs(
+            @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") @Min(0) int pageNo,
+            @Parameter(description = "Number of items per page (1-100)") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int limit,
+            @Parameter(description = "Filter by import type") @RequestParam(required = false) ImportType type,
+            @Parameter(description = "Filter by import status") @RequestParam(required = false) ImportStatus status
+    ) {
+        Page<ImportJobSummaryDto> page = importJobService.getAllImportJobs(pageNo, limit, type, status);
+
+        return PageDto.of(page);
     }
 
     @PreAuthorize("hasAnyRole('HR', 'IT', 'PAYROLL', 'SUPERUSER')")
