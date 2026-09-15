@@ -1,15 +1,17 @@
 package com.iodsky.mysweldo.imports;
 
+import com.iodsky.mysweldo.common.StorageService;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +22,7 @@ import java.util.UUID;
  * skipped rows into import_job_error up to a skip limit.
  */
 @Slf4j
+@RequiredArgsConstructor
 public abstract class AbstractImportService<T> {
 
     protected static final int SKIP_LIMIT = 100;
@@ -27,15 +30,7 @@ public abstract class AbstractImportService<T> {
 
     private final ImportJobRepository importJobRepository;
     private final ImportJobErrorRepository importJobErrorRepository;
-
-    @Value("${import.upload.directory}")
-    private String uploadDirectory;
-
-    protected AbstractImportService(ImportJobRepository importJobRepository,
-                                    ImportJobErrorRepository importJobErrorRepository) {
-        this.importJobRepository = importJobRepository;
-        this.importJobErrorRepository = importJobErrorRepository;
-    }
+    private final StorageService storageService;
 
     @Async("importTaskExecutor")
     public void runImport(UUID importJobId) {
@@ -46,10 +41,10 @@ public abstract class AbstractImportService<T> {
         job.setStartedAt(Instant.now());
         importJobRepository.save(job);
 
-        Path filePath = Paths.get(uploadDirectory, job.getFileName());
         long skipCount = 0;
 
-        try (Reader reader = Files.newBufferedReader(filePath)) {
+        try (InputStream in = storageService.get(job.getFileName());
+             Reader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
             CsvToBean<T> csvToBean = new CsvToBeanBuilder<T>(reader)
                     .withType(getRecordType())
                     .withSkipLines(1)
@@ -93,21 +88,12 @@ public abstract class AbstractImportService<T> {
         } finally {
             job.setFinishedAt(Instant.now());
             importJobRepository.save(job);
-            deleteFile(filePath);
+            storageService.delete(job.getFileName());
         }
     }
 
     protected String duplicateReason(String column, String value) {
         return "Duplicate " + column + ": " + value;
-    }
-
-    private void deleteFile(Path filePath) {
-        try {
-            Files.deleteIfExists(filePath);
-            log.info("Deleted uploaded file: {}", filePath);
-        } catch (Exception e) {
-            log.error("Failed to delete uploaded file: {}. Error: {}", filePath, e.getMessage(), e);
-        }
     }
 
     protected abstract Class<T> getRecordType();

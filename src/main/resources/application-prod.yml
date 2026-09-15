@@ -19,3 +19,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+aws:
+  region: ${AWS_REGION}
+  s3:
+    bucket: ${S3_BUCKET}

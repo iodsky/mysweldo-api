@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.imports;
 
+import com.iodsky.mysweldo.common.StorageService;
 import com.iodsky.mysweldo.common.response.PageDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -8,7 +9,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,12 +16,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,9 +31,7 @@ public class ImportController {
     private final UserImportService userImportService;
     private final ImportJobService importJobService;
     private final ImportJobErrorRepository importJobErrorRepository;
-
-    @Value("${import.upload.directory}")
-    private String uploadDirectory;
+    private final StorageService storageService;
 
     @PreAuthorize("hasAnyRole('HR', 'IT', 'SUPERUSER')")
     @PostMapping(value = "/import-employees", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -49,7 +41,7 @@ public class ImportController {
             operationId = "importEmployees"
     )
     public ImportJobLaunchResponse importEmployees(@RequestPart("file") MultipartFile file) {
-        String fileName = saveCsvFile(file);
+        String fileName = storageService.put(file);
         ImportJob job = importJobService.launchImport(ImportType.EMPLOYEE, fileName);
         employeeImportService.runImport(job.getId());
 
@@ -68,7 +60,7 @@ public class ImportController {
             operationId = "importUsers"
     )
     public ImportJobLaunchResponse importUsers(@RequestPart("file") MultipartFile file) {
-        String fileName = saveCsvFile(file);
+        String fileName = storageService.put(file);
         ImportJob job = importJobService.launchImport(ImportType.USER, fileName);
         userImportService.runImport(job.getId());
 
@@ -129,41 +121,6 @@ public class ImportController {
                 .errorMessage(job.getErrorMessage())
                 .failures(failures)
                 .build();
-    }
-
-    /**
-     * Upload a CSV file to the upload directory with a timestamped filename.
-     *
-     * @param file the multipart file to upload
-     * @return the generated filename
-     */
-    private String saveCsvFile(MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File cannot be empty");
-        }
-
-        if (file.getOriginalFilename() == null || !file.getOriginalFilename().endsWith(".csv")) {
-            throw new IllegalArgumentException("Only CSV files are supported");
-        }
-
-        File uploadDir = new File(uploadDirectory);
-        if (!uploadDir.exists() && !uploadDir.mkdirs()) {
-            throw new IllegalStateException("Failed to create upload directory: " + uploadDirectory);
-        }
-
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-        String fileName = timestamp + "_" + file.getOriginalFilename();
-
-        try {
-            Path filePath = Paths.get(uploadDirectory, fileName);
-            Files.copy(file.getInputStream(), filePath);
-        } catch (Exception e) {
-            log.error("Failed to save uploaded file", e);
-            throw new IllegalStateException("Failed to save uploaded file: " + e.getMessage(), e);
-        }
-
-        log.info("File uploaded successfully: {}", fileName);
-        return fileName;
     }
 
 }

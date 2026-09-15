@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.imports;
 
+import com.iodsky.mysweldo.common.StorageService;
 import com.iodsky.mysweldo.employee.Employee;
 import com.iodsky.mysweldo.employee.EmployeeService;
 import com.iodsky.mysweldo.security.role.Role;
@@ -31,8 +32,10 @@ public class UserImportService extends AbstractImportService<UserImportRecord> {
                              EmployeeService employeeService,
                              RoleRepository roleRepository,
                              UserRepository userRepository,
-                             PasswordEncoder passwordEncoder) {
-        super(importJobRepository, importJobErrorRepository);
+                             PasswordEncoder passwordEncoder,
+                             StorageService storageService) {
+
+        super(importJobRepository, importJobErrorRepository, storageService);
         this.employeeService = employeeService;
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;

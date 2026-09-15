@@ -2,6 +2,7 @@ package com.iodsky.mysweldo.imports;
 
 import com.iodsky.mysweldo.benefit.Benefit;
 import com.iodsky.mysweldo.benefit.BenefitRepository;
+import com.iodsky.mysweldo.common.StorageService;
 import com.iodsky.mysweldo.department.Department;
 import com.iodsky.mysweldo.department.DepartmentRepository;
 import com.iodsky.mysweldo.employee.Employee;
@@ -37,8 +38,9 @@ public class EmployeeImportService extends AbstractImportService<EmployeeImportR
                                  PositionRepository positionRepository,
                                  DepartmentRepository departmentRepository,
                                  BenefitRepository benefitRepository,
-                                 EmployeeRepository employeeRepository) {
-        super(importJobRepository, importJobErrorRepository);
+                                 EmployeeRepository employeeRepository,
+                                 StorageService storageService) {
+        super(importJobRepository, importJobErrorRepository, storageService);
         this.positionRepository = positionRepository;
         this.departmentRepository = departmentRepository;
         this.benefitRepository = benefitRepository;
