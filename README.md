@@ -29,7 +29,6 @@ This project serves as a demonstration of solid backend engineering: layered dom
 - **Payroll engine** — pay-basis strategies (hourly/daily/monthly), statutory deduction & contribution computation, payroll runs.
 - **Security** — role-based access control, stateless JWT auth with refresh tokens.
 - **Bulk import** — on-demand OpenCSV imports for CSV uploads (employees & users).
-- **Standardized responses** — `ApiResponse` envelope with pagination metadata and centralized exception handling.
 - **Soft delete & auditing** — every entity extends a common `BaseModel` (timestamps, optimistic locking, soft delete).
 
 ## Architecture
@@ -154,7 +153,7 @@ docker push ghcr.io/iodsky/mysweldo-api:latest
 ### Run on EC2
 
 ```bash
-docker compose -f mysweldo-api.compose.yml up -d
+docker compose -f compose.yml up -d
 ```
 
 The compose file:

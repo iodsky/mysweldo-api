@@ -6,6 +6,7 @@ opencsv = "5.9"
 flyway = "11.20.1"
 postgresql = "42.7.7"
 lombok = "1.18.40"
+aws-sdk = "2.54.9"
 
 [libraries]
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
@@ -18,6 +19,8 @@ lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 spring-security-test = { module = "org.springframework.security:spring-security-test" }
 opencsv = { module = "com.opencsv:opencsv", version.ref = "opencsv" }
+awssdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws-sdk" }
+awssdk-url-connection-client = { module = "software.amazon.awssdk:url-connection-client", version.ref = "aws-sdk" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }

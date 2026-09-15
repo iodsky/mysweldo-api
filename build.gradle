@@ -26,6 +26,8 @@ dependencies {
     implementation libs.jjwt.api
     implementation libs.springdoc.openapi.starter.webmvc.ui
     implementation libs.flyway.core
+    implementation libs.awssdk.s3
+    implementation libs.awssdk.url.connection.client
 
     compileOnly libs.lombok
     annotationProcessor libs.lombok
