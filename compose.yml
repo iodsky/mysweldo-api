@@ -1,0 +1,28 @@
+services:
+  spring:
+    container_name: mysweldo-server
+    image: ghcr.io/iodsky/mysweldo-api:latest
+    restart: always
+    env_file: [.env]
+    expose: ["8001"]
+    environment:
+      JAVA_OPTS: "-Xmx512m -Xms256m -XX:+UseSerialGC"
+    networks: [mysweldo-network]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [spring]
+    networks: [mysweldo-network]
+
+networks:
+  mysweldo-network:
+
+volumes:
+  caddy-data:
+  caddy-config:
