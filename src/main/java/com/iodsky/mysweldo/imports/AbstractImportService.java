@@ -39,7 +39,7 @@ public abstract class AbstractImportService<T> {
 
         job.setStatus(ImportStatus.RUNNING);
         job.setStartedAt(Instant.now());
-        importJobRepository.save(job);
+        job = importJobRepository.save(job);
 
         long skipCount = 0;
 
@@ -53,7 +53,7 @@ public abstract class AbstractImportService<T> {
 
             List<T> records = csvToBean.parse();
             job.setReadCount(records.size());
-            importJobRepository.save(job);
+            job = importJobRepository.save(job);
 
             for (int i = 0; i < records.size(); i++) {
                 T record = records.get(i);
@@ -74,7 +74,7 @@ public abstract class AbstractImportService<T> {
                 }
 
                 if ((i + 1) % STATUS_SAVE_INTERVAL == 0) {
-                    importJobRepository.save(job);
+                    job = importJobRepository.save(job);
                 }
             }
 
@@ -87,7 +87,7 @@ public abstract class AbstractImportService<T> {
             job.setErrorMessage(e.getMessage());
         } finally {
             job.setFinishedAt(Instant.now());
-            importJobRepository.save(job);
+            job = importJobRepository.save(job);
             storageService.delete(job.getFileName());
         }
     }
