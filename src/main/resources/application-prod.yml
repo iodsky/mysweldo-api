@@ -24,6 +24,8 @@ spring:
         format_sql: true
 
 aws:
+  access_key: ${AWS_ACCESS_KEY}
+  secret_access_key: ${AWS_SECRET_ACCESS_KEY}
   region: ${AWS_REGION}
   s3:
     bucket: ${S3_BUCKET}
