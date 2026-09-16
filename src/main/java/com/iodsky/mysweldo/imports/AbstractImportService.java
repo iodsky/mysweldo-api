@@ -47,7 +47,6 @@ public abstract class AbstractImportService<T> {
              Reader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
             CsvToBean<T> csvToBean = new CsvToBeanBuilder<T>(reader)
                     .withType(getRecordType())
-                    .withSkipLines(1)
                     .withIgnoreLeadingWhiteSpace(true)
                     .build();
 
