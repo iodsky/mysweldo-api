@@ -49,5 +49,8 @@ public class EmployeeDto {
     private SalaryDto salary;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private List<EmployeeBenefitDto> benefits;
+    private String bankName;
+    private String accountNumber;
+    private String accountHolderName;
 
 }

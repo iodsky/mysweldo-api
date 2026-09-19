@@ -46,6 +46,21 @@ public class S3StorageService extends StorageService {
     }
 
     @Override
+    public String store(String fileName, String contentType, byte[] bytes) {
+        String key = "reports/" + generateKey(fileName);
+
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .contentType(contentType)
+                .build();
+        s3Client.putObject(request, RequestBody.fromBytes(bytes));
+
+        log.info("File uploaded to S3: {}", key);
+        return key;
+    }
+
+    @Override
     public InputStream get(String key) {
         GetObjectRequest request = GetObjectRequest.builder()
                 .bucket(bucket)
