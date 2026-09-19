@@ -78,6 +78,9 @@ public class EmployeeMapper  {
                 .endShift(employee.getEndShift())
                 .salary(salary)
                 .benefits(benefits)
+                .bankName(employee.getBankName())
+                .accountNumber(employee.getAccountNumber())
+                .accountHolderName(employee.getAccountHolderName())
                 .build();
     }
 
@@ -115,6 +118,9 @@ public class EmployeeMapper  {
                 .type(request.getType())
                 .startShift(request.getStartShift())
                 .endShift(request.getEndShift())
+                .bankName(request.getBankName())
+                .accountNumber(request.getAccountNumber())
+                .accountHolderName(request.getAccountHolderName())
                 .build();
 
         GovernmentId governmentId = GovernmentId.builder()
@@ -176,6 +182,9 @@ public class EmployeeMapper  {
         existing.setStatus(request.getStatus());
         existing.setStartShift(request.getStartShift());
         existing.setEndShift(request.getEndShift());
+        existing.setBankName(request.getBankName());
+        existing.setAccountNumber(request.getAccountNumber());
+        existing.setAccountHolderName(request.getAccountHolderName());
 
         Salary salary = existing.getSalary();
         salary.setRate(request.getSalaryRequest().getRate());

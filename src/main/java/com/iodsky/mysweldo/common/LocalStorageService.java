@@ -44,6 +44,26 @@ public class LocalStorageService extends StorageService {
     }
 
     @Override
+    public String store(String fileName, String contentType, byte[] bytes) {
+        File uploadDir = new File(uploadDirectory);
+        if (!uploadDir.exists() && !uploadDir.mkdirs()) {
+            throw new IllegalStateException("Failed to create upload directory: " + uploadDirectory);
+        }
+
+        String key = generateKey(fileName);
+        try {
+            Path filePath = Paths.get(uploadDirectory, key);
+            Files.write(filePath, bytes);
+        } catch (Exception e) {
+            log.error("Failed to store file", e);
+            throw new IllegalStateException("Failed to store file: " + e.getMessage(), e);
+        }
+
+        log.info("File stored to disk: {}", key);
+        return key;
+    }
+
+    @Override
     public InputStream get(String key) {
         try {
             log.info("File retrieved from disk: {}", key);

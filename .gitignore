@@ -12,5 +12,7 @@
 *.env
 # Uploaded CSV files
 uploads/*.csv
+# Generated report exports
+uploads/*.xlsx
 
 /.copilot

@@ -60,4 +60,13 @@ public class EmployeeRequest {
     @NotNull
     private List<EmployeeBenefitRequest> benefits;
 
+    @Size(max = 255, message = "Bank name must not exceed 255 characters")
+    private String bankName;
+
+    @Size(max = 255, message = "Account number must not exceed 255 characters")
+    private String accountNumber;
+
+    @Size(max = 255, message = "Account holder name must not exceed 255 characters")
+    private String accountHolderName;
+
 }

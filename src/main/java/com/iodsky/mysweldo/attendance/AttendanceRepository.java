@@ -29,6 +29,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, UUID> {
 
     List<Attendance> findByEmployee_IdAndTimeInBetween(Long employeeId, LocalDateTime timeInStart, LocalDateTime timeInEnd);
 
+    List<Attendance> findAllByTimeInBetweenOrderByTimeInAsc(LocalDateTime timeInStart, LocalDateTime timeInEnd);
+
     Page<AttendanceView> findAllBy (Pageable pageable);
 
     @Query("""

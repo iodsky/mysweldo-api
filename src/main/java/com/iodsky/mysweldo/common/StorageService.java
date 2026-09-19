@@ -19,6 +19,8 @@ public abstract class StorageService {
 
     public abstract void delete(String key);
 
+    public abstract String store(String fileName, String contentType, byte[] bytes);
+
     protected abstract String store(MultipartFile file);
 
     protected String generateKey(String fileName) {
