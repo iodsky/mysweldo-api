@@ -545,6 +545,36 @@ class EmployeeServiceTest {
         }
 
         @Test
+        void shouldResolveEachBenefitTypeWhenAddingBenefitsToEmployeeWithNoBenefits() {
+            EmployeeRequest request = mock(EmployeeRequest.class);
+            when(request.getSupervisorId()).thenReturn(null);
+            when(request.getDepartmentId()).thenReturn("DEPT-001");
+            when(request.getPositionId()).thenReturn("POS-001");
+
+            Benefit persistedBenefit = Benefit.builder().code("CLOTHING").build();
+            EmployeeBenefit transientBenefit = new EmployeeBenefit();
+            transientBenefit.setBenefit(Benefit.builder().code("CLOTHING").build());
+
+            when(employeeRepository.findById(1L)).thenReturn(Optional.of(savedEmployee));
+            when(departmentService.getDepartmentById("DEPT-001")).thenReturn(department);
+            when(positionService.getPositionById("POS-001")).thenReturn(position);
+            when(benefitService.getBenefitByCode("CLOTHING")).thenReturn(persistedBenefit);
+            when(employeeRepository.save(savedEmployee)).thenReturn(savedEmployee);
+
+            doAnswer(invocation -> {
+                savedEmployee.getBenefits().add(transientBenefit);
+                return null;
+            }).when(employeeMapper).updateEntity(eq(savedEmployee), eq(request));
+
+            service.updateEmployeeById(1L, request);
+
+            verify(benefitService).getBenefitByCode("CLOTHING");
+            assertThat(savedEmployee.getBenefits())
+                    .extracting(EmployeeBenefit::getBenefit)
+                    .containsExactly(persistedBenefit);
+        }
+
+        @Test
         void shouldThrow404WhenEmployeeToUpdateNotFound() {
             when(employeeRepository.findById(999L)).thenReturn(Optional.empty());
 
