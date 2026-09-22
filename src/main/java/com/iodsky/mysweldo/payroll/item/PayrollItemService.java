@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.payroll.item;
 
+import com.iodsky.mysweldo.payroll.run.PayrollRunStatus;
 import com.iodsky.mysweldo.security.user.User;
 import com.iodsky.mysweldo.security.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -29,15 +30,16 @@ public class PayrollItemService {
             LocalDate startDate = period.atDay(1);
             LocalDate endDate = period.atEndOfMonth();
 
-            return payrollRepository.findAllByEmployee_IdAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
+            return payrollRepository.findAllByEmployee_IdAndPayrollRun_StatusAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
                     id,
+                    PayrollRunStatus.PROCESSED,
                     endDate,
                     startDate,
                     pageable
             );
         }
 
-        return payrollRepository.findAllByEmployee_Id(id, pageable);
+        return payrollRepository.findAllByEmployee_IdAndPayrollRun_Status(id, PayrollRunStatus.PROCESSED, pageable);
     }
 
 }
