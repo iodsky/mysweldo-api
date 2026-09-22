@@ -81,4 +81,13 @@ public class Employee extends BaseModel {
     @JsonIgnore
     private List<EmployeeBenefit> benefits;
 
+    @Column(name = "bank_name")
+    private String bankName;
+
+    @Column(name = "account_number")
+    private String accountNumber;
+
+    @Column(name = "account_holder_name")
+    private String accountHolderName;
+
 }

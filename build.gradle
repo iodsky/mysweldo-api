@@ -28,6 +28,7 @@ dependencies {
     implementation libs.flyway.core
     implementation libs.awssdk.s3
     implementation libs.awssdk.url.connection.client
+    implementation libs.poi.ooxml
 
     compileOnly libs.lombok
     annotationProcessor libs.lombok

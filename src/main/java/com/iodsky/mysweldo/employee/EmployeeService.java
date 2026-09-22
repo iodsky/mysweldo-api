@@ -120,6 +120,10 @@ public class EmployeeService {
 
             employeeMapper.updateEntity(employee, request);
 
+            employee.getBenefits().forEach(b -> {
+                b.setBenefit(benefitService.getBenefitByCode(b.getBenefit().getCode()));
+            });
+
             Employee saved = employeeRepository.save(employee);
 
             if (employee.getSalary() != null

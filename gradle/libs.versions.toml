@@ -7,6 +7,7 @@ flyway = "11.20.1"
 postgresql = "42.7.7"
 lombok = "1.18.40"
 aws-sdk = "2.54.9"
+poi = "5.3.0"
 
 [libraries]
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
@@ -21,6 +22,7 @@ spring-security-test = { module = "org.springframework.security:spring-security-
 opencsv = { module = "com.opencsv:opencsv", version.ref = "opencsv" }
 awssdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws-sdk" }
 awssdk-url-connection-client = { module = "software.amazon.awssdk:url-connection-client", version.ref = "aws-sdk" }
+poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poi" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
