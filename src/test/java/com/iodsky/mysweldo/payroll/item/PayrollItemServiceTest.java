@@ -1,6 +1,7 @@
 package com.iodsky.mysweldo.payroll.item;
 
 import com.iodsky.mysweldo.employee.Employee;
+import com.iodsky.mysweldo.payroll.run.PayrollRunStatus;
 import com.iodsky.mysweldo.security.role.Role;
 import com.iodsky.mysweldo.security.user.User;
 import com.iodsky.mysweldo.security.user.UserService;
@@ -56,7 +57,8 @@ class PayrollItemServiceTest {
         void shouldReturnPaginatedPayrollsForAuthenticatedEmployeeWhenNoPeriodProvided() {
             Page<PayrollItem> expectedPage = new PageImpl<>(List.of(PayrollItem.builder().build()));
             when(userService.getAuthenticatedUser()).thenReturn(payrollUser);
-            when(payrollRepository.findAllByEmployee_Id(eq(1L), any(Pageable.class))).thenReturn(expectedPage);
+            when(payrollRepository.findAllByEmployee_IdAndPayrollRun_Status(eq(1L), eq(PayrollRunStatus.PROCESSED), any(Pageable.class)))
+                    .thenReturn(expectedPage);
 
             Page<PayrollItem> result = service.getAllEmployeePayroll(0, 10, null);
 
@@ -71,8 +73,8 @@ class PayrollItemServiceTest {
 
             Page<PayrollItem> expectedPage = new PageImpl<>(List.of(PayrollItem.builder().build()));
             when(userService.getAuthenticatedUser()).thenReturn(payrollUser);
-            when(payrollRepository.findAllByEmployee_IdAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
-                    eq(1L), eq(expectedEnd), eq(expectedStart), any(Pageable.class)))
+            when(payrollRepository.findAllByEmployee_IdAndPayrollRun_StatusAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
+                    eq(1L), eq(PayrollRunStatus.PROCESSED), eq(expectedEnd), eq(expectedStart), any(Pageable.class)))
                     .thenReturn(expectedPage);
 
             Page<PayrollItem> result = service.getAllEmployeePayroll(0, 10, period);
@@ -87,14 +89,14 @@ class PayrollItemServiceTest {
             LocalDate expectedEnd = LocalDate.of(2025, 2, 28);
 
             when(userService.getAuthenticatedUser()).thenReturn(payrollUser);
-            when(payrollRepository.findAllByEmployee_IdAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
-                    eq(1L), eq(expectedEnd), eq(expectedStart), any(Pageable.class)))
+            when(payrollRepository.findAllByEmployee_IdAndPayrollRun_StatusAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
+                    eq(1L), eq(PayrollRunStatus.PROCESSED), eq(expectedEnd), eq(expectedStart), any(Pageable.class)))
                     .thenReturn(new PageImpl<>(List.of()));
 
             service.getAllEmployeePayroll(0, 10, february);
 
-            verify(payrollRepository).findAllByEmployee_IdAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
-                    eq(1L), eq(expectedEnd), eq(expectedStart), any(Pageable.class));
+            verify(payrollRepository).findAllByEmployee_IdAndPayrollRun_StatusAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
+                    eq(1L), eq(PayrollRunStatus.PROCESSED), eq(expectedEnd), eq(expectedStart), any(Pageable.class));
         }
     }
 }

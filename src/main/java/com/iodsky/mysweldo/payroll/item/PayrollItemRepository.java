@@ -1,5 +1,6 @@
 package com.iodsky.mysweldo.payroll.item;
 
+import com.iodsky.mysweldo.payroll.run.PayrollRunStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -14,14 +15,15 @@ import java.util.UUID;
 @Repository
 public interface PayrollItemRepository extends JpaRepository<PayrollItem, UUID> {
 
-    Page<PayrollItem> findAllByEmployee_IdAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
+    Page<PayrollItem> findAllByEmployee_IdAndPayrollRun_Status(Long employeeId, PayrollRunStatus status, Pageable pageable);
+
+    Page<PayrollItem> findAllByEmployee_IdAndPayrollRun_StatusAndPayrollRun_Period_StartDateLessThanEqualAndPayrollRun_Period_EndDateGreaterThanEqual(
             Long employeeId,
+            PayrollRunStatus status,
             LocalDate endDate,
             LocalDate startDate,
             Pageable pageable
     );
-
-    Page<PayrollItem> findAllByEmployee_Id(Long employeeId, Pageable pageable);
 
     Boolean existsByPayrollRun_IdAndEmployee_Id(UUID payrollRunId, Long employeeId);
 
